@@ -18,6 +18,7 @@ import {
 import { cn, money, percent, signedMoney } from "@/lib/utils";
 import { CalibrationChart, GroupChart, PerformanceChart } from "./charts";
 import { SimulationNote, StatCard } from "./shared";
+import { ImportedPaperSummary } from "./imports/imported-paper";
 export function Analytics() {
   const { data, mode } = useApp();
   const [tab, setTab] = useState<"actual" | "paper">("actual");
@@ -246,6 +247,7 @@ export function Analytics() {
           appear in total P/L and are excluded from cash ROI.
         </div>
       </section>
+      <ImportedPaperSummary />
       {mode === "demo" && <SimulationNote />}
     </div>
   );

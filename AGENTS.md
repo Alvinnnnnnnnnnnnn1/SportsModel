@@ -8,6 +8,9 @@
 - Use only public Supabase publishable/anon keys in the browser. Enforce auth.uid() ownership in database RLS. Never commit credentials.
 - Before handoff run npm test, npm run typecheck, npm run lint and npm run build; report verification gaps accurately.
 
+- Historical intake lives in `src/lib/imports` and its own workspace. Preserve raw sources, nullable facts, immutable forecasts and transformations. Archive approval never implies a ledger write; actual registration needs separate explicit financial confirmation.
+- New hosted migrations always require explicit approval. `202611040001_historical_import.sql` is prepared locally and unapproved; do not apply it or relabel synthetic fixtures as private research.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

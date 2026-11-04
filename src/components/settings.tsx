@@ -18,7 +18,11 @@ import { useApp } from "@/components/app-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getSupabaseClient } from "@/lib/persistence";
-import { AUTH_CALLBACK_PATH } from "@/lib/auth/callback";
+import {
+  signInWithEmail,
+  signOutCurrentSession,
+  signUpWithEmail,
+} from "@/lib/auth/actions";
 import { dateTime, money } from "@/lib/utils";
 
 function parseAmount(value: string): number {
@@ -500,19 +504,13 @@ function AuthPanel() {
       const client = getSupabaseClient();
       if (!client) throw new Error("Supabase is not configured.");
       if (signUp) {
-        const result = await client.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo: new URL(
-              AUTH_CALLBACK_PATH,
-              window.location.origin,
-            ).toString(),
-          },
-        });
-        if (result.error) throw result.error;
+        const result = await signUpWithEmail(
+          client,
+          { email, password },
+          window.location.origin,
+        );
         setPassword("");
-        if (result.data.session) {
+        if (result.status === "authenticated") {
           setMode("supabase");
           notify("Account created · private workspace opened");
         } else
@@ -520,11 +518,7 @@ function AuthPanel() {
             "Check your email to confirm your account, then sign in here.",
           );
       } else {
-        const result = await client.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (result.error) throw result.error;
+        await signInWithEmail(client, { email, password });
         setPassword("");
         setMode("supabase");
         notify("Signed in to your private workspace");
@@ -534,6 +528,7 @@ function AuthPanel() {
         cause instanceof Error ? cause.message : "Authentication failed.",
       );
     } finally {
+      setPassword("");
       setBusy(false);
     }
   }
@@ -541,12 +536,16 @@ function AuthPanel() {
     setBusy(true);
     setError("");
     try {
-      const result = await getSupabaseClient()?.auth.signOut();
-      if (result?.error) throw result.error;
+      const client = getSupabaseClient();
+      if (!client) throw new Error("Supabase is not configured.");
+      await signOutCurrentSession(client);
       setMode("demo");
       notify("Signed out · returned to isolated demo workspace");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to sign out.");
+      const message = cause instanceof Error ? cause.message : "Unable to sign out.";
+      setError(message);
+      // SIGNED_OUT can unmount this panel before a remote revocation error renders.
+      notify(message);
     } finally {
       setBusy(false);
     }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AppProvider } from "@/components/app-provider";
+import { HistoryProvider } from "@/components/history-provider";
 import { Shell } from "@/components/shell";
 import "./globals.css";
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export default function RootLayout({
     <html lang="en-AU">
       <body>
         <AppProvider>
-          <Shell>{children}</Shell>
+          <HistoryProvider><Shell>{children}</Shell></HistoryProvider>
         </AppProvider>
       </body>
     </html>

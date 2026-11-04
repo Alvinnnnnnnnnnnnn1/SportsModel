@@ -336,7 +336,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       .first()
       .getByRole("button", { name: "Dismiss " + created.title, exact: true })
       .click();
-    await page.getByRole("button", { name: "Dismissed", exact: true }).click();
+    await page.locator(".panel").filter({ has: page.getByLabel("Search notifications", { exact: true }) }).getByRole("button", { name: "Dismissed", exact: true }).click();
     await page
       .getByRole("heading", { name: created.title, exact: true })
       .waitFor();

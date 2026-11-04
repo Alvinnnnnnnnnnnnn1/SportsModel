@@ -35,6 +35,7 @@ import {
   StrategyBadge,
 } from "./shared";
 import { ResearchDetail } from "./research";
+import { ImportedPaperTracking } from "./imports/imported-paper";
 function SettlePaper({
   prediction,
   onClose,
@@ -304,6 +305,7 @@ export function PaperTracking() {
           immutable. Outcome corrections are audited.
         </div>
       </div>
+      <ImportedPaperTracking />
       {mode === "demo" && <SimulationNote />}
       {settling && (
         <SettlePaper

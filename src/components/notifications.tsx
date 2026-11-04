@@ -15,6 +15,7 @@ import { Button } from "./ui/button";
 import { ResearchDetail } from "./research";
 import { SportBadge, StrategyBadge, SimulationNote } from "./shared";
 import { cn, dateTime, freshness } from "@/lib/utils";
+import { ImportedNotifications } from "./imports/imported-notifications";
 export function Notifications() {
   const { data, mode, markRead, dismiss, testNotification, notify } = useApp();
   const params = useSearchParams();
@@ -224,6 +225,7 @@ export function Notifications() {
           </div>
         )}
       </div>
+      <ImportedNotifications />
       <div className="panel flex items-start gap-3 p-4">
         <FlaskConical className="size-4 shrink-0 text-primary" />
         <div>

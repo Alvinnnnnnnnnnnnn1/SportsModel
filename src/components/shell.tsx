@@ -18,8 +18,10 @@ import {
   X,
   BookOpen,
   CircleHelp,
+  FileUp,
 } from "lucide-react";
 import { useApp } from "./app-provider";
+import { useHistory } from "./history-provider";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 const navigation = [
@@ -29,6 +31,7 @@ const navigation = [
   { href: "/paper", label: "Paper Tracking", icon: ListChecks },
   { href: "/analytics", label: "Analytics", icon: ChartNoAxesCombined },
   { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/imports", label: "Historical Import", icon: FileUp },
   { href: "/settings", label: "Settings", icon: Settings2 },
 ];
 export function Logo() {
@@ -47,9 +50,10 @@ export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { mode, data, loading, error, user, reload } = useApp();
+  const { history } = useHistory();
   const unread = data.notifications.filter(
     (n) => !n.readAt && !n.dismissedAt,
-  ).length;
+  ).length + history.notifications.filter(n => !n.readAt && !n.dismissedAt).length;
   const current =
     navigation.find((item) => item.href === pathname)?.label ?? "Workspace";
   return (

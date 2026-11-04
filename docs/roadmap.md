@@ -1,12 +1,28 @@
 # Development roadmap
 
-## Next: verify private persistence
+## Completed foundation: hosted bookkeeping and access checks
 
-Configure a free Supabase test project, apply the migration and test email/password sign-in with two accounts. Confirm every table/RPC denies cross-user access, unauthenticated access fails, direct bet edits produce audit history, registered forecasts cannot be changed and stale browser revisions are rejected. Exercise sign-out, expired sessions and failure recovery. Keep synthetic fixtures in Demo mode and use controlled manual test records in the private project.
+The two approved migrations are deployed. The hosted two-account report passed 17/17 groups: normal password JWTs, manual ledger/funding/settings persistence, settlement/audits, cross-account bet protection, anonymous/deletion restrictions, stale revisions, SDK session restoration and account A's browser sign-in/F5/demo separation/logout. See [verification](deployment-verification.md) for evidence and precise limits. Retain the labelled synthetic accounts/records; do not replay the write harness against them.
+
+## Completed locally: controlled historical intake and lifecycle
+
+CSV/JSON/manual source intake now has bounded parsing, nullable missing facts, validation, audited manual resolution, exact/probable duplicate review, explicit archive confirmation and immutable source provenance. Separate financial confirmation registers only complete, consistent actual records; paper and funding never silently mix. Imported paper results/legs, hypothetical performance, notification idempotency/read/dismiss and paper registration are implemented. The new schema and isolated repositories are prepared locally. No real history was imported.
+
+Installed-SDK tests cover expired refresh, invalid/revoked sessions, signup/confirmation state, callback failures, logout and authenticated saves with mocked transport. The existing two-user hosted checkpoint remains preserved. Local PostgreSQL and browser checks are distinct from hosted verification; see [verification](verification.md).
+
+## Next stage: approve and verify hosted historical storage
+
+Review the exact prepared `202611040001_historical_import.sql` migration, its hash and local database evidence; inspect remote history and dry-run, then obtain explicit approval before deployment. It creates six isolated historical tables and does not modify existing records or policies. Until approved, the private history UI reports the missing migration while Demo works fully.
+
+After approved deployment, verify the new hosted catalog and non-empty historical/paper/notification access with two ordinary user contexts. Prepare a dedicated, reviewed test path that respects private synthetic rejection; do not relabel test fixtures, reuse the old empty-account harness on populated accounts, delete existing records or bypass RLS with service-role credentials. The local embedded tests establish SQL behavior, not hosted Auth/gateway behavior.
+
+Complete one authorized real signup/email-confirmation/callback flow without unnecessary emails. Add hosted form-level entry/edit/settlement coverage including parlay, bonus, loss and void cases, and long-duration session refresh. Keep all new authorized test records clearly labelled and retain them for review.
+
+After these checks, review a tiny user-approved mapped historical sample before any real import. Resolve missing facts and financial contradictions explicitly. Add source-supported adjusted parlay settlement prices separately from frozen original odds before handling partial-void wins. Add a reviewed archive export/backup path before growing history substantially.
 
 ## Strengthen the local research workflow
 
-Add interaction tests for the manual confirmation form, parlay settlement, paper snapshots, notification read/dismiss flows and workspace switching. Add a local Supabase integration test harness when suitable tooling is available. Validate Melbourne daylight-saving boundary input and recorded UTC ordering. Keep account-independent unit tests fast.
+Add interaction tests for the manual confirmation form, parlay settlement, paper snapshots, notification read/dismiss flows and workspace switching. Maintain the existing local PostgreSQL, hosted catalog and secure two-user harnesses, keeping account-independent tests fast. Validate Melbourne daylight-saving boundary input and recorded UTC ordering. Keep account-independent unit tests fast.
 
 Improve research-run idempotency and record run failure details, cancellation and partial provider errors. Add explicit source freshness rules and reproducible model manifests before accepting non-synthetic research. Add per-entity repositories and pagination when dataset size warrants them. Add opt-in reviewed backup/import tools with strict mode and provenance checks rather than copying demo history to production.
 

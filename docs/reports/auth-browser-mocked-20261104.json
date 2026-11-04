@@ -1,0 +1,76 @@
+{
+  "mode": "local browser with intercepted Supabase Auth and RPC responses; no hosted checks",
+  "createdAt": "2026-11-04T00:52:55.332Z",
+  "results": [
+    {
+      "name": "signup keeps confirmation pending and uses the fixed local callback",
+      "passed": true
+    },
+    {
+      "name": "unconfirmed sign-in fails safely and confirmed sign-in opens an empty private workspace",
+      "passed": true
+    },
+    {
+      "name": "failed authenticated funding submission retains its draft and does not publish a financial record",
+      "passed": true
+    },
+    {
+      "name": "retrying the authenticated form persists exactly once and survives browser refresh",
+      "passed": true
+    },
+    {
+      "name": "local logout clears private UI and browser tokens while restoring isolated demo records",
+      "passed": true
+    },
+    {
+      "name": "a browser reload refreshes a genuinely expired session before reading private data",
+      "passed": true
+    },
+    {
+      "name": "revoked browser sessions fail closed without submitting a stale authenticated form",
+      "passed": true
+    },
+    {
+      "name": "failed authentication callbacks clear URL parameters and show controlled errors",
+      "passed": true
+    },
+    {
+      "name": "no external requests or browser runtime exceptions escaped the isolated transport",
+      "passed": true
+    }
+  ],
+  "unexpectedRequests": [],
+  "runtimeErrors": [],
+  "interceptedEndpoints": [
+    [
+      "/auth/v1/signup",
+      1
+    ],
+    [
+      "/auth/v1/token",
+      3
+    ],
+    [
+      "/auth/v1/user",
+      13
+    ],
+    [
+      "/rest/v1/rpc/edgelab_load_workspace",
+      3
+    ],
+    [
+      "/rest/v1/rpc/edgelab_load_history",
+      3
+    ],
+    [
+      "/rest/v1/rpc/edgelab_save_workspace",
+      2
+    ],
+    [
+      "/auth/v1/logout",
+      1
+    ]
+  ],
+  "interceptedAuthRequests": 18,
+  "mockedSuccessfulSaves": 1
+}

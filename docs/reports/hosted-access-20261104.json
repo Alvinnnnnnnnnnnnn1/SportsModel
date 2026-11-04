@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-11-04T00:13:32.537Z",
+  "projectRef": "ilgoswfckkzpoktabbfi",
+  "method": "Public-key password grants; Auth-issued JWTs verified through getUser; no privileged key or SQL role impersonation",
+  "marker": "EDGELAB HOSTED CHECK 391dac0b-e085-41e1-b825-330ce0b505d1",
+  "applicationWritesStarted": true,
+  "retainedRecords": "Clearly labelled new manual bookkeeping records retained in the two dedicated test accounts; no existing account records deleted",
+  "passed": 17,
+  "total": 17,
+  "results": [
+    {
+      "name": "Unauthenticated RPC and private-table access denied",
+      "passed": true
+    },
+    {
+      "name": "Two distinct password grants issue normal authenticated JWTs",
+      "passed": true
+    },
+    {
+      "name": "Both accounts are completely empty before application writes",
+      "passed": true
+    },
+    {
+      "name": "Manual ledger, funding and settings save and round-trip",
+      "passed": true
+    },
+    {
+      "name": "Each user sees only their own records across every user table",
+      "passed": true
+    },
+    {
+      "name": "Cross-account modification and ownership forgery rejected",
+      "passed": true
+    },
+    {
+      "name": "Bet edit and settlement persist with before/after audit",
+      "passed": true
+    },
+    {
+      "name": "Session and records survive SDK re-instantiation",
+      "passed": true
+    },
+    {
+      "name": "Stale workspace revision rejected without changing newer settings",
+      "passed": true
+    },
+    {
+      "name": "Append-only financial and audit history cannot be changed",
+      "passed": true
+    },
+    {
+      "name": "Authenticated delete is denied and the test ledger survives",
+      "passed": true
+    },
+    {
+      "name": "Simulated research is rejected atomically without relabelling provenance",
+      "passed": true
+    },
+    {
+      "name": "Logout removes client access while the second session remains valid",
+      "passed": true
+    },
+    {
+      "name": "Browser Settings sign-in opens the correct private workspace",
+      "passed": true
+    },
+    {
+      "name": "Authenticated browser reload restores the saved ledger and session",
+      "passed": true
+    },
+    {
+      "name": "Switching browser workspaces retains the original demo snapshot",
+      "passed": true
+    },
+    {
+      "name": "Browser logout clears private visibility without removing demo data",
+      "passed": true
+    }
+  ],
+  "limits": [
+    "No signup or confirmation email delivery tested; accounts must be created and confirmed in Dashboard first",
+    "Authenticated browser sign-in/reload/demo switch/logout checks were requested; see individual results",
+    "Hosted research, paper and notification round-trip writes remain unverified; simulated data rejection is tested with truthful flags"
+  ]
+}

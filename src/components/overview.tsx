@@ -15,6 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useApp } from "./app-provider";
+import { useHistory } from "./history-provider";
 import { Button } from "./ui/button";
 import { BetForm } from "./bet-form";
 import {
@@ -34,6 +35,8 @@ import {
 } from "./shared";
 export function Overview() {
   const { data, mode, running, runResearch, notify } = useApp();
+  const { history } = useHistory();
+  const importedPaperCount = history.records.filter(record => record.snapshot.kind === "paper" || record.snapshot.kind === null && history.paperResults.some(result => result.recordId === record.id)).length;
   const [now] = useState(() => Date.now());
   const [addOpen, setAddOpen] = useState(false);
   const [days, setDays] = useState("30");
@@ -246,9 +249,9 @@ export function Overview() {
                 Paper predictions
               </p>
               <p className="tabular mt-1.5 text-sm">
-                {data.paperPredictions.length}
+                {data.paperPredictions.length + importedPaperCount}
                 <span className="ml-1 text-[9px] text-muted-foreground">
-                  tracked
+                  tracked{importedPaperCount > 0 ? ` · ${importedPaperCount} imported` : ""}
                 </span>
               </p>
             </div>

@@ -46,11 +46,11 @@ Restart `npm run dev` after environment changes. The app's Settings shows Privat
 
 ## Current integration checkpoint
 
-CLI authentication/linking is complete, and the linked reference was verified as `ilgoswfckkzpoktabbfi`. Remote history has no applied migrations. A read-only catalog check found no public tables/views, public indexes or EdgeLab functions; PostgreSQL is 17.11 and the required Supabase roles/Auth table and pgcrypto extension are present.
+On 4 November 2026, after explicit user approval and hash/reference checks, both reviewed migrations were applied in order to `ilgoswfckkzpoktabbfi`. Remote history confirms versions `202611030001` and `202611030002`. No additional migration, seed or reset was used. Immediately afterward all 14 application tables were empty.
 
-The remote dry-run succeeded and lists both local migrations in order. No migration was applied and no application records were changed. The next step requires explicit approval of the reviewed files before any remote migration. See [migration-review.md](migration-review.md) for the exact object changes, safety findings, hashes and approval scope.
+Exact hosted catalog verification passed for the tables, columns, policies, functions, triggers, constraints, indexes and permissions. Anonymous requests to all 14 tables and both workspace RPCs returned HTTP 401 / `42501`. The nine reviewed CHECK constraints remain NOT VALID. See [deployment-verification.md](deployment-verification.md) for exact counts, commands, limitations and normal-user test status. [migration-review.md](migration-review.md) remains the historical pre-deployment approval review.
 
-The supplied URL/key previously returned HTTP 200 from the live Auth settings endpoint: Email enabled, sign-up allowed, email confirmation required. Successful app sign-in/email delivery and authenticated hosted persistence/RLS remain unverified until migrations are approved, applied and tested with normal user sessions. Embedded SQL results are local tests only.
+The user completed the two-account secure terminal run: **17/17 passed** (13 API/SDK and four browser groups). It verified normal-user sign-in/JWT identity, manual ledger/funding/settings writes, session restoration, cross-account bet protection, stale snapshots, deletion/history restrictions, private/demo separation and logout. The sanitized [report](reports/hosted-access-20261104.json) and exact [verification scope](deployment-verification.md) are retained. Signup/email delivery, token expiry/refresh and positive hosted research/paper/notification round trips remain unverified. Test accounts and records are retained; this report review performs no remote writes.
 
 ## Data model
 
@@ -80,7 +80,7 @@ The MVP saves the current workspace in one RPC rather than implementing per-enti
 
 ## Verification limits and checks before live use
 
-Automated repository tests cover local isolation, validation, simulated-record rejection and revision error handling. The migration can be syntax/execution tested against local PostgreSQL; authentication, email confirmation and RLS must also be tested against your own configured free Supabase project before relying on it for real records.
+Automated repository tests cover local isolation, validation, simulated-record rejection and revision error handling. The deployed project also passed the 17-group real-user test. Local SQL/catalog checks and hosted normal-user checks are distinct evidence. Email delivery, expired sessions and positive research-related writes still require separate verification.
 
 With two test accounts, verify that neither account can select/update the other's UUIDs or invoke the RPC unauthenticated; direct immutable-record updates fail; bet edits append audits; a stale tab is rejected; and signing out clears the visible authenticated workspace. Do not use a service-role connection for these isolation checks, since service-role credentials bypass RLS.
 
@@ -105,4 +105,67 @@ Use two separate browser profiles or private windows with separate authenticated
 4. Open A in two tabs. Save from the first, then save the older second-tab snapshot. The second must report a revision conflict, retain its prior view and require reload. Verify rejected saves leave no partial records.
 5. Check immutable candidate/probability/provenance and paper registration fields, append-only financial/audit history and matching current bet/leg projections. Refresh after edits to see server-generated audits.
 
-Record exact hosted outcomes separately. Until those checks are executed, Auth sign-up/sign-in/email and hosted RLS/persistence remain unverified.
+The completed run's exact outcomes are recorded in [deployment-verification.md](deployment-verification.md): core Auth, bookkeeping persistence, RLS bet protection and browser session checks passed. The checklist above remains a runbook; it does not expand coverage beyond the report. Signup/email and the stated remaining behaviors are still unverified.
+
+### Secure two-account hosted test
+
+Create two new dedicated users in Dashboard → Authentication → Users → Add user → Create new user, with distinct emails, private strong passwords and Auto Confirm User enabled. Do not use personal accounts containing application data. No CLI secret-key retrieval is needed.
+
+With the local app running at localhost:3000, run in your own interactive terminal:
+
+```sh
+node scripts/check-hosted-access.mjs \
+  --project-ref ilgoswfckkzpoktabbfi \
+  --confirm-test-writes \
+  --browser-runtime /private/tmp/edgelab-browser \
+  --report /private/tmp/edgelab-hosted-access-20261104.json
+```
+
+The optional browser runtime above is the existing temporary Playwright installation used for local QA; omit `--browser-runtime` for API/SDK-only checks. To reproduce on another machine, install Playwright into a temporary prefix and supply that path, as described in `docs/browser-qa.md`. Installed Chrome is detected on macOS, with `--browser /absolute/path` available elsewhere. `--app-url` defaults to `http://localhost:3000`.
+
+Emails are visible in your own terminal and validated immediately; reserved addresses such as `edgelab-test-a-20261104@example.invalid` are accepted syntactically. Passwords remain hidden. Passwords/tokens are never accepted in arguments or saved to files; errors and the JSON report are sanitized and omit both emails and credentials. The harness first verifies two normal Auth-issued sessions, then requires both workspaces AND all 14 user-owned table reads to be empty before any app write. It aborts if either account already contains application records.
+
+The single run executes 13 API/SDK groups and four optional browser groups: real password sign-in, authenticated ownership, labelled synthetic bookkeeping round trips and settlement/audits, session restoration, stale-update rejection, immutable-history/deletion restrictions, truthful simulated-research rejection, logout, browser F5 and demo isolation. Test bookkeeping rows remain in the dedicated accounts for review. It creates no Auth users and deletes no records. Do not rerun the write harness against already-used accounts: the empty-account guard will stop it. Preserve its report for review; use a new report filename and two new dedicated accounts for a deliberate new full run.
+
+The authenticated write test intentionally uses manual records without a forecast or invented source provenance. Its records explicitly say SYNTHETIC/INTEGRATION TEST/no wager. Research/paper/notification successes are not claimed from relabelling synthetic research as real. Production rejection of such fixtures is a passing boundary check.
+
+## Pending historical-import schema — not deployed
+
+`202611040001_historical_import.sql` is prepared locally and requires a **new explicit approval** before any hosted change. Approval of the two 3 November migrations does not approve this file. No source data or seed is included. Review [historical-import.md](historical-import.md) for the UI/format contract and [historical-migration-review.md](historical-migration-review.md) for the exact hash, object counts and read-only remote plan.
+
+The additive migration creates:
+
+- `historical_workspace_revisions`: a private per-user optimistic-concurrency counter, independent of the existing financial workspace revision.
+- `historical_import_batches`: immutable original source text, SHA-256, classification and approved summary.
+- `historical_research_records`: immutable nullable source snapshots, raw rows, fingerprints, transformation history and explicit review acknowledgements. Numeric money projections derive from integer cents; unknowns remain SQL NULL.
+- `historical_paper_results`: separate mutable overall/leg results, guarded against contradictory outcomes and changes to original forecasts.
+- `historical_notifications`: source-linked, deduplicated reminders with monotonic read/dismiss state and retained history.
+- `historical_audit_history`: append-only import/lifecycle audit payloads. Database triggers also generate audit records for direct authenticated changes.
+
+All six tables enforce `auth.uid()` ownership with RLS. Authenticated roles receive no DELETE privileges. Source/record/audit updates are forbidden. Composite UUID/user foreign keys prevent cross-owner references. A private historical batch cannot be classified synthetic. Original source UTF-8 SHA-256, payload projections, source snapshot references, summaries and duplicate fingerprints are checked. The migration does not alter existing application rows, tables or policies.
+
+`edgelab_load_history(expected_owner_id)` and `edgelab_save_history(workspace, expected_revision, expected_owner_id)` are SECURITY INVOKER RPCs with fixed search paths. Anonymous/Public execution is revoked. Both RPCs require the captured expected user UUID and reject a mismatch with `auth.uid()` before access, so a shared-client account switch between identity verification and the request cannot redirect a historical operation into another account. Save validates before writing, locks the user's revision, rejects stale snapshots, preserves old immutable rows and performs the approved append/lifecycle changes atomically. Direct writes invalidate stale snapshots. Unique source identity and notification keys prevent exact duplicate registration; uncertain matches still require application review. A failed save rolls back.
+
+Before any eventual deployment:
+
+```sh
+npx supabase migration list --remote
+npx supabase db push --dry-run --remote --skip-vault
+```
+
+Confirm the linked project is `ilgoswfckkzpoktabbfi`, the first two versions are already recorded and **only** `202611040001` is pending. Review its current hash and local security results. Stop if remote history/schema has changed or any unexpected migration appears. Request explicit approval for this exact migration. Never reset the database or push seeds. After approval, deploy only that reviewed file, then verify the hosted catalog and normal-user history RPCs before claiming hosted historical persistence.
+
+Until approval the private Historical Import, imported-paper and historical-alert sections show an actionable storage message. Existing hosted bookkeeping/authentication continue working. Demo exercises the complete new workflow without Supabase or remote writes.
+
+### Local verification of the pending schema
+
+With the already installed temporary PGlite runtime (or the optional setup above):
+
+```sh
+node scripts/check-database.mjs --runtime /private/tmp/edgelab-db-validation
+node scripts/check-import-database.mjs --runtime /private/tmp/edgelab-db-validation
+```
+
+The first preserves the original security/persistence regression checks while applying all local migrations; the second covers the new archive, paper and alert lifecycle, negative financial/source cases, two normal-role user contexts, anonymous denial and stale saves. This is embedded PostgreSQL with an Auth shim, **not hosted Auth or gateway verification**. No remote records or accounts are changed.
+
+After authorized deployment, hosted verification must use ordinary authenticated users and the public key. Do not reuse populated accounts with the old empty-account write harness, label synthetic tests as real research, weaken private synthetic rejection, or use service-role results as RLS proof. A dedicated reviewed hosted historical verification path remains to be prepared; local mocked/SQL successes do not replace it.

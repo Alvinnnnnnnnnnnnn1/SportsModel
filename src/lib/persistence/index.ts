@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { AppData } from "@/lib/domain/types";
 import { appDataSchema } from "@/lib/domain/validation";
+import { requireAuthenticatedUser } from "@/lib/auth/actions";
 
 export interface Repository {
   load(): Promise<AppData | null>;
@@ -114,9 +115,7 @@ export function createSupabaseRepository(userId: string): Repository {
   };
   const requireUser = async () => {
     const supabase = requireClient();
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user || data.user.id !== userId)
-      throw new Error("Your session changed. Sign in again before saving.");
+    await requireAuthenticatedUser(supabase, userId);
     return supabase;
   };
   return {

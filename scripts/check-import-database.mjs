@@ -200,7 +200,7 @@ try {
   const orphan = importBatch(310, [snapshot()]);
   await rejected(() => db.query('insert into public.historical_import_batches(id,user_id,payload,created_at) values($1,$2,$3,$4)', [orphan.batch.id, owner, orphan.batch, stamp]), /summary must match/i, 'deferred completeness checks reject source-only direct imports');
   pass('no historical security test requires a privileged service-role client');
-  console.log(`${checks} historical database checks passed (local embedded PostgreSQL; hosted migration not applied)`);
+  console.log(`${checks} historical database checks passed (local embedded PostgreSQL; no hosted requests made)`);
 } catch (error) {
   console.error(`FAIL ${error instanceof Error ? error.message : String(error)}`);
   process.exitCode = 1;

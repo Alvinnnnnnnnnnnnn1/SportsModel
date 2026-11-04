@@ -1,0 +1,68 @@
+{
+  "projectRef": "ilgoswfckkzpoktabbfi",
+  "mode": "hosted normal-user historical read and negative probes only",
+  "startedAt": "2026-11-04T06:47:58.057Z",
+  "results": [
+    {
+      "name": "Two distinct password-issued normal JWT identities are verified through Auth getUser",
+      "passed": true
+    },
+    {
+      "name": "Both ordinary authenticated users load their own historical workspace",
+      "passed": true
+    },
+    {
+      "name": "Expected-owner RPC checks reject both directions of account mismatch before historical access",
+      "passed": true
+    },
+    {
+      "name": "A null expected owner cannot bypass the history RPC identity guard",
+      "passed": true
+    },
+    {
+      "name": "Cross-owner reads return no rows across all six historical tables in both directions",
+      "passed": true,
+      "detail": "Both historical contexts were empty; this is empty-state isolation evidence, not non-empty cross-user lifecycle proof."
+    },
+    {
+      "name": "Deployed read-only validators reject honestly classified synthetic source batches and records",
+      "passed": true
+    },
+    {
+      "name": "Cross-owner save expectations are rejected before any write in both empty test contexts",
+      "passed": true
+    },
+    {
+      "name": "An honestly synthetic save RPC is rejected without relabelling test data",
+      "passed": true
+    },
+    {
+      "name": "Both historical snapshots and revisions remain unchanged after all probes",
+      "passed": true
+    },
+    {
+      "name": "Unauthenticated requests are denied across all six historical tables",
+      "passed": true
+    },
+    {
+      "name": "Unauthenticated callers cannot execute either historical workspace RPC",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "limitations": [
+    "No positive hosted historical, paper-result or notification writes are attempted.",
+    "Synthetic fixtures remain labelled synthetic and are expected to be rejected, never relabelled as real or unverified.",
+    "Empty-table isolation checks do not prove non-empty cross-account lifecycle behavior.",
+    "Local PostgreSQL lifecycle tests and hosted JWT checks are separate evidence.",
+    "No application records are intentionally changed or deleted; no accounts are created or deleted. Normal Auth sign-in/out updates sessions. Expected-failure write probes require both historical workspaces to start empty."
+  ],
+  "bothHistoryContextsEmpty": true,
+  "negativeWriteStatus": "rejected_unchanged",
+  "finishedAt": "2026-11-04T06:48:51.116Z",
+  "summary": {
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0
+  }
+}

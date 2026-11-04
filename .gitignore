@@ -9,6 +9,8 @@ coverage/
 *.log
 playwright-report/
 test-results/
+# Private local source/reconciliation previews; never commit recovered experiment data.
+.local/
 next-env.d.ts
 supabase/.temp/
 supabase/.branches/

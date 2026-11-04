@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from 'next/link';
 import { useSearchParams } from "next/navigation";
 import {
   Bell,
@@ -16,6 +17,7 @@ import { ResearchDetail } from "./research";
 import { SportBadge, StrategyBadge, SimulationNote } from "./shared";
 import { cn, dateTime, freshness } from "@/lib/utils";
 import { ImportedNotifications } from "./imports/imported-notifications";
+import { paperReminderRecordId } from '@/lib/notifications/paper-reminders';
 export function Notifications() {
   const { data, mode, markRead, dismiss, testNotification, notify } = useApp();
   const params = useSearchParams();
@@ -173,6 +175,7 @@ export function Notifications() {
                       )}
                     </div>
                     <div className="flex gap-2">
+                      {paperReminderRecordId(n) && <Button size="sm" variant="outline" asChild><Link href={`/imports?record=${paperReminderRecordId(n)}`}>Paper source details</Link></Button>}
                       {!n.readAt && (
                         <Button
                           size="sm"

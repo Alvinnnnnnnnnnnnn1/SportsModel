@@ -7,6 +7,8 @@ import { useApp } from '../app-provider';
 import { useHistory } from '../history-provider';
 import { HistoryDetail } from '../history-detail';
 import { ImportWizard } from './import-wizard';
+import { ConversationIntake } from './conversation-intake';
+import { CheckpointPanel } from '../handoff/checkpoint-panel';
 import { HistoryStatus } from './history-status';
 import { Button } from '../ui/button';
 import { dateTime, money } from '@/lib/utils';
@@ -21,10 +23,13 @@ function Workspace() {
   const { history, loading, error } = useHistory();
   const params = useSearchParams(); const [selected, setSelected] = useState<string | null>(params.get('record'));
   const [query, setQuery] = useState(''); const [kind, setKind] = useState('all');
+  const [mappedSource,setMappedSource]=useState<{text:string;sourceName:string}>(); const [importVersion,setImportVersion]=useState(0);
   const records = history.records.filter(record => (kind === 'all' || (record.snapshot.kind ?? 'unknown') === kind) && `${record.snapshot.event ?? ''} ${record.snapshot.participant ?? ''} ${record.snapshot.selection ?? ''} ${record.snapshot.sourceReference ?? ''}`.toLowerCase().includes(query.toLowerCase()));
   return <>
     <HistoryStatus />
-    <ImportWizard onCommitted={() => setQuery('')} />
+    <CheckpointPanel />
+    <ConversationIntake onMappedSource={source=>{setMappedSource(source);setImportVersion(value=>value+1);requestAnimationFrame(()=>document.getElementById('source-import-review')?.scrollIntoView({behavior:'smooth',block:'start'}));}} />
+    <div id="source-import-review"><ImportWizard key={importVersion} seedSource={mappedSource} onCommitted={() => setQuery('')} /></div>
     <section className="panel overflow-hidden" aria-label="Historical archive">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border p-5"><div><h2 className="text-sm font-medium">Immutable research archive</h2><p className="mt-1 text-[11px] text-muted-foreground">{history.records.length} records · {history.batches.length} approved imports · archive approval has no financial effect</p></div><div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-3 size-3.5 text-muted-foreground" /><input className="input pl-9" aria-label="Search imported records" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search historical records…" /></div><select className="input w-auto" aria-label="Filter imported type" value={kind} onChange={e => setKind(e.target.value)}>{['all','paper','actual','unknown'].map(value => <option key={value} value={value}>{value === 'all' ? 'All types' : value}</option>)}</select></div></div>
       {records.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Original research</th><th>Type / status</th><th>Price / stake</th><th>Source / prediction date</th><th /></tr></thead><tbody>{records.map(record => { const s = record.snapshot; return <tr key={record.id}><td><button className="text-left text-[11px] hover:text-primary" onClick={() => setSelected(record.id)}>{s.participant ?? s.event ?? 'Unknown participant'}</button><p className="mt-1 text-[10px] text-muted-foreground">{s.sport ?? 'Unknown sport'} · {s.event ?? 'Unknown event'}</p><p className="mt-1 text-[10px] text-muted-foreground">{s.selection ?? 'Unknown selection'} · Line {s.line ?? 'Unknown'}</p></td><td><p>{s.kind ?? 'Unclassified'} · {s.outcome ?? 'Unknown outcome'}</p><p className="mt-1 text-[9px] uppercase tracking-wide text-amber-200/80">{s.verification.replaceAll('_',' ')}</p></td><td><p>{s.odds ?? 'Unknown odds'}</p><p className="mt-1 text-[10px] text-muted-foreground">{s.stakeCents === null ? 'Unknown stake' : money(s.stakeCents)} · {s.stakeType ?? 'Unknown type'}</p></td><td className="max-w-56"><p className="truncate text-[10px]">{s.sourceReference ?? 'Unknown source'}</p><p className="mt-1 text-[10px] text-muted-foreground">{s.predictionAt ? dateTime(s.predictionAt) : 'Unknown original timestamp'}</p></td><td><Button size="sm" variant="outline" onClick={() => setSelected(record.id)}>Review source</Button></td></tr>; })}</tbody></table></div> : <div className="empty-state min-h-40"><Archive className="mb-2 size-6" /><p>{loading ? 'Loading archive…' : error ? 'Historical storage is unavailable.' : history.records.length ? 'No records match these filters.' : 'No history has been imported.'}</p></div>}

@@ -129,9 +129,9 @@ The single run executes 13 API/SDK groups and four optional browser groups: real
 
 The authenticated write test intentionally uses manual records without a forecast or invented source provenance. Its records explicitly say SYNTHETIC/INTEGRATION TEST/no wager. Research/paper/notification successes are not claimed from relabelling synthetic research as real. Production rejection of such fixtures is a passing boundary check.
 
-## Pending historical-import schema — not deployed
+## Historical-import schema — deployed after approval
 
-`202611040001_historical_import.sql` is prepared locally and requires a **new explicit approval** before any hosted change. Approval of the two 3 November migrations does not approve this file. No source data or seed is included. Review [historical-import.md](historical-import.md) for the UI/format contract and [historical-migration-review.md](historical-migration-review.md) for the exact hash, object counts and read-only remote plan.
+`202611040001_historical_import.sql` received its own explicit approval and was deployed to the intended project on 4 November 2026. Remote history and exact hosted catalog verification passed. Do not reapply it. No source data or seed was included. Review [historical-import.md](historical-import.md) for the UI/format contract and [historical-migration-review.md](historical-migration-review.md) for the exact hash, object counts and read-only remote plan.
 
 The additive migration creates:
 
@@ -146,16 +146,16 @@ All six tables enforce `auth.uid()` ownership with RLS. Authenticated roles rece
 
 `edgelab_load_history(expected_owner_id)` and `edgelab_save_history(workspace, expected_revision, expected_owner_id)` are SECURITY INVOKER RPCs with fixed search paths. Anonymous/Public execution is revoked. Both RPCs require the captured expected user UUID and reject a mismatch with `auth.uid()` before access, so a shared-client account switch between identity verification and the request cannot redirect a historical operation into another account. Save validates before writing, locks the user's revision, rejects stale snapshots, preserves old immutable rows and performs the approved append/lifecycle changes atomically. Direct writes invalidate stale snapshots. Unique source identity and notification keys prevent exact duplicate registration; uncertain matches still require application review. A failed save rolls back.
 
-Before any eventual deployment:
+Read-only status checks (the historical migration is already applied):
 
 ```sh
 npx supabase migration list --remote
 npx supabase db push --dry-run --remote --skip-vault
 ```
 
-Confirm the linked project is `ilgoswfckkzpoktabbfi`, the first two versions are already recorded and **only** `202611040001` is pending. Review its current hash and local security results. Stop if remote history/schema has changed or any unexpected migration appears. Request explicit approval for this exact migration. Never reset the database or push seeds. After approval, deploy only that reviewed file, then verify the hosted catalog and normal-user history RPCs before claiming hosted historical persistence.
+Confirm the linked project is `ilgoswfckkzpoktabbfi` and all three versions are already recorded. No pending migration is expected for this stage. Do not replay the historical file. Stop if remote history/schema differs or an unexpected migration appears; any future migration requires separate review and approval. Never reset or push seeds. The original pre-deployment plan and approval are retained in the migration review.
 
-Until approval the private Historical Import, imported-paper and historical-alert sections show an actionable storage message. Existing hosted bookkeeping/authentication continue working. Demo exercises the complete new workflow without Supabase or remote writes.
+The private Historical Import and paper/alert sections can now address the deployed history RPCs. Normal-user reads and expected-failure synthetic writes passed the secure hosted checks. Positive hosted historical/paper/notification writes remain unverified. Existing bookkeeping/Auth and Demo separation are preserved.
 
 ### Local verification of the pending schema
 
@@ -169,3 +169,12 @@ node scripts/check-import-database.mjs --runtime /private/tmp/edgelab-db-validat
 The first preserves the original security/persistence regression checks while applying all local migrations; the second covers the new archive, paper and alert lifecycle, negative financial/source cases, two normal-role user contexts, anonymous denial and stale saves. This is embedded PostgreSQL with an Auth shim, **not hosted Auth or gateway verification**. No remote records or accounts are changed.
 
 After authorized deployment, hosted verification must use ordinary authenticated users and the public key. Do not reuse populated accounts with the old empty-account write harness, label synthetic tests as real research, weaken private synthetic rejection, or use service-role results as RLS proof. A dedicated reviewed hosted historical verification path remains to be prepared; local mocked/SQL successes do not replace it.
+
+
+## Research continuity storage and hosted checkpoint
+
+The manual research handoff reuses the six historical tables without schema changes. Versioned response/context envelopes remain the immutable batch source; original candidate objects remain raw rows; mapping, metadata and day-completion attestations remain transformations. Paper approval adds separate result state and linked alerts atomically. Context journals and pass/watch decisions are kind-null archives, not actual/paper bets. Source-supported actual records still need separate financial confirmation.
+
+The latest hosted report passed **11/11** ordinary-user read/negative checks with distinct password-issued sessions. Both historical contexts began empty; cross-owner reads returned no rows, expected-owner loads/saves rejected, null-owner access rejected, synthetic batch/record validators and saves rejected, anonymous reads/RPCs denied, and both snapshots/revisions stayed unchanged. This is not non-empty cross-account persistence proof. See [hosted-history-verification.md](hosted-history-verification.md) and [retained report](reports/hosted-history-access-20261104.json). Existing accounts/records were preserved.
+
+The exact catalog matches 20 tables / 20 policies / 46 functions / 42 triggers with zero differences, including the original schema. Positive local PostgreSQL lifecycle tests remain separate. No normal-user hosted immutability/update/settlement success is claimed merely from catalog definitions or rejected synthetic inserts. The private synthetic boundary must remain intact.

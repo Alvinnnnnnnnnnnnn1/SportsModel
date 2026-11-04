@@ -75,7 +75,7 @@ export function Overview() {
             A clear view of your bankroll, research and results.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             disabled={running || mode !== "demo"}
@@ -84,8 +84,9 @@ export function Overview() {
             }
           >
             <CirclePlay className={cn(running && "animate-spin")} />
-            {running ? "Running simulation…" : "Run Daily Research"}
+            {running ? "Running simulation…" : "Run Simulated Research"}
           </Button>
+          <Button variant="outline" asChild><Link href="/research">Daily Research Handoff</Link></Button>
           <Button onClick={() => setAddOpen(true)}>
             <Plus /> Record bet
           </Button>

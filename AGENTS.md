@@ -1,7 +1,7 @@
 # EdgeLab project instructions
 
 - Build a private, zero-cost, local-first Next.js App Router application with strict TypeScript, npm, Tailwind and accessible shadcn/ui components.
-- All seeded sports, prices, forecasts, alerts and results are synthetic. Label demo data clearly. Never connect bookmaker accounts, scrape bookmakers, execute bets, import ChatGPT history or add paid services.
+- All seeded sports, prices, forecasts, alerts and results are synthetic. Label demo data clearly. Never connect bookmaker accounts, scrape bookmakers, execute bets, automatically access ChatGPT history or add paid services. User-selected exports require manual mapping, preview and explicit import approval.
 - Demo storage and authenticated Supabase storage must be isolated. Production starts empty. Mock research is available only in demo mode.
 - Store dates in UTC and display in Australia/Melbourne. Store money as integer AUD cents in TypeScript and NUMERIC in PostgreSQL. Paper activity must never affect cash bankroll.
 - Keep deterministic calculations, providers, persistence and presentation separate. Predictions and provenance are immutable after registration; ledger edits require an audit record.
@@ -9,7 +9,10 @@
 - Before handoff run npm test, npm run typecheck, npm run lint and npm run build; report verification gaps accurately.
 
 - Historical intake lives in `src/lib/imports` and its own workspace. Preserve raw sources, nullable facts, immutable forecasts and transformations. Archive approval never implies a ledger write; actual registration needs separate explicit financial confirmation.
-- New hosted migrations always require explicit approval. `202611040001_historical_import.sql` is prepared locally and unapproved; do not apply it or relabel synthetic fixtures as private research.
+- New hosted migrations always require explicit approval. `202611040001_historical_import.sql` was explicitly approved and deployed to `ilgoswfckkzpoktabbfi` on 4 November 2026; do not reapply it. Its reviewed SHA-256 is in docs/historical-migration-review.md. Never relabel synthetic fixtures as private research.
+
+- Research Handoff is a manual copy/paste workflow with no OpenAI API. Preserve source claims, uncertainty, original forecast immutability, explicit paper approval and separate actual-ledger confirmation. Day 5 aggregate figures are an unverified reference, never invented records, deposits or bookmaker balances.
+- The Odds API readiness targets the-odds-api.com only, stays disabled without optional server-only free-plan configuration, and must not poll or make implicit requests.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

@@ -1,0 +1,24 @@
+{
+  "projectRef": "ilgoswfckkzpoktabbfi",
+  "migrationVersions": [
+    "202611030001",
+    "202611030002",
+    "202611040001"
+  ],
+  "historicalMigrationSha256": "fa9c50ac7e4be61ec8eaa92e7e6c66a89c8d583b966843cd97cb64f97afef08a",
+  "scope": "SELECT-only hosted catalog comparison. No application records or normal-user persistence claims.",
+  "passed": true,
+  "differences": [],
+  "rawDifferences": [],
+  "objectCounts": {
+    "tables": 20,
+    "columns": 136,
+    "constraints": 182,
+    "indexes": 68,
+    "policies": 20,
+    "triggers": 42,
+    "functions": 46
+  },
+  "functionBodiesVerified": 46,
+  "unvalidatedChecks": 9
+}

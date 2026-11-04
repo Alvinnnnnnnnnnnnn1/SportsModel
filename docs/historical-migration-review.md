@@ -1,6 +1,6 @@
 # Pending historical migration review — 4 November 2026
 
-**Prepared and locally tested; NOT approved or deployed.** The user's earlier approval covered only `202611030001` and `202611030002`. No remote writes, seed, resets, account deletions or record deletions were performed during this development stage.
+**Historical review retained; now explicitly approved and deployed.** The user approved only this reviewed file during the continuation. Remote history and exact catalog checks subsequently passed; see the deployment addendum below. At the time of the original review it was prepared and locally tested, but not approved or deployed. The user's earlier approval covered only `202611030001` and `202611030002`. No remote writes, seed, resets, account deletions or record deletions were performed during this development stage.
 
 ## Target and plan
 
@@ -51,3 +51,12 @@ Pending deployment has **not** been verified in hosted PostgREST, including sche
 ## Approval boundary
 
 Request explicit approval to apply **only** this exact migration to `ilgoswfckkzpoktabbfi`. After approval, recheck target, hash, history, new namespace conflicts and dry-run. Apply only the reviewed pending file with seeds disabled. Stop/report unexpected errors; never reset or repair existing data. Verify resulting remote history, catalog and normal-user access before claiming hosted historical persistence. Keep all existing test accounts/records.
+
+
+## Deployment addendum — verified 4 November 2026
+
+The user explicitly approved this exact migration and hash. Namespace checks found zero `historical_%` relations and zero history functions before deployment. The CLI applied exactly one migration with `--remote --skip-vault --agent no --output-format text --yes` and exited successfully. Remote history now records `202611040001`; it was not reapplied during the subsequent resume.
+
+A SELECT-only exact catalog comparison verified all 20 tables, 136 columns, 182 constraints, 68 indexes, 20 policies, 42 triggers and 46 function bodies, including ownership constraints and effective/explicit permissions, with zero raw differences. The nine earlier NOT VALID checks remain unchanged. Public-key anonymous probes returned HTTP 401 / 42501 for all six new tables and both history RPCs. These are catalog/anonymous results, not positive normal-user persistence claims. No additional migration, seed, reset or existing-record deletion was performed. The approved file hash and both original migration hashes are unchanged.
+
+The private schema rejects honestly classified synthetic research. The secure normal-user verifier checks reads, ownership mismatch, anonymous denial and optional expected-failure synthetic saves; it does not bypass that boundary or claim positive hosted research writes. See [hosted-history-verification.md](hosted-history-verification.md) and [verification.md](verification.md).

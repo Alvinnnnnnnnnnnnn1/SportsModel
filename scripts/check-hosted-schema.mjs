@@ -22,7 +22,10 @@ if (!runtime) throw new Error('Pass --runtime <temporary npm prefix containing @
 const { PGlite } = createRequire(path.resolve(runtime, 'package.json'))('@electric-sql/pglite');
 const db = new PGlite();
 const directory = new URL('../supabase/migrations/', import.meta.url);
-const migrationNames = (await fs.readdir(directory)).filter(name => /^\d+_.+\.sql$/.test(name)).sort();
+const through = option('--migration-through');
+if (through && !/^\d{12}$/.test(through)) throw new Error('--migration-through must be a 12-digit migration version.');
+const migrationNames = (await fs.readdir(directory)).filter(name => /^\d+_.+\.sql$/.test(name) && (!through || name.split('_')[0] <= through)).sort();
+const hasHistory = migrationNames.some(name => name.startsWith('202611040001_'));
 const expectedFiles = {};
 await db.exec("create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid stable language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;");
 // Hosted catalog inspection confirmed postgres-owned PUBLIC-schema default
@@ -38,6 +41,7 @@ for (const name of migrationNames) {
 const tableNames = [
   'audit_history','bet_legs','bets','events','experiment_settings','financial_transactions','model_versions',
   'notifications','odds_snapshots','paper_predictions','research_candidates','research_runs','sports','user_profiles',
+  ...(hasHistory ? ['historical_workspace_revisions','historical_import_batches','historical_research_records','historical_paper_results','historical_notifications','historical_audit_history'] : []),
 ];
 const tablesLiteral = JSON.stringify(tableNames).replaceAll("'", "''");
 // The expression normalization only removes schema qualification and repeated
@@ -70,11 +74,11 @@ select jsonb_build_object(
 ) as catalog_snapshot
 `;
 const expected = (await db.query(snapshotSql)).rows[0].catalog_snapshot;
-assert.equal(Object.keys(expected.tables).length,14);
-assert.equal(Object.keys(expected.policies).length,14);
-assert.equal(Object.keys(expected.functions).length,24);
-assert.equal(Object.keys(expected.triggers).length,24);
-assert.equal(Object.keys(expected.explicitFunctionGrants).length,38);
+assert.equal(Object.keys(expected.tables).length,hasHistory ? 20 : 14);
+assert.equal(Object.keys(expected.policies).length,hasHistory ? 20 : 14);
+assert.equal(Object.keys(expected.functions).length,hasHistory ? 46 : 24);
+assert.equal(Object.keys(expected.triggers).length,hasHistory ? 42 : 24);
+assert.equal(Object.keys(expected.explicitFunctionGrants).length,hasHistory ? 60 : 38);
 const invalidChecks = Object.entries(expected.constraints).filter(([,value]) => value.type==='c' && !value.validated);
 assert.equal(invalidChecks.length,9);
 const manifestLiteral = JSON.stringify(expected,null,2).replaceAll('$edgelab_catalog$', '$edgelab_catalog_escaped$');
@@ -105,7 +109,7 @@ select jsonb_build_object(
  'unvalidatedChecks',(select count(*) from actual_items where category='constraints' and value->>'type'='c' and value->>'validated'='false'),
  'differences',coalesce((select jsonb_agg(jsonb_build_object('category',category,'object',object_name,'expected',expected,'actual',actual) order by category,object_name) from differences),'[]'::jsonb),
  'rawDifferences',coalesce((select jsonb_agg(jsonb_build_object('category',category,'object',object_name,'expected',expected,'actual',actual) order by category,object_name) from differences),'[]'::jsonb),
- 'platformBaseline','Verified Supabase PUBLIC-schema default function grants to anon/authenticated without grant option; approved migrations revoke them on workspace RPCs and validators. Trigger-only functions retain their existing PUBLIC execution privileges.'
+ 'platformBaseline','Verified Supabase PUBLIC-schema default function grants to anon/authenticated without grant option; approved migrations revoke them on workspace RPCs and validators. Original trigger-only functions retain prior PUBLIC execution privileges; all new history functions deny PUBLIC/anonymous execution.'
 ) as edgelab_schema_verification;
 `;
 const verify = async () => (await db.query(verificationSql)).rows[0].edgelab_schema_verification;

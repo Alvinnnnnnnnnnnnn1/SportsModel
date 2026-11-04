@@ -902,3 +902,6 @@ if (
     process.exitCode = 1;
   });
 }
+
+// Shared secure terminal/public-key helpers; importing this module never runs the write harness.
+export { CheckFailure, apiOk, clientFor, credentialsFromTerminal, publicConfiguration, publicFailure, signIn };

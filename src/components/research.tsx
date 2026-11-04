@@ -27,6 +27,7 @@ import type { Candidate } from "@/lib/domain/types";
 import { SPORTS, STRATEGIES } from "@/lib/domain/types";
 import { expectedValue, impliedProbability } from "@/lib/domain/calculations";
 import { cn, dateTime, freshness, percent } from "@/lib/utils";
+import { ResearchHandoff } from './handoff/research-handoff';
 export function ResearchDetail({
   candidate,
   onClose,
@@ -241,9 +242,10 @@ export function Research() {
           onClick={() => void runResearch().catch((e) => notify(e.message))}
         >
           <CirclePlay className={cn(running && "animate-spin")} />
-          {running ? "Running simulation…" : "Run Daily Research"}
+          {running ? "Running simulation…" : "Run Simulated Research"}
         </Button>
       </div>
+      <ResearchHandoff />
       <div className="grid gap-3 md:grid-cols-3">
         {(["A", "B", "C"] as const).map((track, i) => (
           <button

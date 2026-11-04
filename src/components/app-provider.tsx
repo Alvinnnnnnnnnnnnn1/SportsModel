@@ -35,6 +35,8 @@ import {
   isSupabaseConfigured,
   type Repository,
 } from "@/lib/persistence";
+import type { HistoricalRecord, HistoricalPaperResult } from '@/lib/imports/types';
+import { addPaperResultReminder } from '@/lib/notifications/paper-reminders';
 interface AppContextValue {
   data: AppData;
   mode: Mode;
@@ -60,6 +62,7 @@ interface AppContextValue {
   testNotification: () => Promise<void>;
   updateSettings: (settings: ExperimentSettings) => Promise<void>;
   addTransaction: (transaction: Transaction) => Promise<void>;
+  remindPaperResult: (record: HistoricalRecord, result?: HistoricalPaperResult) => Promise<void>;
 }
 const Context = createContext<AppContextValue | null>(null);
 export function useApp() {
@@ -474,6 +477,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         testNotification,
         updateSettings,
         addTransaction,
+        remindPaperResult: (record, result) => mutate(value => addPaperResultReminder(value, record, result, mode)),
         markRead: (id) =>
           mutate((value) => ({
             ...value,

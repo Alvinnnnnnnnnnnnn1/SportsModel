@@ -232,7 +232,7 @@ fs.mkdirSync(artifacts, { recursive: true });
         JSON.parse(localStorage.getItem("edgelab:demo:v1")).researchRuns.length,
     );
     await page
-      .getByRole("button", { name: "Run Daily Research", exact: true })
+      .getByRole("button", { name: "Run Simulated Research", exact: true })
       .click();
     await page.getByText(/Simulation complete/).waitFor({ timeout: 20000 });
     const after = await page.evaluate(
@@ -243,7 +243,7 @@ fs.mkdirSync(artifacts, { recursive: true });
   });
   await test("research detail and immutable paper registration", async () => {
     await page
-      .getByRole("button", { name: "Review", exact: false })
+      .locator(".panel").filter({ has: page.getByLabel("Search research candidates", { exact: true }) }).getByRole("button", { name: "Review", exact: false })
       .first()
       .click();
     await page.getByRole("dialog").waitFor();
@@ -359,7 +359,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       JSON.parse(localStorage.getItem("edgelab:demo:v1")),
     );
     await page
-      .getByRole("button", { name: "Review", exact: false })
+      .locator(".panel").filter({ has: page.getByLabel("Search research candidates", { exact: true }) }).getByRole("button", { name: "Review", exact: false })
       .first()
       .click();
     await page

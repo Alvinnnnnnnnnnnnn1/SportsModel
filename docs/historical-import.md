@@ -4,7 +4,7 @@
 
 The controlled import UI is at `/imports` (Historical Import in the sidebar). Demo is fully local and accepts **explicitly synthetic** sources only. It saves a separate, initially empty historical workspace under `edgelab:history:demo:v1`. It never copies history to a private account. The existing demonstration ledger remains under `edgelab:demo:v1`.
 
-Private historical persistence requires the **prepared, unapproved** migration `202611040001_historical_import.sql`. It has not been applied to the hosted project. Until deployment is approved, the private import screen reports that historical storage is unavailable and refuses to save. Existing authenticated ledger/settings persistence continues to use the two already-deployed migrations. No real experiment history has been imported.
+Private historical persistence uses `202611040001_historical_import.sql`, explicitly approved and deployed to `ilgoswfckkzpoktabbfi` on 4 November 2026. Its exact hosted schema/catalog and anonymous restrictions passed verification. Ordinary-user positive historical/paper/notification round trips remain separately unverified; see the current verification report. Existing ledger/settings persistence is preserved. No real experiment history has been imported. Selected official conversation JSON now has a manual mapping path described in [conversation-intake.md](conversation-intake.md).
 
 Private imports must be unverified or manually user-confirmed source records; synthetic fixtures are rejected by both the repository and SQL. User-confirmed means the user reviewed the source, not that EdgeLab independently verified it. Do not relabel a synthetic fixture to bypass that boundary.
 
@@ -81,7 +81,7 @@ The MVP retains source batches as whole snapshots and is designed for a small pr
 | `src/components/history-provider.tsx`, `history-detail.tsx` | Isolated workspace state, queued saves, immutable source detail and separate financial confirmation |
 | `src/lib/imports/types.ts`, `validation.ts`, `parser.ts`, `duplicates.ts`, `commands.ts`, `calculations.ts`, `fixtures.ts`, `index.ts` | Nullable entities, strict validation, bounded parsing, provenance, matching, audited commands, deterministic reconciliation and synthetic templates |
 | `src/lib/imports/repository.ts` | Separate browser and authenticated history repositories with revision/expected-owner checks |
-| `supabase/migrations/202611040001_historical_import.sql` | Prepared additive schema, RLS, guards, audits and transactional RPCs; not deployed |
+| `supabase/migrations/202611040001_historical_import.sql` | Approved deployed additive schema, RLS, guards, audits and transactional RPCs |
 | `src/lib/auth/actions.ts`, `src/components/settings.tsx`, `src/lib/persistence/index.ts` | Controlled Auth actions/errors, verified user checks, password clearing and local-session logout |
 | `src/app/layout.tsx`, `src/components/shell.tsx`, `overview.tsx`, `paper.tsx`, `analytics.tsx`, `notifications.tsx` | History provider/navigation and imported counts/performance/lifecycle sections, preserving original features |
 | `tests/auth-session.test.ts`, `import.test.ts`, `import-lifecycle.test.ts`, `import-persistence.test.ts` | New transport, parser/domain, lifecycle and persistence regressions |
@@ -89,3 +89,8 @@ The MVP retains source batches as whole snapshots and is designed for a small pr
 | `README.md`, `AGENTS.md`, `docs/architecture.md`, `database.md`, `verification.md`, `roadmap.md`, `browser-qa.md`, `historical-import.md`, `historical-migration-review.md`, `docs/reports/*browser*20261104.json` | Setup/architecture/security/format/approval documentation and sanitized local evidence |
 
 Earlier hosted verification helpers and evidence present at resume were retained. No dependency, lockfile, environment template, deployed migration or existing data changes were required for this stage.
+
+
+## Recovered extraction staging
+
+Source-extraction review JSON now has a conservative local mapping adapter. It shows complete source/category/warning/reconciliation details through the existing wizard and downloadable previews. Import is locked in both the UI and command layer for these staging records until separate explicit review/approval. See [recovery-review.md](recovery-review.md). No real recovery dataset is committed to the repository or hosted automatically.

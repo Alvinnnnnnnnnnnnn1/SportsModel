@@ -41,3 +41,15 @@ node scripts/check-auth-browser.mjs \
 It uses fake tokens/accounts and in-memory RPC responses; it tests real UI forms and the installed SDK rather than hosted Auth. Signup confirmation state, unconfirmed/revoked-session errors, token expiry refresh, failed/successful authenticated funding submission, reload, logout, callback URL cleanup and demo isolation are covered. It reads only the public configured service URL to identify intercepted requests; it requests no credentials and sends no email. Do not call this hosted verification.
 
 For a stable production-server check, first run `npm run build`, then `npm start -- --port 3101`, and pass `http://localhost:3101` to these scripts. Stop the QA server afterward. Browser harnesses and optional temporary runtimes are test tools, not application dependencies or new paid services. Retained reports are summarized in [verification.md](verification.md).
+
+
+## Complete research continuation check
+
+```sh
+node scripts/check-handoff-browser.mjs \
+  --runtime /private/tmp/edgelab-browser \
+  --url http://localhost:3101 \
+  --artifacts /private/tmp/edgelab-handoff-browser
+```
+
+Use a stable local production build/server as above. The suite blocks all nonlocal traffic, uses only labelled synthetic records in a fresh context, and fixes/advances its browser clock for source/event/result chronology. It covers selected conversation mapping, archive review and separate financial registration, context journal, generated/copied prompt, malformed/LLM/missing-price responses, paper/pass approval and alerts, duplicate rejection, reminders, per-leg settlement, analytics/day continuation, mobile layout and the complete snapshot export. Actual results and any skipped checks are reported explicitly; a synthetic local success is not hosted verification.

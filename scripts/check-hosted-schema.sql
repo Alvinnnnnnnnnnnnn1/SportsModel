@@ -4,6 +4,7 @@
 -- Expected migration SHA-256 files (local provenance, not a remote history hash):
 -- 202611030001_edgelab.sql: 550af08d2a33026e641103bda42444193723b701ed0152bff3ce344667a3d33b
 -- 202611030002_harden_workspace_integrity.sql: d90a2fc096dfed2bc8c0aeb38ae4ba7f86783afa86fb1e905e824affadf3fb21
+-- 202611040001_historical_import.sql: fa9c50ac7e4be61ec8eaa92e7e6c66a89c8d583b966843cd97cb64f97afef08a
 -- Compare function bodies exactly by SHA-256; structural metadata compares exact
 -- object names and definitions. Every raw ACL difference remains a failure.
 -- Expected ACLs model verified Supabase PUBLIC-schema default function grants
@@ -102,6 +103,42 @@ with expected as (select $edgelab_catalog${
       "ownerIsPrivileged": true
     },
     "financial_transactions": {
+      "rls": true,
+      "kind": "r",
+      "forceRls": false,
+      "ownerIsPrivileged": true
+    },
+    "historical_audit_history": {
+      "rls": true,
+      "kind": "r",
+      "forceRls": false,
+      "ownerIsPrivileged": true
+    },
+    "historical_notifications": {
+      "rls": true,
+      "kind": "r",
+      "forceRls": false,
+      "ownerIsPrivileged": true
+    },
+    "historical_paper_results": {
+      "rls": true,
+      "kind": "r",
+      "forceRls": false,
+      "ownerIsPrivileged": true
+    },
+    "historical_import_batches": {
+      "rls": true,
+      "kind": "r",
+      "forceRls": false,
+      "ownerIsPrivileged": true
+    },
+    "historical_research_records": {
+      "rls": true,
+      "kind": "r",
+      "forceRls": false,
+      "ownerIsPrivileged": true
+    },
+    "historical_workspace_revisions": {
       "rls": true,
       "kind": "r",
       "forceRls": false,
@@ -693,6 +730,22 @@ with expected as (select $edgelab_catalog${
       "generated": "s",
       "expression": "(payload ->> 'kind'::text)"
     },
+    "historical_audit_history.id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 1,
+      "generated": "",
+      "expression": null
+    },
+    "historical_notifications.id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 1,
+      "generated": "",
+      "expression": null
+    },
     "odds_snapshots.candidate_id": {
       "type": "uuid",
       "notNull": true,
@@ -748,6 +801,14 @@ with expected as (select $edgelab_catalog${
       "position": 5,
       "generated": "",
       "expression": "'Australia/Melbourne'::text"
+    },
+    "historical_import_batches.id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 1,
+      "generated": "",
+      "expression": null
     },
     "paper_predictions.settled_at": {
       "type": "timestamp with time zone",
@@ -805,6 +866,14 @@ with expected as (select $edgelab_catalog${
       "generated": "",
       "expression": null
     },
+    "historical_research_records.id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 1,
+      "generated": "",
+      "expression": null
+    },
     "paper_predictions.candidate_id": {
       "type": "uuid",
       "notNull": true,
@@ -837,6 +906,62 @@ with expected as (select $edgelab_catalog${
       "generated": "s",
       "expression": "((payload ->> 'probability'::text))::numeric"
     },
+    "historical_audit_history.payload": {
+      "type": "jsonb",
+      "notNull": true,
+      "identity": "",
+      "position": 5,
+      "generated": "",
+      "expression": null
+    },
+    "historical_audit_history.user_id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 2,
+      "generated": "",
+      "expression": null
+    },
+    "historical_notifications.payload": {
+      "type": "jsonb",
+      "notNull": true,
+      "identity": "",
+      "position": 4,
+      "generated": "",
+      "expression": null
+    },
+    "historical_notifications.user_id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 2,
+      "generated": "",
+      "expression": null
+    },
+    "historical_paper_results.payload": {
+      "type": "jsonb",
+      "notNull": true,
+      "identity": "",
+      "position": 3,
+      "generated": "",
+      "expression": null
+    },
+    "historical_paper_results.user_id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 2,
+      "generated": "",
+      "expression": null
+    },
+    "historical_research_records.kind": {
+      "type": "text",
+      "notNull": false,
+      "identity": "",
+      "position": 9,
+      "generated": "s",
+      "expression": "(payload #>> '{snapshot,kind}'::text[])"
+    },
     "research_candidates.decimal_odds": {
       "type": "numeric(12,4)",
       "notNull": true,
@@ -861,11 +986,139 @@ with expected as (select $edgelab_catalog${
       "generated": "",
       "expression": null
     },
+    "historical_audit_history.batch_id": {
+      "type": "uuid",
+      "notNull": false,
+      "identity": "",
+      "position": 4,
+      "generated": "",
+      "expression": null
+    },
+    "historical_import_batches.payload": {
+      "type": "jsonb",
+      "notNull": true,
+      "identity": "",
+      "position": 3,
+      "generated": "",
+      "expression": null
+    },
+    "historical_import_batches.user_id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 2,
+      "generated": "",
+      "expression": null
+    },
+    "historical_research_records.sport": {
+      "type": "text",
+      "notNull": false,
+      "identity": "",
+      "position": 10,
+      "generated": "s",
+      "expression": "(payload #>> '{snapshot,sport}'::text[])"
+    },
+    "historical_research_records.stake": {
+      "type": "numeric(14,2)",
+      "notNull": false,
+      "identity": "",
+      "position": 11,
+      "generated": "s",
+      "expression": "(((payload #>> '{snapshot,stakeCents}'::text[]))::numeric / (100)::numeric)"
+    },
     "research_candidates.registered_at": {
       "type": "timestamp with time zone",
       "notNull": true,
       "identity": "",
       "position": 9,
+      "generated": "",
+      "expression": null
+    },
+    "historical_audit_history.record_id": {
+      "type": "uuid",
+      "notNull": false,
+      "identity": "",
+      "position": 3,
+      "generated": "",
+      "expression": null
+    },
+    "historical_notifications.record_id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 3,
+      "generated": "",
+      "expression": null
+    },
+    "historical_paper_results.record_id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 1,
+      "generated": "",
+      "expression": null
+    },
+    "historical_audit_history.created_at": {
+      "type": "timestamp with time zone",
+      "notNull": true,
+      "identity": "",
+      "position": 6,
+      "generated": "",
+      "expression": null
+    },
+    "historical_notifications.created_at": {
+      "type": "timestamp with time zone",
+      "notNull": true,
+      "identity": "",
+      "position": 6,
+      "generated": "",
+      "expression": null
+    },
+    "historical_notifications.dedupe_key": {
+      "type": "text",
+      "notNull": true,
+      "identity": "",
+      "position": 5,
+      "generated": "s",
+      "expression": "(payload ->> 'dedupeKey'::text)"
+    },
+    "historical_paper_results.updated_at": {
+      "type": "timestamp with time zone",
+      "notNull": true,
+      "identity": "",
+      "position": 4,
+      "generated": "",
+      "expression": null
+    },
+    "historical_research_records.payload": {
+      "type": "jsonb",
+      "notNull": true,
+      "identity": "",
+      "position": 5,
+      "generated": "",
+      "expression": null
+    },
+    "historical_research_records.user_id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 2,
+      "generated": "",
+      "expression": null
+    },
+    "historical_import_batches.created_at": {
+      "type": "timestamp with time zone",
+      "notNull": true,
+      "identity": "",
+      "position": 5,
+      "generated": "",
+      "expression": null
+    },
+    "historical_research_records.batch_id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 3,
       "generated": "",
       "expression": null
     },
@@ -884,6 +1137,102 @@ with expected as (select $edgelab_catalog${
       "position": 4,
       "generated": "",
       "expression": null
+    },
+    "historical_import_batches.source_hash": {
+      "type": "text",
+      "notNull": true,
+      "identity": "",
+      "position": 4,
+      "generated": "s",
+      "expression": "(payload ->> 'sourceHash'::text)"
+    },
+    "historical_research_records.row_number": {
+      "type": "integer",
+      "notNull": true,
+      "identity": "",
+      "position": 4,
+      "generated": "",
+      "expression": null
+    },
+    "historical_workspace_revisions.user_id": {
+      "type": "uuid",
+      "notNull": true,
+      "identity": "",
+      "position": 1,
+      "generated": "",
+      "expression": null
+    },
+    "historical_research_records.external_id": {
+      "type": "text",
+      "notNull": false,
+      "identity": "",
+      "position": 7,
+      "generated": "s",
+      "expression": "(payload #>> '{snapshot,externalId}'::text[])"
+    },
+    "historical_research_records.fingerprint": {
+      "type": "text",
+      "notNull": true,
+      "identity": "",
+      "position": 6,
+      "generated": "s",
+      "expression": "(payload ->> 'fingerprint'::text)"
+    },
+    "historical_research_records.imported_at": {
+      "type": "timestamp with time zone",
+      "notNull": true,
+      "identity": "",
+      "position": 15,
+      "generated": "",
+      "expression": null
+    },
+    "historical_research_records.probability": {
+      "type": "numeric",
+      "notNull": false,
+      "identity": "",
+      "position": 14,
+      "generated": "s",
+      "expression": "((payload #>> '{snapshot,probability}'::text[]))::numeric"
+    },
+    "historical_workspace_revisions.revision": {
+      "type": "bigint",
+      "notNull": true,
+      "identity": "",
+      "position": 2,
+      "generated": "",
+      "expression": "0"
+    },
+    "historical_research_records.decimal_odds": {
+      "type": "numeric(12,4)",
+      "notNull": false,
+      "identity": "",
+      "position": 13,
+      "generated": "s",
+      "expression": "((payload #>> '{snapshot,odds}'::text[]))::numeric"
+    },
+    "historical_workspace_revisions.updated_at": {
+      "type": "timestamp with time zone",
+      "notNull": true,
+      "identity": "",
+      "position": 3,
+      "generated": "",
+      "expression": "now()"
+    },
+    "historical_research_records.reported_payout": {
+      "type": "numeric(14,2)",
+      "notNull": false,
+      "identity": "",
+      "position": 12,
+      "generated": "s",
+      "expression": "(((payload #>> '{snapshot,payoutCents}'::text[]))::numeric / (100)::numeric)"
+    },
+    "historical_research_records.source_reference": {
+      "type": "text",
+      "notNull": false,
+      "identity": "",
+      "position": 8,
+      "generated": "s",
+      "expression": "(payload #>> '{snapshot,sourceReference}'::text[])"
     }
   },
   "indexes": {
@@ -1146,12 +1495,47 @@ with expected as (select $edgelab_catalog${
       "primary": false,
       "definition": "CREATE UNIQUE INDEX paper_predictions_user_id_id_key ON paper_predictions USING btree (user_id, id)"
     },
+    "historical_audit_history.historical_audits_owner_date": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_audits_owner_date ON historical_audit_history USING btree (user_id, created_at DESC)"
+    },
     "model_versions.model_versions_user_id_name_method_key": {
       "ready": true,
       "valid": true,
       "unique": true,
       "primary": false,
       "definition": "CREATE UNIQUE INDEX model_versions_user_id_name_method_key ON model_versions USING btree (user_id, name, method)"
+    },
+    "historical_audit_history.historical_audit_history_pkey": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": true,
+      "definition": "CREATE UNIQUE INDEX historical_audit_history_pkey ON historical_audit_history USING btree (id)"
+    },
+    "historical_audit_history.historical_audits_owner_batch": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_audits_owner_batch ON historical_audit_history USING btree (user_id, batch_id)"
+    },
+    "historical_notifications.historical_notifications_pkey": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": true,
+      "definition": "CREATE UNIQUE INDEX historical_notifications_pkey ON historical_notifications USING btree (id)"
+    },
+    "historical_paper_results.historical_paper_results_pkey": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": true,
+      "definition": "CREATE UNIQUE INDEX historical_paper_results_pkey ON historical_paper_results USING btree (record_id)"
     },
     "odds_snapshots.odds_snapshots_user_id_candidate_id_key": {
       "ready": true,
@@ -1167,6 +1551,62 @@ with expected as (select $edgelab_catalog${
       "primary": false,
       "definition": "CREATE UNIQUE INDEX research_candidates_user_id_id_key ON research_candidates USING btree (user_id, id)"
     },
+    "historical_audit_history.historical_audits_owner_record": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_audits_owner_record ON historical_audit_history USING btree (user_id, record_id)"
+    },
+    "historical_import_batches.historical_batches_owner_date": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_batches_owner_date ON historical_import_batches USING btree (user_id, created_at DESC)"
+    },
+    "historical_import_batches.historical_import_batches_pkey": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": true,
+      "definition": "CREATE UNIQUE INDEX historical_import_batches_pkey ON historical_import_batches USING btree (id)"
+    },
+    "historical_import_batches.historical_batches_owner_source": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_batches_owner_source ON historical_import_batches USING btree (user_id, source_hash)"
+    },
+    "historical_research_records.historical_external_reference": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_external_reference ON historical_research_records USING btree (user_id, edgelab_history_reference_key(external_id, source_reference)) WHERE ((external_id IS NOT NULL) AND (source_reference IS NOT NULL))"
+    },
+    "historical_research_records.historical_records_owner_date": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_records_owner_date ON historical_research_records USING btree (user_id, imported_at DESC)"
+    },
+    "historical_research_records.historical_records_owner_kind": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_records_owner_kind ON historical_research_records USING btree (user_id, kind, sport)"
+    },
+    "historical_research_records.historical_records_owner_batch": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_records_owner_batch ON historical_research_records USING btree (user_id, batch_id)"
+    },
     "financial_transactions.financial_transactions_user_id_id_key": {
       "ready": true,
       "valid": true,
@@ -1174,12 +1614,103 @@ with expected as (select $edgelab_catalog${
       "primary": false,
       "definition": "CREATE UNIQUE INDEX financial_transactions_user_id_id_key ON financial_transactions USING btree (user_id, id)"
     },
+    "historical_notifications.historical_notifications_owner_date": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_notifications_owner_date ON historical_notifications USING btree (user_id, created_at DESC)"
+    },
+    "historical_research_records.historical_research_records_pkey": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": true,
+      "definition": "CREATE UNIQUE INDEX historical_research_records_pkey ON historical_research_records USING btree (id)"
+    },
     "paper_predictions.paper_predictions_user_id_candidate_id_key": {
       "ready": true,
       "valid": true,
       "unique": true,
       "primary": false,
       "definition": "CREATE UNIQUE INDEX paper_predictions_user_id_candidate_id_key ON paper_predictions USING btree (user_id, candidate_id)"
+    },
+    "historical_notifications.historical_notifications_owner_record": {
+      "ready": true,
+      "valid": true,
+      "unique": false,
+      "primary": false,
+      "definition": "CREATE INDEX historical_notifications_owner_record ON historical_notifications USING btree (user_id, record_id)"
+    },
+    "historical_audit_history.historical_audit_history_user_id_id_key": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_audit_history_user_id_id_key ON historical_audit_history USING btree (user_id, id)"
+    },
+    "historical_notifications.historical_notifications_user_id_id_key": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_notifications_user_id_id_key ON historical_notifications USING btree (user_id, id)"
+    },
+    "historical_import_batches.historical_import_batches_user_id_id_key": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_import_batches_user_id_id_key ON historical_import_batches USING btree (user_id, id)"
+    },
+    "historical_workspace_revisions.historical_workspace_revisions_pkey": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": true,
+      "definition": "CREATE UNIQUE INDEX historical_workspace_revisions_pkey ON historical_workspace_revisions USING btree (user_id)"
+    },
+    "historical_research_records.historical_research_records_user_id_id_key": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_research_records_user_id_id_key ON historical_research_records USING btree (user_id, id)"
+    },
+    "historical_notifications.historical_notifications_user_id_record_id_key": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_notifications_user_id_record_id_key ON historical_notifications USING btree (user_id, record_id)"
+    },
+    "historical_paper_results.historical_paper_results_user_id_record_id_key": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_paper_results_user_id_record_id_key ON historical_paper_results USING btree (user_id, record_id)"
+    },
+    "historical_notifications.historical_notifications_user_id_dedupe_key_key": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_notifications_user_id_dedupe_key_key ON historical_notifications USING btree (user_id, dedupe_key)"
+    },
+    "historical_research_records.historical_research_records_user_id_fingerprint_key": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_research_records_user_id_fingerprint_key ON historical_research_records USING btree (user_id, fingerprint)"
+    },
+    "historical_research_records.historical_research_records_user_id_batch_id_row_number_key": {
+      "ready": true,
+      "valid": true,
+      "unique": true,
+      "primary": false,
+      "definition": "CREATE UNIQUE INDEX historical_research_records_user_id_batch_id_row_number_key ON historical_research_records USING btree (user_id, batch_id, row_number)"
     }
   },
   "policies": {
@@ -1301,6 +1832,60 @@ with expected as (select $edgelab_catalog${
       "permissive": true
     },
     "financial_transactions.owner_access": {
+      "check": "(user_id = auth.uid())",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "(user_id = auth.uid())",
+      "command": "*",
+      "permissive": true
+    },
+    "historical_audit_history.historical_owner": {
+      "check": "(user_id = auth.uid())",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "(user_id = auth.uid())",
+      "command": "*",
+      "permissive": true
+    },
+    "historical_notifications.historical_owner": {
+      "check": "(user_id = auth.uid())",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "(user_id = auth.uid())",
+      "command": "*",
+      "permissive": true
+    },
+    "historical_paper_results.historical_owner": {
+      "check": "(user_id = auth.uid())",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "(user_id = auth.uid())",
+      "command": "*",
+      "permissive": true
+    },
+    "historical_import_batches.historical_owner": {
+      "check": "(user_id = auth.uid())",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "(user_id = auth.uid())",
+      "command": "*",
+      "permissive": true
+    },
+    "historical_research_records.historical_owner": {
+      "check": "(user_id = auth.uid())",
+      "roles": [
+        "authenticated"
+      ],
+      "using": "(user_id = auth.uid())",
+      "command": "*",
+      "permissive": true
+    },
+    "historical_workspace_revisions.historical_owner": {
       "check": "(user_id = auth.uid())",
       "roles": [
         "authenticated"
@@ -1500,11 +2085,38 @@ with expected as (select $edgelab_catalog${
       "deferrable": false,
       "initiallyDeferred": false
     },
+    "historical_paper_results.historical_paper_audit": {
+      "type": 21,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_audit_lifecycle()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_paper_results.historical_paper_guard": {
+      "type": 23,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_guard_paper()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
     "paper_predictions.edgelab_direct_write_revision": {
       "type": 21,
       "when": null,
       "enabled": "O",
       "function": "edgelab_bump_direct_revision()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_import_batches.historical_batch_audit": {
+      "type": 5,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_audit_lifecycle()",
       "arguments": "",
       "deferrable": false,
       "initiallyDeferred": false
@@ -1518,11 +2130,146 @@ with expected as (select $edgelab_catalog${
       "deferrable": false,
       "initiallyDeferred": false
     },
+    "historical_audit_history.historical_audit_immutable": {
+      "type": 19,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_deny_rewrite()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_audit_history.historical_direct_revision": {
+      "type": 21,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_bump_revision()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_import_batches.historical_batch_complete": {
+      "type": 5,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_guard_batch_totals()",
+      "arguments": "",
+      "deferrable": true,
+      "initiallyDeferred": true
+    },
+    "historical_notifications.historical_direct_revision": {
+      "type": 21,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_bump_revision()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_paper_results.historical_direct_revision": {
+      "type": 21,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_bump_revision()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
     "financial_transactions.edgelab_direct_write_revision": {
       "type": 21,
       "when": null,
       "enabled": "O",
       "function": "edgelab_bump_direct_revision()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_import_batches.historical_batch_immutable": {
+      "type": 19,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_deny_rewrite()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_import_batches.historical_direct_revision": {
+      "type": 21,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_bump_revision()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_audit_history.historical_audit_source_guard": {
+      "type": 7,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_guard_audit()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_notifications.historical_notification_audit": {
+      "type": 21,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_audit_lifecycle()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_notifications.historical_notification_guard": {
+      "type": 23,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_guard_notification()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_research_records.historical_direct_revision": {
+      "type": 21,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_bump_revision()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_research_records.historical_record_immutable": {
+      "type": 19,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_deny_rewrite()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_research_records.historical_records_complete": {
+      "type": 5,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_guard_batch_totals()",
+      "arguments": "",
+      "deferrable": true,
+      "initiallyDeferred": true
+    },
+    "historical_workspace_revisions.historical_revision_guard": {
+      "type": 23,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_guard_revision()",
+      "arguments": "",
+      "deferrable": false,
+      "initiallyDeferred": false
+    },
+    "historical_research_records.historical_record_batch_guard": {
+      "type": 7,
+      "when": null,
+      "enabled": "O",
+      "function": "edgelab_history_guard_record()",
       "arguments": "",
       "deferrable": false,
       "initiallyDeferred": false
@@ -1589,6 +2336,30 @@ with expected as (select $edgelab_catalog${
       ],
       "securityDefiner": false
     },
+    "edgelab_history_guard_audit()": {
+      "strict": false,
+      "returns": "trigger",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "1da121aaeffe03e7dc09154eb2c201aafd2e04e2311d8f39c910a5cf852c1530",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_guard_paper()": {
+      "strict": false,
+      "returns": "trigger",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "afde61d8ee2a9f6b7ae00d8994f26dcf6ab08c6b1d666684512b4ad9d61a044f",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
     "edgelab_bump_direct_revision()": {
       "strict": false,
       "returns": "trigger",
@@ -1613,12 +2384,156 @@ with expected as (select $edgelab_catalog${
       ],
       "securityDefiner": false
     },
+    "edgelab_history_guard_record()": {
+      "strict": false,
+      "returns": "trigger",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "2536dbc5b8253abc827cf925ce86a48612f8af3e47054bb2a9ce41d9127ad32d",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_bump_revision()": {
+      "strict": false,
+      "returns": "trigger",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "bd12aefa12de74c7b7ea3c5f637f639cb153a8045eaf104126cb78053fbcdd53",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_guard_revision()": {
+      "strict": false,
+      "returns": "trigger",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "10a7f736052f5191aa4639c7fb5a58fe5b82ab664920e001ffbdd6bafc56c4f1",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_leg(value jsonb)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "sql",
+      "bodySha256": "bce43f4177cdceefda46ce86b79970ffe650837a2c1cbe4ece8664b250b36bc1",
+      "volatility": "s",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
     "edgelab_guard_settings_revision()": {
       "strict": false,
       "returns": "trigger",
       "defaults": null,
       "language": "plpgsql",
       "bodySha256": "fce2c509931a1623c73c06f51df24be88428a53400ad0426cff3122a961410a5",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_audit_lifecycle()": {
+      "strict": false,
+      "returns": "trigger",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "156a0844297d2c0437cbe4055f455d30457ffbb927033994938ed845bce88778",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_time(value jsonb)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "sql",
+      "bodySha256": "fd4bca5c241a3d34a8b932c3c6e740760340599540c0f9c50301d45637f528a5",
+      "volatility": "s",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_audit(value jsonb)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "sql",
+      "bodySha256": "dd0490820e0ce0956db1d04c7d67626b02002f0c7adb77084a85eeae2553f526",
+      "volatility": "s",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_batch(value jsonb)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "f8b6806aad1bb5c10ea815278bf72221cfe9671afe13395a65b5358e00fc13e1",
+      "volatility": "s",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_paper(value jsonb)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "17e4bdd9a02f7cb71653d2f34d206f4c477514bcc1fab21eb950e9f6e188d2b1",
+      "volatility": "s",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_record(value jsonb)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "e30be4dd01c232d00e9b820c2cfffb8a9d3837318779f59a0f242696910e38c8",
+      "volatility": "s",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_guard_batch_totals()": {
+      "strict": false,
+      "returns": "trigger",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "422f99d4c5a8a83f4d3540fccb7279c7f76c195d772124e090f88da636d80c62",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_guard_notification()": {
+      "strict": false,
+      "returns": "trigger",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "91224d28cda147b894b1825e9e3cd7a21ea657e2192c8d61968410ec722b62e1",
       "volatility": "v",
       "configuration": [
         "search_path=\"\""
@@ -1644,6 +2559,18 @@ with expected as (select $edgelab_catalog${
       "language": "sql",
       "bodySha256": "2dbf65b696dadb1e0ae34ef86a9151477cbf704de70173753e866951d1a97888",
       "volatility": "i",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_snapshot(value jsonb)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "aaa8eb0b4b89f09a6cd32ec43c46af450a0192e19d0bc7a3c30a0f3f6f983a97",
+      "volatility": "s",
       "configuration": [
         "search_path=\"\""
       ],
@@ -1691,6 +2618,18 @@ with expected as (select $edgelab_catalog${
       "defaults": null,
       "language": "sql",
       "bodySha256": "ee8f949712e85d6c977ffdf05a66ed990c139f4b2142ef4f8a4135478c714236",
+      "volatility": "s",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_notification(value jsonb)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "sql",
+      "bodySha256": "50a9eea2b367c666deb9d688dbd7caef044214b2b19f7b2ea09c751362311425",
       "volatility": "s",
       "configuration": [
         "search_path=\"\""
@@ -1745,6 +2684,18 @@ with expected as (select $edgelab_catalog${
       ],
       "securityDefiner": false
     },
+    "edgelab_load_history(expected_owner_id uuid)": {
+      "strict": false,
+      "returns": "jsonb",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "42617cc164f95234dfc8e2bdcc5874efb4fa09771484ebddcf7db47b8ab86b49",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
     "edgelab_valid_candidate_snapshot(value jsonb)": {
       "strict": false,
       "returns": "boolean",
@@ -1781,6 +2732,18 @@ with expected as (select $edgelab_catalog${
       ],
       "securityDefiner": false
     },
+    "edgelab_history_object(value jsonb, keys text[])": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "sql",
+      "bodySha256": "987041509b64bb6b85a202f03b57d85cea9d33e8eb50b45715f192ccb3ee7117",
+      "volatility": "i",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
     "edgelab_valid_notification_snapshot(value jsonb)": {
       "strict": false,
       "returns": "boolean",
@@ -1793,12 +2756,60 @@ with expected as (select $edgelab_catalog${
       ],
       "securityDefiner": false
     },
+    "edgelab_history_text(value jsonb, maximum integer)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": null,
+      "language": "sql",
+      "bodySha256": "78d65dea5ff41370a906dd45c0abe1b1f2cc9fd8c9cc9d7411ced2de0a9b93e6",
+      "volatility": "i",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_cents(value jsonb, minimum integer)": {
+      "strict": false,
+      "returns": "boolean",
+      "defaults": "0",
+      "language": "sql",
+      "bodySha256": "6c29f0674b8382b825bc11dbae8282cce24901763d7d4ce54531a070c3f00141",
+      "volatility": "i",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
     "edgelab_save_workspace(workspace jsonb, expected_revision bigint)": {
       "strict": false,
       "returns": "bigint",
       "defaults": null,
       "language": "plpgsql",
       "bodySha256": "a62e38e138a5f0c295dd14af6ee3df814195c22ef62df082facc743b4eb4eefa",
+      "volatility": "v",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_history_reference_key(external_id text, source_reference text)": {
+      "strict": true,
+      "returns": "text",
+      "defaults": null,
+      "language": "sql",
+      "bodySha256": "b8cef65bb43a5e97eb1b9a9f37737fe6df906da007b2b62b8e1ce59291443304",
+      "volatility": "i",
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "securityDefiner": false
+    },
+    "edgelab_save_history(workspace jsonb, expected_revision bigint, expected_owner_id uuid)": {
+      "strict": false,
+      "returns": "bigint",
+      "defaults": null,
+      "language": "plpgsql",
+      "bodySha256": "9885303b75dcb5f7b293e26df63d25cabf651058c8e40364a7c0c5d06bece5b6",
       "volatility": "v",
       "configuration": [
         "search_path=\"\""
@@ -2603,6 +3614,27 @@ with expected as (select $edgelab_catalog${
       "deferrable": false,
       "definition": "CHECK ((timezone = 'Australia/Melbourne'::text))"
     },
+    "historical_audit_history.historical_audit_history_pkey": {
+      "type": "p",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    "historical_notifications.historical_notifications_pkey": {
+      "type": "p",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    "historical_paper_results.historical_paper_results_pkey": {
+      "type": "p",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "PRIMARY KEY (record_id)"
+    },
     "odds_snapshots.odds_snapshots_user_id_candidate_id_key": {
       "type": "u",
       "deferred": false,
@@ -2645,6 +3677,27 @@ with expected as (select $edgelab_catalog${
       "deferrable": false,
       "definition": "CHECK (((funding_cap > (0)::numeric) AND (funding_cap <= (1000000)::numeric) AND (default_stake > (0)::numeric) AND (default_stake <= (1000000)::numeric) AND (funding_cap <> 'NaN'::numeric) AND (default_stake <> 'NaN'::numeric))) NOT VALID"
     },
+    "historical_audit_history.historical_audit_history_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'id'::text))::uuid IS DISTINCT FROM id)))"
+    },
+    "historical_notifications.historical_notifications_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'id'::text))::uuid IS DISTINCT FROM id)))"
+    },
+    "historical_paper_results.historical_paper_results_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'recordId'::text))::uuid IS DISTINCT FROM record_id)))"
+    },
     "odds_snapshots.odds_snapshots_user_id_candidate_id_fkey": {
       "type": "f",
       "deferred": false,
@@ -2659,6 +3712,55 @@ with expected as (select $edgelab_catalog${
       "deferrable": false,
       "definition": "CHECK ((kind = ANY (ARRAY['deposit'::text, 'withdrawal'::text])))"
     },
+    "historical_audit_history.historical_audit_history_check1": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'recordId'::text))::uuid IS DISTINCT FROM record_id)))"
+    },
+    "historical_audit_history.historical_audit_history_check2": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'batchId'::text))::uuid IS DISTINCT FROM batch_id)))"
+    },
+    "historical_audit_history.historical_audit_history_check3": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'timestamp'::text))::timestamp with time zone IS DISTINCT FROM created_at)))"
+    },
+    "historical_import_batches.historical_import_batches_pkey": {
+      "type": "p",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)"
+    },
+    "historical_notifications.historical_notifications_check1": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'recordId'::text))::uuid IS DISTINCT FROM record_id)))"
+    },
+    "historical_notifications.historical_notifications_check2": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'createdAt'::text))::timestamp with time zone IS DISTINCT FROM created_at)))"
+    },
+    "historical_paper_results.historical_paper_results_check1": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'updatedAt'::text))::timestamp with time zone IS DISTINCT FROM updated_at)))"
+    },
     "experiment_settings.experiment_settings_funding_cap_check": {
       "type": "c",
       "deferred": false,
@@ -2672,6 +3774,13 @@ with expected as (select $edgelab_catalog${
       "validated": false,
       "deferrable": false,
       "definition": "CHECK (edgelab_valid_transaction_snapshot(payload)) NOT VALID"
+    },
+    "historical_import_batches.historical_import_batches_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'id'::text))::uuid IS DISTINCT FROM id)))"
     },
     "research_candidates.research_candidates_probability_check": {
       "type": "c",
@@ -2693,6 +3802,13 @@ with expected as (select $edgelab_catalog${
       "validated": true,
       "deferrable": false,
       "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    "historical_import_batches.historical_import_batches_check1": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'createdAt'::text))::timestamp with time zone IS DISTINCT FROM created_at)))"
     },
     "research_candidates.research_candidates_decimal_odds_check": {
       "type": "c",
@@ -2722,6 +3838,13 @@ with expected as (select $edgelab_catalog${
       "deferrable": false,
       "definition": "UNIQUE (user_id, id)"
     },
+    "historical_research_records.historical_research_records_pkey": {
+      "type": "p",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)"
+    },
     "paper_predictions.paper_predictions_hypothetical_stake_check": {
       "type": "c",
       "deferred": false,
@@ -2735,6 +3858,13 @@ with expected as (select $edgelab_catalog${
       "validated": true,
       "deferrable": false,
       "definition": "UNIQUE (user_id, candidate_id)"
+    },
+    "historical_research_records.historical_research_records_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'id'::text))::uuid IS DISTINCT FROM id)))"
     },
     "paper_predictions.paper_predictions_user_id_candidate_id_fkey": {
       "type": "f",
@@ -2750,12 +3880,229 @@ with expected as (select $edgelab_catalog${
       "deferrable": false,
       "definition": "FOREIGN KEY (user_id, event_id) REFERENCES events(user_id, id)"
     },
+    "historical_audit_history.historical_audit_history_user_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    "historical_notifications.historical_notifications_user_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    "historical_paper_results.historical_paper_results_user_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    "historical_research_records.historical_research_records_check1": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'batchId'::text))::uuid IS DISTINCT FROM batch_id)))"
+    },
+    "historical_research_records.historical_research_records_check2": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'rowNumber'::text))::integer IS DISTINCT FROM row_number)))"
+    },
+    "historical_research_records.historical_research_records_check3": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((NOT (((payload ->> 'importedAt'::text))::timestamp with time zone IS DISTINCT FROM imported_at)))"
+    },
+    "historical_audit_history.historical_audit_history_payload_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK (edgelab_history_audit(payload))"
+    },
+    "historical_notifications.historical_notifications_payload_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK (edgelab_history_notification(payload))"
+    },
+    "historical_paper_results.historical_paper_results_payload_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK (edgelab_history_paper(payload))"
+    },
+    "historical_audit_history.historical_audit_history_user_id_id_key": {
+      "type": "u",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "UNIQUE (user_id, id)"
+    },
+    "historical_import_batches.historical_import_batches_user_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    "historical_notifications.historical_notifications_user_id_id_key": {
+      "type": "u",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "UNIQUE (user_id, id)"
+    },
+    "historical_import_batches.historical_import_batches_payload_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK (edgelab_history_batch(payload))"
+    },
+    "historical_import_batches.historical_import_batches_user_id_id_key": {
+      "type": "u",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "UNIQUE (user_id, id)"
+    },
+    "historical_workspace_revisions.historical_workspace_revisions_pkey": {
+      "type": "p",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "PRIMARY KEY (user_id)"
+    },
+    "historical_research_records.historical_research_records_user_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    "historical_research_records.historical_research_records_payload_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK (edgelab_history_record(payload))"
+    },
     "research_candidates.research_candidates_user_id_model_version_id_fkey": {
       "type": "f",
       "deferred": false,
       "validated": true,
       "deferrable": false,
       "definition": "FOREIGN KEY (user_id, model_version_id) REFERENCES model_versions(user_id, id)"
+    },
+    "historical_research_records.historical_research_records_user_id_id_key": {
+      "type": "u",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "UNIQUE (user_id, id)"
+    },
+    "historical_audit_history.historical_audit_history_user_id_batch_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id, batch_id) REFERENCES historical_import_batches(user_id, id)"
+    },
+    "historical_notifications.historical_notifications_user_id_record_id_key": {
+      "type": "u",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "UNIQUE (user_id, record_id)"
+    },
+    "historical_paper_results.historical_paper_results_user_id_record_id_key": {
+      "type": "u",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "UNIQUE (user_id, record_id)"
+    },
+    "historical_audit_history.historical_audit_history_user_id_record_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id, record_id) REFERENCES historical_research_records(user_id, id)"
+    },
+    "historical_notifications.historical_notifications_user_id_dedupe_key_key": {
+      "type": "u",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "UNIQUE (user_id, dedupe_key)"
+    },
+    "historical_notifications.historical_notifications_user_id_record_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id, record_id) REFERENCES historical_research_records(user_id, id)"
+    },
+    "historical_paper_results.historical_paper_results_user_id_record_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id, record_id) REFERENCES historical_research_records(user_id, id)"
+    },
+    "historical_research_records.historical_research_records_row_number_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK (((row_number >= 1) AND (row_number <= 500)))"
+    },
+    "historical_workspace_revisions.historical_workspace_revisions_user_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    "historical_workspace_revisions.historical_workspace_revisions_revision_check": {
+      "type": "c",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "CHECK ((revision >= 0))"
+    },
+    "historical_research_records.historical_research_records_user_id_batch_id_fkey": {
+      "type": "f",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "FOREIGN KEY (user_id, batch_id) REFERENCES historical_import_batches(user_id, id)"
+    },
+    "historical_research_records.historical_research_records_user_id_fingerprint_key": {
+      "type": "u",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "UNIQUE (user_id, fingerprint)"
+    },
+    "historical_research_records.historical_research_records_user_id_batch_id_row_number_key": {
+      "type": "u",
+      "deferred": false,
+      "validated": true,
+      "deferrable": false,
+      "definition": "UNIQUE (user_id, batch_id, row_number)"
     }
   },
   "tableGrants": {
@@ -2913,15 +4260,38 @@ with expected as (select $edgelab_catalog${
     "user_profiles.authenticated.TRIGGER": false,
     "audit_history.authenticated.TRUNCATE": false,
     "financial_transactions.anon.TRUNCATE": false,
+    "historical_audit_history.anon.DELETE": false,
+    "historical_audit_history.anon.INSERT": false,
+    "historical_audit_history.anon.SELECT": false,
+    "historical_audit_history.anon.UPDATE": false,
+    "historical_notifications.anon.DELETE": false,
+    "historical_notifications.anon.INSERT": false,
+    "historical_notifications.anon.SELECT": false,
+    "historical_notifications.anon.UPDATE": false,
+    "historical_paper_results.anon.DELETE": false,
+    "historical_paper_results.anon.INSERT": false,
+    "historical_paper_results.anon.SELECT": false,
+    "historical_paper_results.anon.UPDATE": false,
     "model_versions.authenticated.TRIGGER": false,
     "notifications.authenticated.TRUNCATE": false,
     "odds_snapshots.authenticated.TRIGGER": false,
     "research_runs.authenticated.TRUNCATE": false,
     "user_profiles.authenticated.TRUNCATE": false,
+    "historical_audit_history.anon.TRIGGER": false,
+    "historical_import_batches.anon.DELETE": false,
+    "historical_import_batches.anon.INSERT": false,
+    "historical_import_batches.anon.SELECT": false,
+    "historical_import_batches.anon.UPDATE": false,
+    "historical_notifications.anon.TRIGGER": false,
+    "historical_paper_results.anon.TRIGGER": false,
     "model_versions.authenticated.TRUNCATE": false,
     "odds_snapshots.authenticated.TRUNCATE": false,
     "audit_history.authenticated.REFERENCES": false,
     "financial_transactions.anon.REFERENCES": false,
+    "historical_audit_history.anon.TRUNCATE": false,
+    "historical_import_batches.anon.TRIGGER": false,
+    "historical_notifications.anon.TRUNCATE": false,
+    "historical_paper_results.anon.TRUNCATE": false,
     "notifications.authenticated.REFERENCES": false,
     "paper_predictions.authenticated.DELETE": false,
     "paper_predictions.authenticated.INSERT": true,
@@ -2929,6 +4299,11 @@ with expected as (select $edgelab_catalog${
     "paper_predictions.authenticated.UPDATE": true,
     "research_runs.authenticated.REFERENCES": false,
     "user_profiles.authenticated.REFERENCES": false,
+    "historical_import_batches.anon.TRUNCATE": false,
+    "historical_research_records.anon.DELETE": false,
+    "historical_research_records.anon.INSERT": false,
+    "historical_research_records.anon.SELECT": false,
+    "historical_research_records.anon.UPDATE": false,
     "model_versions.authenticated.REFERENCES": false,
     "odds_snapshots.authenticated.REFERENCES": false,
     "paper_predictions.authenticated.TRIGGER": false,
@@ -2936,25 +4311,81 @@ with expected as (select $edgelab_catalog${
     "experiment_settings.authenticated.INSERT": true,
     "experiment_settings.authenticated.SELECT": true,
     "experiment_settings.authenticated.UPDATE": true,
+    "historical_audit_history.anon.REFERENCES": false,
+    "historical_notifications.anon.REFERENCES": false,
+    "historical_paper_results.anon.REFERENCES": false,
+    "historical_research_records.anon.TRIGGER": false,
     "paper_predictions.authenticated.TRUNCATE": false,
     "research_candidates.authenticated.DELETE": false,
     "research_candidates.authenticated.INSERT": true,
     "research_candidates.authenticated.SELECT": true,
     "research_candidates.authenticated.UPDATE": true,
     "experiment_settings.authenticated.TRIGGER": false,
+    "historical_import_batches.anon.REFERENCES": false,
+    "historical_research_records.anon.TRUNCATE": false,
     "research_candidates.authenticated.TRIGGER": false,
     "experiment_settings.authenticated.TRUNCATE": false,
+    "historical_workspace_revisions.anon.DELETE": false,
+    "historical_workspace_revisions.anon.INSERT": false,
+    "historical_workspace_revisions.anon.SELECT": false,
+    "historical_workspace_revisions.anon.UPDATE": false,
     "paper_predictions.authenticated.REFERENCES": false,
     "research_candidates.authenticated.TRUNCATE": false,
     "financial_transactions.authenticated.DELETE": false,
     "financial_transactions.authenticated.INSERT": true,
     "financial_transactions.authenticated.SELECT": true,
     "financial_transactions.authenticated.UPDATE": true,
+    "historical_research_records.anon.REFERENCES": false,
+    "historical_workspace_revisions.anon.TRIGGER": false,
     "experiment_settings.authenticated.REFERENCES": false,
     "financial_transactions.authenticated.TRIGGER": false,
+    "historical_workspace_revisions.anon.TRUNCATE": false,
     "research_candidates.authenticated.REFERENCES": false,
     "financial_transactions.authenticated.TRUNCATE": false,
-    "financial_transactions.authenticated.REFERENCES": false
+    "historical_audit_history.authenticated.DELETE": false,
+    "historical_audit_history.authenticated.INSERT": true,
+    "historical_audit_history.authenticated.SELECT": true,
+    "historical_audit_history.authenticated.UPDATE": true,
+    "historical_notifications.authenticated.DELETE": false,
+    "historical_notifications.authenticated.INSERT": true,
+    "historical_notifications.authenticated.SELECT": true,
+    "historical_notifications.authenticated.UPDATE": true,
+    "historical_paper_results.authenticated.DELETE": false,
+    "historical_paper_results.authenticated.INSERT": true,
+    "historical_paper_results.authenticated.SELECT": true,
+    "historical_paper_results.authenticated.UPDATE": true,
+    "historical_audit_history.authenticated.TRIGGER": false,
+    "historical_import_batches.authenticated.DELETE": false,
+    "historical_import_batches.authenticated.INSERT": true,
+    "historical_import_batches.authenticated.SELECT": true,
+    "historical_import_batches.authenticated.UPDATE": true,
+    "historical_notifications.authenticated.TRIGGER": false,
+    "historical_paper_results.authenticated.TRIGGER": false,
+    "historical_workspace_revisions.anon.REFERENCES": false,
+    "financial_transactions.authenticated.REFERENCES": false,
+    "historical_audit_history.authenticated.TRUNCATE": false,
+    "historical_import_batches.authenticated.TRIGGER": false,
+    "historical_notifications.authenticated.TRUNCATE": false,
+    "historical_paper_results.authenticated.TRUNCATE": false,
+    "historical_import_batches.authenticated.TRUNCATE": false,
+    "historical_research_records.authenticated.DELETE": false,
+    "historical_research_records.authenticated.INSERT": true,
+    "historical_research_records.authenticated.SELECT": true,
+    "historical_research_records.authenticated.UPDATE": true,
+    "historical_audit_history.authenticated.REFERENCES": false,
+    "historical_notifications.authenticated.REFERENCES": false,
+    "historical_paper_results.authenticated.REFERENCES": false,
+    "historical_research_records.authenticated.TRIGGER": false,
+    "historical_import_batches.authenticated.REFERENCES": false,
+    "historical_research_records.authenticated.TRUNCATE": false,
+    "historical_workspace_revisions.authenticated.DELETE": false,
+    "historical_workspace_revisions.authenticated.INSERT": true,
+    "historical_workspace_revisions.authenticated.SELECT": true,
+    "historical_workspace_revisions.authenticated.UPDATE": true,
+    "historical_research_records.authenticated.REFERENCES": false,
+    "historical_workspace_revisions.authenticated.TRIGGER": false,
+    "historical_workspace_revisions.authenticated.TRUNCATE": false,
+    "historical_workspace_revisions.authenticated.REFERENCES": false
   },
   "columnGrants": {
     "bets.anon.INSERT": false,
@@ -3046,6 +4477,18 @@ with expected as (select $edgelab_catalog${
     "odds_snapshots.authenticated.SELECT": true,
     "odds_snapshots.authenticated.UPDATE": true,
     "research_candidates.anon.REFERENCES": false,
+    "historical_audit_history.anon.INSERT": false,
+    "historical_audit_history.anon.SELECT": false,
+    "historical_audit_history.anon.UPDATE": false,
+    "historical_notifications.anon.INSERT": false,
+    "historical_notifications.anon.SELECT": false,
+    "historical_notifications.anon.UPDATE": false,
+    "historical_paper_results.anon.INSERT": false,
+    "historical_paper_results.anon.SELECT": false,
+    "historical_paper_results.anon.UPDATE": false,
+    "historical_import_batches.anon.INSERT": false,
+    "historical_import_batches.anon.SELECT": false,
+    "historical_import_batches.anon.UPDATE": false,
     "audit_history.authenticated.REFERENCES": false,
     "financial_transactions.anon.REFERENCES": false,
     "notifications.authenticated.REFERENCES": false,
@@ -3054,21 +4497,57 @@ with expected as (select $edgelab_catalog${
     "paper_predictions.authenticated.UPDATE": true,
     "research_runs.authenticated.REFERENCES": false,
     "user_profiles.authenticated.REFERENCES": false,
+    "historical_research_records.anon.INSERT": false,
+    "historical_research_records.anon.SELECT": false,
+    "historical_research_records.anon.UPDATE": false,
     "model_versions.authenticated.REFERENCES": false,
     "odds_snapshots.authenticated.REFERENCES": false,
     "experiment_settings.authenticated.INSERT": true,
     "experiment_settings.authenticated.SELECT": true,
     "experiment_settings.authenticated.UPDATE": true,
+    "historical_audit_history.anon.REFERENCES": false,
+    "historical_notifications.anon.REFERENCES": false,
+    "historical_paper_results.anon.REFERENCES": false,
     "research_candidates.authenticated.INSERT": true,
     "research_candidates.authenticated.SELECT": true,
     "research_candidates.authenticated.UPDATE": true,
+    "historical_import_batches.anon.REFERENCES": false,
+    "historical_workspace_revisions.anon.INSERT": false,
+    "historical_workspace_revisions.anon.SELECT": false,
+    "historical_workspace_revisions.anon.UPDATE": false,
     "paper_predictions.authenticated.REFERENCES": false,
     "financial_transactions.authenticated.INSERT": true,
     "financial_transactions.authenticated.SELECT": true,
     "financial_transactions.authenticated.UPDATE": true,
+    "historical_research_records.anon.REFERENCES": false,
     "experiment_settings.authenticated.REFERENCES": false,
     "research_candidates.authenticated.REFERENCES": false,
-    "financial_transactions.authenticated.REFERENCES": false
+    "historical_audit_history.authenticated.INSERT": true,
+    "historical_audit_history.authenticated.SELECT": true,
+    "historical_audit_history.authenticated.UPDATE": true,
+    "historical_notifications.authenticated.INSERT": true,
+    "historical_notifications.authenticated.SELECT": true,
+    "historical_notifications.authenticated.UPDATE": true,
+    "historical_paper_results.authenticated.INSERT": true,
+    "historical_paper_results.authenticated.SELECT": true,
+    "historical_paper_results.authenticated.UPDATE": true,
+    "historical_import_batches.authenticated.INSERT": true,
+    "historical_import_batches.authenticated.SELECT": true,
+    "historical_import_batches.authenticated.UPDATE": true,
+    "historical_workspace_revisions.anon.REFERENCES": false,
+    "financial_transactions.authenticated.REFERENCES": false,
+    "historical_research_records.authenticated.INSERT": true,
+    "historical_research_records.authenticated.SELECT": true,
+    "historical_research_records.authenticated.UPDATE": true,
+    "historical_audit_history.authenticated.REFERENCES": false,
+    "historical_notifications.authenticated.REFERENCES": false,
+    "historical_paper_results.authenticated.REFERENCES": false,
+    "historical_import_batches.authenticated.REFERENCES": false,
+    "historical_workspace_revisions.authenticated.INSERT": true,
+    "historical_workspace_revisions.authenticated.SELECT": true,
+    "historical_workspace_revisions.authenticated.UPDATE": true,
+    "historical_research_records.authenticated.REFERENCES": false,
+    "historical_workspace_revisions.authenticated.REFERENCES": false
   },
   "functionGrants": {
     "edgelab_audit_bet().anon": true,
@@ -3077,47 +4556,91 @@ with expected as (select $edgelab_catalog${
     "edgelab_guard_prediction().anon": true,
     "edgelab_audit_bet().authenticated": true,
     "edgelab_guard_leg_identity().anon": true,
+    "edgelab_history_guard_audit().anon": false,
+    "edgelab_history_guard_paper().anon": false,
     "edgelab_bump_direct_revision().anon": true,
     "edgelab_check_leg_projection().anon": true,
+    "edgelab_history_guard_record().anon": false,
     "edgelab_deny_rewrite().authenticated": true,
+    "edgelab_history_bump_revision().anon": false,
+    "edgelab_history_guard_revision().anon": false,
+    "edgelab_history_leg(value jsonb).anon": false,
     "edgelab_guard_settings_revision().anon": true,
+    "edgelab_history_audit_lifecycle().anon": false,
+    "edgelab_history_time(value jsonb).anon": false,
     "edgelab_load_workspace().authenticated": true,
+    "edgelab_history_audit(value jsonb).anon": false,
+    "edgelab_history_batch(value jsonb).anon": false,
+    "edgelab_history_paper(value jsonb).anon": false,
     "edgelab_guard_prediction().authenticated": true,
+    "edgelab_history_record(value jsonb).anon": false,
+    "edgelab_history_guard_batch_totals().anon": false,
+    "edgelab_history_guard_notification().anon": false,
     "edgelab_valid_json_odds(value jsonb).anon": false,
     "edgelab_valid_json_uuid(value jsonb).anon": false,
     "edgelab_guard_leg_identity().authenticated": true,
+    "edgelab_history_snapshot(value jsonb).anon": false,
     "edgelab_valid_json_cents(value jsonb).anon": false,
+    "edgelab_history_guard_audit().authenticated": true,
+    "edgelab_history_guard_paper().authenticated": true,
     "edgelab_bump_direct_revision().authenticated": true,
     "edgelab_check_leg_projection().authenticated": true,
+    "edgelab_history_guard_record().authenticated": true,
     "edgelab_valid_bet_snapshot(value jsonb).anon": false,
     "edgelab_valid_leg_snapshot(value jsonb).anon": false,
     "edgelab_valid_run_snapshot(value jsonb).anon": false,
+    "edgelab_history_bump_revision().authenticated": true,
+    "edgelab_history_guard_revision().authenticated": true,
+    "edgelab_history_leg(value jsonb).authenticated": true,
+    "edgelab_history_notification(value jsonb).anon": false,
     "edgelab_valid_audit_snapshot(value jsonb).anon": false,
     "edgelab_valid_json_timestamp(value jsonb).anon": false,
     "edgelab_valid_paper_snapshot(value jsonb).anon": false,
     "edgelab_guard_settings_revision().authenticated": true,
+    "edgelab_history_audit_lifecycle().authenticated": true,
+    "edgelab_history_time(value jsonb).authenticated": true,
+    "edgelab_history_audit(value jsonb).authenticated": true,
+    "edgelab_history_batch(value jsonb).authenticated": true,
+    "edgelab_history_paper(value jsonb).authenticated": true,
     "edgelab_valid_json_probability(value jsonb).anon": false,
+    "edgelab_history_record(value jsonb).authenticated": true,
+    "edgelab_load_history(expected_owner_id uuid).anon": false,
+    "edgelab_history_guard_batch_totals().authenticated": true,
+    "edgelab_history_guard_notification().authenticated": true,
     "edgelab_valid_candidate_snapshot(value jsonb).anon": false,
     "edgelab_valid_json_odds(value jsonb).authenticated": true,
     "edgelab_valid_json_uuid(value jsonb).authenticated": true,
     "edgelab_valid_private_provenance(value jsonb).anon": false,
+    "edgelab_history_snapshot(value jsonb).authenticated": true,
     "edgelab_valid_json_cents(value jsonb).authenticated": true,
     "edgelab_valid_transaction_snapshot(value jsonb).anon": false,
+    "edgelab_history_object(value jsonb, keys text[]).anon": false,
     "edgelab_valid_bet_snapshot(value jsonb).authenticated": true,
     "edgelab_valid_leg_snapshot(value jsonb).authenticated": true,
     "edgelab_valid_notification_snapshot(value jsonb).anon": false,
     "edgelab_valid_run_snapshot(value jsonb).authenticated": true,
+    "edgelab_history_notification(value jsonb).authenticated": true,
+    "edgelab_history_text(value jsonb, maximum integer).anon": false,
     "edgelab_valid_audit_snapshot(value jsonb).authenticated": true,
     "edgelab_valid_json_timestamp(value jsonb).authenticated": true,
     "edgelab_valid_paper_snapshot(value jsonb).authenticated": true,
+    "edgelab_history_cents(value jsonb, minimum integer).anon": false,
     "edgelab_valid_json_probability(value jsonb).authenticated": true,
+    "edgelab_load_history(expected_owner_id uuid).authenticated": true,
     "edgelab_valid_candidate_snapshot(value jsonb).authenticated": true,
     "edgelab_valid_private_provenance(value jsonb).authenticated": true,
     "edgelab_valid_transaction_snapshot(value jsonb).authenticated": true,
+    "edgelab_history_object(value jsonb, keys text[]).authenticated": true,
     "edgelab_valid_notification_snapshot(value jsonb).authenticated": true,
+    "edgelab_history_text(value jsonb, maximum integer).authenticated": true,
+    "edgelab_history_cents(value jsonb, minimum integer).authenticated": true,
     "edgelab_save_workspace(workspace jsonb, expected_revision bigint).anon": false,
+    "edgelab_history_reference_key(external_id text, source_reference text).anon": false,
     "edgelab_save_workspace(workspace jsonb, expected_revision bigint).authenticated": true,
+    "edgelab_history_reference_key(external_id text, source_reference text).authenticated": true,
+    "edgelab_save_history(workspace jsonb, expected_revision bigint, expected_owner_id uuid).anon": false,
     "edgelab_valid_json_text(value jsonb, minimum integer, maximum integer, trimmed boolean).anon": false,
+    "edgelab_save_history(workspace jsonb, expected_revision bigint, expected_owner_id uuid).authenticated": true,
     "edgelab_valid_json_text(value jsonb, minimum integer, maximum integer, trimmed boolean).authenticated": true
   },
   "explicitTableGrants": {
@@ -3162,7 +4685,25 @@ with expected as (select $edgelab_catalog${
     "research_candidates.authenticated.UPDATE": false,
     "financial_transactions.authenticated.INSERT": false,
     "financial_transactions.authenticated.SELECT": false,
-    "financial_transactions.authenticated.UPDATE": false
+    "financial_transactions.authenticated.UPDATE": false,
+    "historical_audit_history.authenticated.INSERT": false,
+    "historical_audit_history.authenticated.SELECT": false,
+    "historical_audit_history.authenticated.UPDATE": false,
+    "historical_notifications.authenticated.INSERT": false,
+    "historical_notifications.authenticated.SELECT": false,
+    "historical_notifications.authenticated.UPDATE": false,
+    "historical_paper_results.authenticated.INSERT": false,
+    "historical_paper_results.authenticated.SELECT": false,
+    "historical_paper_results.authenticated.UPDATE": false,
+    "historical_import_batches.authenticated.INSERT": false,
+    "historical_import_batches.authenticated.SELECT": false,
+    "historical_import_batches.authenticated.UPDATE": false,
+    "historical_research_records.authenticated.INSERT": false,
+    "historical_research_records.authenticated.SELECT": false,
+    "historical_research_records.authenticated.UPDATE": false,
+    "historical_workspace_revisions.authenticated.INSERT": false,
+    "historical_workspace_revisions.authenticated.SELECT": false,
+    "historical_workspace_revisions.authenticated.UPDATE": false
   },
   "explicitColumnGrants": {},
   "explicitFunctionGrants": {
@@ -3185,24 +4726,46 @@ with expected as (select $edgelab_catalog${
     "edgelab_guard_prediction().authenticated.EXECUTE": false,
     "edgelab_guard_settings_revision().public.EXECUTE": false,
     "edgelab_guard_leg_identity().authenticated.EXECUTE": false,
+    "edgelab_history_guard_audit().authenticated.EXECUTE": false,
+    "edgelab_history_guard_paper().authenticated.EXECUTE": false,
     "edgelab_bump_direct_revision().authenticated.EXECUTE": false,
     "edgelab_check_leg_projection().authenticated.EXECUTE": false,
+    "edgelab_history_guard_record().authenticated.EXECUTE": false,
+    "edgelab_history_bump_revision().authenticated.EXECUTE": false,
+    "edgelab_history_guard_revision().authenticated.EXECUTE": false,
+    "edgelab_history_leg(value jsonb).authenticated.EXECUTE": false,
     "edgelab_guard_settings_revision().authenticated.EXECUTE": false,
+    "edgelab_history_audit_lifecycle().authenticated.EXECUTE": false,
+    "edgelab_history_time(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_history_audit(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_history_batch(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_history_paper(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_history_record(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_history_guard_batch_totals().authenticated.EXECUTE": false,
+    "edgelab_history_guard_notification().authenticated.EXECUTE": false,
     "edgelab_valid_json_odds(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_json_uuid(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_history_snapshot(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_json_cents(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_bet_snapshot(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_leg_snapshot(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_run_snapshot(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_history_notification(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_audit_snapshot(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_json_timestamp(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_paper_snapshot(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_json_probability(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_load_history(expected_owner_id uuid).authenticated.EXECUTE": false,
     "edgelab_valid_candidate_snapshot(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_private_provenance(value jsonb).authenticated.EXECUTE": false,
     "edgelab_valid_transaction_snapshot(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_history_object(value jsonb, keys text[]).authenticated.EXECUTE": false,
     "edgelab_valid_notification_snapshot(value jsonb).authenticated.EXECUTE": false,
+    "edgelab_history_text(value jsonb, maximum integer).authenticated.EXECUTE": false,
+    "edgelab_history_cents(value jsonb, minimum integer).authenticated.EXECUTE": false,
     "edgelab_save_workspace(workspace jsonb, expected_revision bigint).authenticated.EXECUTE": false,
+    "edgelab_history_reference_key(external_id text, source_reference text).authenticated.EXECUTE": false,
+    "edgelab_save_history(workspace jsonb, expected_revision bigint, expected_owner_id uuid).authenticated.EXECUTE": false,
     "edgelab_valid_json_text(value jsonb, minimum integer, maximum integer, trimmed boolean).authenticated.EXECUTE": false
   }
 }$edgelab_catalog$::jsonb as value),
@@ -3210,7 +4773,7 @@ actual as (
 with app_tables as (
   select c.oid,c.relname,c.relrowsecurity,c.relforcerowsecurity,c.relkind
   from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relname in (select jsonb_array_elements_text('["audit_history","bet_legs","bets","events","experiment_settings","financial_transactions","model_versions","notifications","odds_snapshots","paper_predictions","research_candidates","research_runs","sports","user_profiles"]'::jsonb))
+  where n.nspname='public' and c.relname in (select jsonb_array_elements_text('["audit_history","bet_legs","bets","events","experiment_settings","financial_transactions","model_versions","notifications","odds_snapshots","paper_predictions","research_candidates","research_runs","sports","user_profiles","historical_workspace_revisions","historical_import_batches","historical_research_records","historical_paper_results","historical_notifications","historical_audit_history"]'::jsonb))
 ), app_functions as (
   select p.*,l.lanname from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace join pg_catalog.pg_language l on l.oid=p.prolang
   where n.nspname='public' and p.proname like 'edgelab_%'
@@ -3247,5 +4810,5 @@ select jsonb_build_object(
  'unvalidatedChecks',(select count(*) from actual_items where category='constraints' and value->>'type'='c' and value->>'validated'='false'),
  'differences',coalesce((select jsonb_agg(jsonb_build_object('category',category,'object',object_name,'expected',expected,'actual',actual) order by category,object_name) from differences),'[]'::jsonb),
  'rawDifferences',coalesce((select jsonb_agg(jsonb_build_object('category',category,'object',object_name,'expected',expected,'actual',actual) order by category,object_name) from differences),'[]'::jsonb),
- 'platformBaseline','Verified Supabase PUBLIC-schema default function grants to anon/authenticated without grant option; approved migrations revoke them on workspace RPCs and validators. Trigger-only functions retain their existing PUBLIC execution privileges.'
+ 'platformBaseline','Verified Supabase PUBLIC-schema default function grants to anon/authenticated without grant option; approved migrations revoke them on workspace RPCs and validators. Original trigger-only functions retain prior PUBLIC execution privileges; all new history functions deny PUBLIC/anonymous execution.'
 ) as edgelab_schema_verification;

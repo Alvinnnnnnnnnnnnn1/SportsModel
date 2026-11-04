@@ -1,0 +1,36 @@
+'use client';
+import { Download, FileSearch, LockKeyhole } from 'lucide-react';
+import type { RecoveryPreview } from '@/lib/imports/recovery';
+import { recoveryPreviewJson, recoveryPreviewMarkdown } from '@/lib/imports/recovery-report';
+import { money } from '@/lib/utils';
+import { Button } from '../ui/button';
+const categoryLabels: Record<string,string> = {
+  total:'Identified source items',actualCash:'Reported cash wagers',actualBonus:'Reported bonus wagers',
+  actualUnclassified:'Unclassified actual stakes',paperSettled:'Identified settled papers',paperUnresolved:'Papers unresolved at source time',
+  day6CashProposals:'Unconfirmed Day 6 cash proposals',day6PaperProposals:'Unconfirmed Day 6 paper proposals',unidentifiedNotCreated:'Unidentified papers · no rows created',
+};
+function download(result:RecoveryPreview,format:'json'|'md') {
+  const contents=format==='json'?recoveryPreviewJson(result):recoveryPreviewMarkdown(result);
+  const url=URL.createObjectURL(new Blob([contents],{type:format==='json'?'application/json':'text/markdown;charset=utf-8'}));
+  const link=document.createElement('a');link.href=url;link.download=`${result.preview.sourceName.replace(/\.json$/i,'')}.preview.${format}`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+export function RecoveryReview({result}:{result:RecoveryPreview}) {
+  const summary=result.summary, r=result.reconciliation;
+  const rowWarnings=result.preview.rows.reduce((sum,row)=>sum+row.issues.filter(i=>i.severity==='warning').length,0);
+  const rowErrors=result.preview.rows.reduce((sum,row)=>sum+row.issues.filter(i=>i.severity==='error').length,0);
+  return <section className="space-y-4 rounded-xl border border-amber-200/20 bg-amber-200/[.015] p-4" aria-label="Recovery extraction review">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="flex items-center gap-2 text-sm"><FileSearch className="size-4 text-primary" />Recovery extraction · unverified preview</h3><p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">This stages the supplied recovery through the existing validator. It does not approve an import, create a wager, register a proposal or infer funding. Source approval flags are not database-write consent.</p></div><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={()=>download(result,'md')}><Download />Download complete review</Button><Button size="sm" variant="outline" onClick={()=>download(result,'json')}>Preview JSON</Button></div></div>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{Object.entries(summary).map(([key,value])=><div key={key} className="rounded-lg border border-border p-3"><p className="text-[10px] text-muted-foreground">{categoryLabels[key]??key}</p><p className="mt-2 text-lg">{value??'Unknown'}</p></div>)}</div>
+    <p className="text-[11px] leading-relaxed text-amber-200">{summary.unidentifiedNotCreated??'Unknown count of'} unidentified paper predictions are retained only as aggregate metadata. The {summary.day6CashProposals+summary.day6PaperProposals} Day 6 proposals have no placed/registered status or committed stake. Exact missing dates and source facts remain null.</p>
+    <div className="rounded-lg border border-border p-4"><h4 className="text-xs font-medium">Known source amounts · not ledger registration</h4><dl className="mt-3 grid gap-4 text-xs sm:grid-cols-3">{[
+      ['Cash stakes',r.cashStakeCents],['Cash gross returns',r.cashGrossReturnCents],['Bonus face stake · not cash exposure',r.bonusFaceStakeCents],
+      ['Bonus cash winnings',r.bonusCashReturnCents],['Cash-only P/L',r.cashOnlyPnlCents],['Cash + bonus P/L',r.modelledPnlCents],
+      ['Identified paper reported hypothetical P/L',r.identifiedPaperReportedHypotheticalProfitCents],['Day 6 proposed cash stakes · excluded',r.proposedCashStakeCents],['Day 6 proposed paper stakes · excluded',r.proposedPaperHypotheticalStakeCents],
+    ].map(([label,value])=><div key={String(label)}><dt className="text-[10px] text-muted-foreground">{label}</dt><dd className="mt-1">{typeof value==='number'?money(value):'Unknown'}</dd></div>)}</dl><p className="mt-4 text-[11px] text-muted-foreground">Cash-only ROI: {r.cashOnlyRoiPercent===null?'Unknown':`${r.cashOnlyRoiPercent.toFixed(4)}%`}. Reported modelled allocation: {r.reportedAllocationCents===null?'Unknown':money(r.reportedAllocationCents)}. Actual bookmaker balance and deposits are unverified.</p><div className="mt-3 space-y-1">{r.notes.map((note,i)=><p key={i} className="text-[10px] leading-relaxed text-muted-foreground">{note}</p>)}</div></div>
+    <div className="table-wrap rounded-lg border border-border"><table className="data-table"><thead><tr><th>Checkpoint measure</th><th>Reported</th><th>Computed / identified</th><th>Result</th></tr></thead><tbody>{r.comparisons.map(item=>{const format=(value:number|null)=>value===null?'Unknown':item.unit==='AUD_cents'?money(value):item.unit==='percent'?`${value.toFixed(4)}%`:String(value);return <tr key={item.key}><td>{item.label}</td><td>{format(item.reported)}</td><td>{format(item.computed)}</td><td className={item.status==='matches'?'text-primary':'text-amber-200'}>{item.status==='matches'?'Arithmetic matches only':item.status==='mismatch'?'Mismatch':'Insufficient data'}</td></tr>;})}</tbody></table></div>
+    <div className="rounded-lg border border-border p-4"><h4 className="text-xs font-medium">All global warnings</h4><div className="mt-3 space-y-2">{result.globalIssues.map((item,i)=><p key={i} className={item.severity==='error'?'break-words text-[11px] text-red-300':'break-words text-[11px] text-amber-200/85'}>{item.field}: {item.message}</p>)}</div><p className="mt-3 text-[11px] text-muted-foreground">Row validation: {rowErrors} errors and {rowWarnings} warnings. Open each row&apos;s Details below or download the complete review for every warning, mapping, source row and financial-readiness blocker.</p></div>
+    <details className="rounded-lg border border-border p-4"><summary className="cursor-pointer text-xs">Information to recover from the original conversation/tickets</summary><ul className="mt-3 list-disc space-y-2 pl-4 text-[11px] leading-relaxed text-muted-foreground">{result.missingRecovery.map((item,i)=><li key={i}>{item}</li>)}</ul></details>
+    <p className="text-[11px] leading-relaxed text-muted-foreground">{result.existingRecordsCompared?'Duplicate checks include the loaded authenticated history snapshot as well as this source.':'Duplicate checks cover this source only. No authenticated existing-history snapshot was compared.'} Missing event identities and original timestamps limit duplicate certainty.</p>
+    <p className="flex items-start gap-2 rounded-lg border border-amber-200/20 p-3 text-[11px] leading-relaxed text-amber-100"><LockKeyhole className="mt-0.5 size-4 shrink-0" />This extraction is locked for local review: row selection, source edits and saving are disabled. Review the complete preview before requesting a separately approved import. No records have been committed.</p>
+  </section>;
+}

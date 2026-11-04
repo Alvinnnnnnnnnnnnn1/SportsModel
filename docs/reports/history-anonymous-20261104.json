@@ -1,0 +1,55 @@
+{
+  "projectRef": "ilgoswfckkzpoktabbfi",
+  "completedAt": "2026-11-04T06:45:16.269Z",
+  "scope": "Hosted anonymous requests with public key only. No authenticated persistence claims.",
+  "results": [
+    {
+      "name": "anonymous table historical_workspace_revisions",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_import_batches",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_research_records",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_paper_results",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_notifications",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_audit_history",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous RPC edgelab_load_history",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous RPC edgelab_save_history",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    }
+  ]
+}

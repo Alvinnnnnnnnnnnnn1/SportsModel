@@ -10,15 +10,19 @@ CSV/JSON/manual source intake now has bounded parsing, nullable missing facts, v
 
 Installed-SDK tests cover expired refresh, invalid/revoked sessions, signup/confirmation state, callback failures, logout and authenticated saves with mocked transport. The existing two-user hosted checkpoint remains preserved. Local PostgreSQL and browser checks are distinct from hosted verification; see [verification](verification.md).
 
-## Next stage: approve and verify hosted historical storage
+## Current checkpoint: deployed history and manual research continuation
 
-Review the exact prepared `202611040001_historical_import.sql` migration, its hash and local database evidence; inspect remote history and dry-run, then obtain explicit approval before deployment. It creates six isolated historical tables and does not modify existing records or policies. Until approved, the private history UI reports the missing migration while Demo works fully.
+The historical migration was explicitly approved/deployed and its exact hosted catalog passed. The secure two-user hosted read/negative report passed **11/11** checks without changing historical snapshots. Anonymous access was rejected. Positive hosted history/paper/notification round trips remain unverified; preserve synthetic rejection instead of relabelling fixtures to force a pass.
 
-After approved deployment, verify the new hosted catalog and non-empty historical/paper/notification access with two ordinary user contexts. Prepare a dedicated, reviewed test path that respects private synthetic rejection; do not relabel test fixtures, reuse the old empty-account harness on populated accounts, delete existing records or bypass RLS with service-role credentials. The local embedded tests establish SQL behavior, not hosted Auth/gateway behavior.
+The zero-cost Research Handoff is implemented: owner-attested context journals, current prompt generation/copy, structured response contract and validation, manual candidate review, atomic immutable paper/alert registration, separate actual confirmation, results and analytics. User-selected conversation JSON supports manual multi-record mapping with original references; no real export/history has been supplied or imported. See [research-continuity.md](research-continuity.md).
 
-Complete one authorized real signup/email-confirmation/callback flow without unnecessary emails. Add hosted form-level entry/edit/settlement coverage including parlay, bonus, loss and void cases, and long-duration session refresh. Keep all new authorized test records clearly labelled and retain them for review.
+## Recommended next stage: source review and genuine private pilot
 
-After these checks, review a tiny user-approved mapped historical sample before any real import. Resolve missing facts and financial contradictions explicitly. Add source-supported adjusted parlay settlement prices separately from frozen original odds before handling partial-void wins. Add a reviewed archive export/backup path before growing history substantially.
+Obtain the original Days 1–5 source from the user and manually map a tiny sample. Review missing facts, day membership, duplicate identities and the unverified checkpoint reconciliation before explicit import approval. Source totals never justify inventing stakes, a funding transaction or a bookmaker balance. Confirm the full original rule set and completed day separately in the context journal.
+
+After separately authorized genuine-source registration, verify a small positive hosted paper/notification/result lifecycle and non-empty two-account isolation using ordinary users. Keep existing records/accounts; use no service-role proof or synthetic relabelling. Complete an authorized email confirmation callback and real long-duration session checks if needed. No additional migrations are currently required for the manual handoff.
+
+Add a reviewed complete-backup restore path and explicit historical day scoping before larger migrations. Add source-supported adjusted parlay settlement prices separately from immutable original odds before partial-void wins can enter financial totals. Build a durable provider quota ledger only before any future exposed The Odds API endpoint; the readiness adapter remains disabled and untested against live prices.
 
 ## Strengthen the local research workflow
 

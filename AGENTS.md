@@ -14,6 +14,12 @@
 - Research Handoff is a manual copy/paste workflow with no OpenAI API. Preserve source claims, uncertainty, original forecast immutability, explicit paper approval and separate actual-ledger confirmation. Day 5 aggregate figures are an unverified reference, never invented records, deposits or bookmaker balances.
 - The Odds API readiness targets the-odds-api.com only, stays disabled without optional server-only free-plan configuration, and must not poll or make implicit requests.
 
+- The personal Supabase account already exists. Use its current normal authenticated session; do not recreate/reset it, request credentials, copy test-account data or equate the funding cap with deposits. Settings includes a read-only sanitized access check.
+- Recovery sources and detailed previews stay in ignored `.local/` or user-selected local files. The combined recovery remains preview-only. Only the separately reviewed single-paper pilot scope has been approved; inspect `.local/paper-supplement-review/single-paper-approval-scope.json` and current verification evidence before any continuation. No other historical import, financial registration, deletion or migration is approved.
+
+- The 5 November 2026 Day 6 owner checkpoint is local staging only. Two owner-confirmed pending placements have unknown accepted execution odds/times; quoted prices and probability ranges stay raw provenance, not ledger odds or point forecasts. No new checkpoint import or methodology authority has been approved. Do not repeat the already imported historical paper pilot.
+- Research methodology approval, original-rule completeness, owner-reported active day and source-confirmed completion are separate. Local continuity evidence never registers positions or affects bankroll. Owner-linked former proposals need distinct paper registration proof before independent paper tracking.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

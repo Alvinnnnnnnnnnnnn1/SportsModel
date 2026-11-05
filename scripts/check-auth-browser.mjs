@@ -63,6 +63,8 @@ let revoked = false;
 let confirmEmail = false;
 let refreshes = 0;
 let successfulSaves = 0;
+let dropAcknowledgedSave = false;
+let droppedAcknowledgments = 0;
 let signupRedirect;
 let logoutScope;
 const endpointCounts = new Map();
@@ -123,6 +125,12 @@ await context.route("**/*", async (route) => {
     assert.equal(body.workspace.paperPredictions.length, 0);
     assert.equal(body.workspace.bets.length, 0);
     assert.equal(body.workspace.researchRuns.length, 0);
+    if (dropAcknowledgedSave) {
+      // Deliberately broken mocked server: acknowledges a revision without storing the payload.
+      // Readback must detect the missing settings audit, even when settings are unchanged.
+      droppedAcknowledgments++;
+      return send(++revision);
+    }
     stored = structuredClone(body.workspace);
     successfulSaves++;
     return send(++revision);
@@ -222,6 +230,45 @@ try {
     assert.equal(successfulSaves, 1);
     assert.equal(await page.evaluate(() => localStorage.getItem("edgelab:demo:v1")), demoBefore);
   });
+  await check("unchanged private settings save is read back with an audit and no extra funding", async () => {
+    const settingsBefore = structuredClone(stored.settings);
+    const fundingBefore = structuredClone(stored.transactions);
+    const betsBefore = structuredClone(stored.bets);
+    const settingsAuditsBefore = stored.audit.filter(entry => entry.entityType === "settings").length;
+    const readsBefore = endpointCounts.get("/rest/v1/rpc/edgelab_load_workspace") ?? 0;
+    const savesBefore = successfulSaves;
+    await page.getByRole("button", { name: "Save settings", exact: true }).click();
+    await page.getByRole("status").filter({ hasText: "Private settings saved and read back · change recorded in audit history" }).waitFor();
+    assert.equal(successfulSaves, savesBefore + 1);
+    assert((endpointCounts.get("/rest/v1/rpc/edgelab_load_workspace") ?? 0) > readsBefore);
+    assert.deepEqual(stored.settings, settingsBefore);
+    assert.deepEqual(stored.transactions, fundingBefore);
+    assert.deepEqual(stored.bets, betsBefore);
+    assert.equal(stored.audit.filter(entry => entry.entityType === "settings").length, settingsAuditsBefore + 1);
+    await page.reload();
+    await page.getByText("Signed in with Supabase", { exact: true }).waitFor();
+    await page.getByText("SYNTHETIC AUTH FORM CHECK — no money moved", { exact: true }).waitFor();
+    assert.deepEqual(stored.settings, settingsBefore);
+    assert.deepEqual(stored.transactions, fundingBefore);
+    assert.equal(await page.evaluate(() => localStorage.getItem("edgelab:demo:v1")), demoBefore);
+  });
+  await check("acknowledged settings writes without persistence fail readback instead of claiming success", async () => {
+    const before = structuredClone(stored);
+    const savesBefore = successfulSaves;
+    dropAcknowledgedSave = true;
+    await page.getByRole("button", { name: "Save settings", exact: true }).click();
+    await page.getByRole("alert").filter({ hasText: "The settings write could not be confirmed by a private database read." }).waitFor();
+    assert.equal(droppedAcknowledgments, 1);
+    assert.equal(successfulSaves, savesBefore);
+    assert.deepEqual(stored, before);
+    assert.equal(await page.getByRole("status").filter({ hasText: "Private settings saved and read back" }).count(), 0);
+    dropAcknowledgedSave = false;
+    await page.reload();
+    await page.getByText("Signed in with Supabase", { exact: true }).waitFor();
+    await page.getByText("SYNTHETIC AUTH FORM CHECK — no money moved", { exact: true }).waitFor();
+    assert.deepEqual(stored, before);
+    assert.equal(await page.evaluate(() => localStorage.getItem("edgelab:demo:v1")), demoBefore);
+  });
   await check("local logout clears private UI and browser tokens while restoring isolated demo records", async () => {
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await page.getByText("DEMO MODE", { exact: true }).waitFor();
@@ -281,6 +328,7 @@ try {
     interceptedEndpoints: [...endpointCounts.entries()],
     interceptedAuthRequests: [...endpointCounts.entries()].filter(([endpoint]) => endpoint.startsWith("/auth/")).reduce((sum, [, count]) => sum + count, 0),
     mockedSuccessfulSaves: successfulSaves,
+    mockedAcknowledgedWritesWithoutPersistence: droppedAcknowledgments,
   };
   if (option("--report")) await writeFile(option("--report"), JSON.stringify(report, null, 2));
 }

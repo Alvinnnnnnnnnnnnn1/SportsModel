@@ -1,0 +1,55 @@
+{
+  "simulatedOnly": true,
+  "results": [
+    {
+      "name": "all eight application routes still render",
+      "passed": true
+    },
+    {
+      "name": "malformed JSON creates no stored records",
+      "passed": true
+    },
+    {
+      "name": "invalid UTF-8 file clears earlier file selection without saving",
+      "passed": true
+    },
+    {
+      "name": "JSON preview, unknown nulls and explicit batch approval",
+      "passed": true
+    },
+    {
+      "name": "exact duplicates blocked without modifying archive",
+      "passed": true
+    },
+    {
+      "name": "paper forecast frozen and per-leg settlement audited",
+      "passed": true
+    },
+    {
+      "name": "explicitly cleared result timestamp stays unknown when editor reopens",
+      "passed": true
+    },
+    {
+      "name": "notifications deduplicate, persist read and add unknown record to paper",
+      "passed": true
+    },
+    {
+      "name": "separate financial confirmation registers bonus entry without funding",
+      "passed": true
+    },
+    {
+      "name": "CSV file upload and manual entry work through review",
+      "passed": true
+    },
+    {
+      "name": "mobile import layout remains usable",
+      "passed": true
+    },
+    {
+      "name": "no browser errors or external network",
+      "passed": true
+    }
+  ],
+  "runtimeErrors": [],
+  "externalRequests": []
+}

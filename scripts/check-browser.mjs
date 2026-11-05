@@ -214,7 +214,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       .click();
     await page
       .getByText(
-        "Experiment settings saved · change recorded in audit history",
+        "Demo settings saved · change recorded in local audit history",
         { exact: false },
       )
       .waitFor();

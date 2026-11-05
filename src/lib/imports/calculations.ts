@@ -1,7 +1,8 @@
+import { isHistoricalReviewRecord } from './review-status';
 import { betSchema } from '@/lib/domain/validation';
 import { multiplyMoney } from '@/lib/domain/calculations';
 import type { Bet, BetLeg, Outcome } from '@/lib/domain/types';
-import type { HistoricalFinancialReview, HistoricalPaperResult, HistoricalRecord, ImportIssue } from './types';
+import type { HistoricalFinancialReview, HistoricalPaperResult, HistoricalRecord, ImportIssue, ImportPreviewRow } from './types';
 export interface HypotheticalResult {
     stakeCents: number | null;
     returnCents: number | null;
@@ -77,7 +78,7 @@ export function computeHypothetical(record: HistoricalRecord, result?: Historica
         return { ...base, reason: 'Won parlays with void legs need source-supported adjusted settlement pricing; the original price cannot determine hypothetical returns or forecast accuracy.' };
     const decisive = outcome === 'won' || outcome === 'lost';
     const chronological = Boolean(s.predictionAt && settledAt && Date.parse(s.predictionAt) < Date.parse(settledAt));
-    base.accuracyEligible = decisive && chronological;
+    base.accuracyEligible = decisive && chronological && !isHistoricalReviewRecord(record);
     base.hit = base.accuracyEligible ? Number(outcome === 'won') : null;
     if (base.accuracyEligible && s.probability !== null && s.probabilitySource && s.probabilityMethod && s.modelVersion)
         base.brierScore = (s.probability - Number(outcome === 'won')) ** 2;
@@ -86,4 +87,10 @@ export function computeHypothetical(record: HistoricalRecord, result?: Historica
     if (outcome === null || outcome === 'pending')
         return { ...base, reason: 'Prediction has no decisive settlement yet.' };
     return { ...base, ...resultAmounts(s.stakeCents, s.odds, s.stakeType, outcome), eligible: true };
+}
+
+
+export function previewFinancialReview(row:ImportPreviewRow){
+ if(row.snapshot.kind!=='actual')return null;
+ return financialReview({id:'00000000-0000-4000-8000-000000000001',batchId:'00000000-0000-4000-8000-000000000002',rowNumber:row.rowNumber,importedAt:new Date().toISOString(),raw:row.raw,fingerprint:row.fingerprint,snapshot:row.snapshot,issues:row.issues,transformations:row.transformations,probableDuplicateConfirmed:false,incompleteConfirmed:false});
 }

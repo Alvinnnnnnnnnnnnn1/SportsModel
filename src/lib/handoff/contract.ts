@@ -25,7 +25,7 @@ export const researchCandidateSchema = z.object({
 export const researchPassSchema = z.object({ id: z.string().trim().min(1).max(100), sport: z.enum(['NBA', 'NBL', 'ATP', 'WTA']).nullable(), event: shortText.nullable(), reason: text, sourceUrls: z.array(sourceUrl).max(30) }).strict();
 export const researchResponseSchema = z.object({
   format: z.literal('edgelab.research-response'), version: z.literal(1),
-  id: z.string().trim().min(1).max(100), researchDate: date, researchDay: z.number().int().min(1).max(1000000),
+  id: z.string().trim().min(1).max(100), createdAt: timestamp.nullable().optional(), researchDate: date, researchDay: z.number().int().min(1).max(1000000),
   dayStatus: z.enum(['draft', 'completed']), source: text.nullable(), researchMethod: text.nullable(),
   sourceUrls: z.array(sourceUrl).max(30), rulesSourceReference: text.nullable(),
   candidates: z.array(researchCandidateSchema).max(100), passes: z.array(researchPassSchema).max(100),
@@ -40,7 +40,7 @@ export type ResearchPass = z.infer<typeof researchPassSchema>;
 /** Machine-readable JSON Schema; semantic review rules remain separately enforced. */
 export const researchResponseJsonSchema = z.toJSONSchema(researchResponseSchema, { unrepresentable: 'any' });
 export const RESEARCH_RESPONSE_TEMPLATE: ResearchResponse = {
-  format: 'edgelab.research-response', version: 1, id: 'replace-with-unique-response-id',
+  format: 'edgelab.research-response', version: 1, id: 'replace-with-unique-response-id', createdAt: null,
   researchDate: '2026-11-04', researchDay: 6, dayStatus: 'draft',
   source: null, researchMethod: null, sourceUrls: [], rulesSourceReference: null,
   candidates: [], passes: [{ id: 'pass-1', sport: null, event: null, reason: 'No source-supported opportunity has been established. Replace this reason only with documented research.', sourceUrls: [] }],

@@ -1,3 +1,5 @@
+Current extension: see [versioned research memory](research-memory.md) for proposed policy approval, active Day 6 handling, owner-confirmed pending claims, local source retention and compact prompts. No new checkpoint was saved to Supabase.
+
 # Continue the Sports Betting Experiment through EdgeLab
 
 EdgeLab stores the experiment; a ChatGPT conversation is a replaceable research workspace. The workflow needs no OpenAI API, odds API account, paid hosting, bookmaker login or automatic wagering. A browser-local synthetic Demo remains available. Your authenticated Supabase workspace is the durable private record, subject to your own backups and the provider's free-project limits; it is not a bookmaker statement or a guarantee of indefinite service availability.
@@ -10,7 +12,7 @@ Catalog verification, ordinary-user JWT verification, local embedded PostgreSQL,
 
 ## Bring Days 1–5 into the record
 
-No original export or structured history has been supplied. EdgeLab does not access your private ChatGPT account or conversations. Use an official export that you obtain yourself, extract its `conversations.json` locally, then open **Historical Import → Conversation source intake**. Select the relevant conversation, review its current branch or all branches, and manually map selected messages into explicit record objects or arrays. Multiple selections in one answer can be separate rows; one parlay is one record with individual `legs`. Images and unsupported message parts are flagged; they are not interpreted. See [conversation-intake.md](conversation-intake.md) for exact instructions and supported export structures.
+Two structured recovery sources have now been supplied locally and combined into a locked review preview; no real history has been committed. See [the current operating guide](operating-edgelab.md) for reviewed-source gaps and next steps. EdgeLab does not access your private ChatGPT account or conversations. Use an official export that you obtain yourself, extract its `conversations.json` locally, then open **Historical Import → Conversation source intake**. Select the relevant conversation, review its current branch or all branches, and manually map selected messages into explicit record objects or arrays. Multiple selections in one answer can be separate rows; one parlay is one record with individual `legs`. Images and unsupported message parts are flagged; they are not interpreted. See [conversation-intake.md](conversation-intake.md) for exact instructions and supported export structures.
 
 Alternatively upload a deliberately prepared CSV or structured JSON file using the existing historical template, or enter records manually. Source references, original selected conversation, source hashes and manual transformations are retained. Other conversations from a full export are excluded from the saved source. Missing odds, probabilities, prices, statistics and original timestamps stay null. Message creation time is source metadata, not automatically a prediction or placement time.
 
@@ -63,11 +65,11 @@ The existing provider interfaces are retained. A separate disabled-by-default ad
 
 ## Remaining manual work
 
-Supply and review the original Days 1–5 sources; do not import real history until its proposed rows and reconciliation are confirmed. Run the secure ordinary-user hosted verifier from your own terminal without sharing passwords, and review its sanitized report. Positive hosted historical/paper/notification lifecycle verification needs separately authorized genuine source records or a separately reviewed test facility that preserves the synthetic boundary; it cannot be claimed from fixture relabelling. Complete one authorized real signup/email-confirmation flow if needed. All source verification, research decisions, actual-entry confirmation and event-result collection remain manual.
+The existing personal account, settings and approved single-paper persistence pilot are verified; do not repeat account setup or the pilot import. Review remaining Days 1–5 sources and original rules before approving any further history. Older evidence can stay under review while new manually approved research is recorded. Source checking, research decisions, actual-entry confirmation and event-result collection remain manual. See the current operating guide and verification results for the exact completed scope and remaining limits.
 
 
-## Verified completion checkpoint
+## Earlier continuity checkpoint
 
 The ordinary-user hosted history read/negative report passed **11/11**, with unchanged empty historical snapshots. Anonymous requests passed **8/8** rejection checks. This does not certify positive hosted history writes. The exact deployed schema matches all three reviewed migrations; the historical file was not reapplied on resume.
 
-Locally, 323 unit tests passed; the optional actual-domain PostgreSQL integration passed 1/1 when enabled; the original/history database suites passed 70/70 and 77/77. TypeScript, lint and production build passed. Browser checks passed 57 groups across the original app, imports, mocked Auth and the complete 16-group continuity workflow. See [verification.md](verification.md) for reports and precise limits.
+At that earlier checkpoint, 323 unit tests passed; the optional actual-domain PostgreSQL integration passed 1/1 when enabled; the original/history database suites passed 70/70 and 77/77. TypeScript, lint and production build passed. Browser checks passed 57 groups across the original app, imports, mocked Auth and the complete 16-group continuity workflow. See [verification.md](verification.md) for reports and precise limits.

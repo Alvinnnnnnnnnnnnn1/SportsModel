@@ -6,7 +6,7 @@ const json = (value: unknown) => JSON.stringify(canonical(value));
 const stamp = () => new Date().toISOString();
 function checked(value: HistoricalWorkspace): HistoricalWorkspace { return historicalWorkspaceSchema.parse(value) as HistoricalWorkspace; }
 export function prepareImportCommit(preview: ImportPreview, decisions: ImportDecision[], verification: VerificationStatus, existingRecords: HistoricalRecord[] = []): ImportCommit {
-    if (preview.rows.some(row => row.transformations.some(change => change.rule === 'recovery_mapping_v1')))
+    if (preview.rows.some(row => row.transformations.some(change => change.rule === 'recovery_mapping_v1' || change.rule === 'owner_checkpoint_preview_only_v1')))
         throw new Error('Recovery extraction is preview-only. Review the complete mapping and reconciliation and obtain separate explicit approval before enabling an import. No records were saved.');
     if (new Set(decisions.map(d => d.rowNumber)).size !== decisions.length)
         throw new Error('Each source row can have only one review decision.');

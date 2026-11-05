@@ -1,0 +1,62 @@
+{
+  "clientDate": "2026-11-05",
+  "scope": "Local development and synthetic/mocked verification only. No real checkpoint import, methodology approval, hosted write or migration.",
+  "unitTestsPassed": 450,
+  "optionalPostgresTestsSkippedByDefault": 2,
+  "optionalPostgresTestsExplicitlyPassed": 2,
+  "corePostgresChecksPassed": 70,
+  "historyPostgresChecksPassed": 77,
+  "browserGroupsPassed": 73,
+  "browserSuites": {
+    "continuity-memory-browser-20261105.json": {
+      "passed": 7,
+      "failed": 0,
+      "sha256": "21f7ec7b87a97bf0331c38b837de1028ed3a7d1ffb6949f897e36cf42f6d62a0"
+    },
+    "continuity-memory-handoff-20261105.json": {
+      "passed": 16,
+      "failed": 0,
+      "sha256": "d036fe9b5094e1af551d0376a7c1aba3ae8a3f6e6050f4d279d1d13f56a47d2f"
+    },
+    "continuity-memory-imports-20261105.json": {
+      "passed": 12,
+      "failed": 0,
+      "sha256": "e0ab01ba779093fbc6a775c8c28232d56f33cf2674bf8289c0d4424a483fdd1f"
+    },
+    "continuity-memory-auth-20261105.json": {
+      "passed": 11,
+      "failed": 0,
+      "sha256": "851d779c00f5c5efcad9a44e4c9909c87c47d57ee45d4b3cbbf7236a9f8428b7"
+    },
+    "continuity-memory-original-20261105.json": {
+      "passed": 20,
+      "failed": 0,
+      "sha256": "caef00679dee0ae48c5b8b0f26f68a048805cbb0ab3ca31192d779d58ba12a1b"
+    },
+    "continuity-memory-workspace-20261105.json": {
+      "passed": 7,
+      "failed": 0,
+      "sha256": "65259f68996667a45b9028ee555f1863a96fced19d3f53874f96bb6b99da0bec"
+    }
+  },
+  "typescript": "passed",
+  "lint": "passed",
+  "productionBuild": "passed",
+  "privateDay6MappingDiagnostic": "passed",
+  "preparedMigrationCount": 0,
+  "dependencyChanges": false,
+  "existingMigrationHashesUnchanged": true,
+  "checkpointSourceClass": "owner_attested_not_execution_verified",
+  "stagedOwnerPlacementCount": 2,
+  "executionOddsAndPlacementTimes": null,
+  "financialLedgerRowsCreated": 0,
+  "fundingTransactionsCreated": 0,
+  "methodologyStatus": "reconstructed_proposal_not_authoritative",
+  "remainingGaps": [
+    "Hosted v2 journal/checkpoint writes not attempted without explicit approval",
+    "Accepted execution prices/times and receipt references missing",
+    "Original full methodology and original forecast registration evidence unavailable",
+    "First-class forecast ranges and closing-price persistence not implemented; raw provenance retained",
+    "Full database backup restore remains unimplemented"
+  ]
+}

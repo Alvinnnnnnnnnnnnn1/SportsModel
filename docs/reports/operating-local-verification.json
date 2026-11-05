@@ -1,0 +1,52 @@
+{
+  "browserGroups": 73,
+  "suites": {
+    "original": {
+      "passed": 20,
+      "failed": 0,
+      "sha256": "caef00679dee0ae48c5b8b0f26f68a048805cbb0ab3ca31192d779d58ba12a1b",
+      "scope": "Local browser; mocked auth/synthetic records"
+    },
+    "imports": {
+      "passed": 12,
+      "failed": 0,
+      "sha256": "e0ab01ba779093fbc6a775c8c28232d56f33cf2674bf8289c0d4424a483fdd1f",
+      "scope": "Local browser; mocked auth/synthetic records"
+    },
+    "auth": {
+      "passed": 11,
+      "failed": 0,
+      "sha256": "2ba177aed499d1223712660a4ce84d33efdc51555cafdf7a7600be7280e05674",
+      "scope": "Local browser; mocked auth/synthetic records"
+    },
+    "handoff": {
+      "passed": 16,
+      "failed": 0,
+      "sha256": "0017f7de7aff3449bfd821c01ab2b7abe9eff6ff6848f21d39c90c1c683eeeb5",
+      "scope": "Local browser; mocked auth/synthetic records"
+    },
+    "personalMocked": {
+      "passed": 7,
+      "failed": 0,
+      "sha256": "1390645a717c9f14bc1897960e033f5438a4f96dad3beb351c8a70bd3a10a19d",
+      "scope": "Local browser; mocked auth/synthetic records"
+    },
+    "recoveryPreview": {
+      "passed": 7,
+      "failed": 0,
+      "sha256": "40d5ffca45c46c4466eff71794ddc30c0095c86755e7861b8619a159a9b133c5",
+      "scope": "Read-only local preview of supplied sources; no commits"
+    }
+  },
+  "unitTestsPassed": 386,
+  "optionalPostgresDefaultSkipped": 1,
+  "optionalPostgresExplicitPassed": 1,
+  "localPostgresChecks": {
+    "core": 70,
+    "history": 77
+  },
+  "privateSourceReviewChecks": 1,
+  "hostedWritesByAgent": 0,
+  "approvedNullablePilotLocalPostgresChecks": 1,
+  "privateFinalHostedExportValidationChecks": 1
+}

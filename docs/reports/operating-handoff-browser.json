@@ -1,0 +1,75 @@
+{
+  "syntheticOnly": true,
+  "hostedVerification": false,
+  "browserClockStartedAt": "2026-11-04T12:04:14.674Z",
+  "browserClockAdvancedHours": 27,
+  "results": [
+    {
+      "name": "fresh local workspace has no imported experiment history",
+      "passed": true
+    },
+    {
+      "name": "explicitly selected synthetic conversation maps multiple records without saving",
+      "passed": true
+    },
+    {
+      "name": "historical archive requires explicit review and retains selected source provenance",
+      "passed": true
+    },
+    {
+      "name": "actual historical entry reaches ledger only through separate manual financial confirmation",
+      "passed": true
+    },
+    {
+      "name": "owner-attested context is append-only and distinct from the unverified Day 5 checkpoint",
+      "passed": true
+    },
+    {
+      "name": "Run Daily Research produces and copies a self-contained prompt without research or financial writes",
+      "passed": true
+    },
+    {
+      "name": "malformed research JSON and LLM probabilities are blocked before registration",
+      "passed": true
+    },
+    {
+      "name": "missing bookmaker prices remain null and require explicit review rather than invented odds",
+      "passed": true
+    },
+    {
+      "name": "approved structured research atomically registers paper, pass history and an in-app alert",
+      "passed": true
+    },
+    {
+      "name": "duplicate research responses are rejected without duplicate predictions or alerts",
+      "passed": true
+    },
+    {
+      "name": "outstanding-result reminders deduplicate and retain source navigation",
+      "passed": true
+    },
+    {
+      "name": "final event and individual leg results persist without changing the frozen forecast or cash ledger",
+      "passed": true
+    },
+    {
+      "name": "analytics and the next conversation use persisted results and confirmed day progression",
+      "passed": true
+    },
+    {
+      "name": "complete continuity export contains both workspaces, original sources, rules and audits",
+      "passed": true
+    },
+    {
+      "name": "mobile handoff and conversation intake have no document overflow",
+      "passed": true
+    },
+    {
+      "name": "all verification used synthetic local state without browser errors or escaped network requests",
+      "passed": true
+    }
+  ],
+  "skippedChecks": [],
+  "runtimeErrors": [],
+  "externalRequests": []
+}

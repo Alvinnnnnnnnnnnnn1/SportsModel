@@ -4,6 +4,14 @@ A private, zero-cost sports research and record-keeping MVP built with Next.js A
 
 **All initial sports, teams, players, markets, odds, forecasts, alerts and results are synthetic.** They demonstrate the product and are not real opportunities or evidence of a betting advantage. EdgeLab never places wagers, connects bookmaker accounts, accesses bookmaker credentials, scrapes bookmakers or transfers money.
 
+## Use your existing experiment workspace
+
+Your existing personal account can be used directly; no account recreation or credentials in chat are needed. See [the operating guide](docs/operating-edgelab.md) for the read-only personal access check, recovery review, proposed hosted persistence pilot and daily copy/paste research workflow. Historical source review and imports remain separate from actual financial registration. The A$500 cap is never assumed to be a deposit.
+
+## Versioned research memory
+
+The handoff now separates approved methodology, owner reports, source-confirmed days, provisional placement claims, local historical evidence and unregistered proposals. It generates a compact brief using the existing strict response contract. See [research memory and Day 6 review](docs/research-memory.md) and the [proposed methodology](docs/experiment-methodology.proposed.md). Both the reconstructed methodology and latest checkpoint remain subject to explicit approval; no new hosted history or funding was added.
+
 ## Run locally
 
 Use Node.js 22 or newer and npm. No account, environment variables, API keys, billing account or hosting is required for Demo mode.
@@ -33,7 +41,7 @@ The first Demo visit creates a browser-local synthetic workspace with 30 ledger 
 
 On **Research → Run Daily Research**, generate a structured prompt from saved owner-reviewed history, recorded ledger entries, outstanding results and the latest confirmed research day. Copy it into a separate conversation, then paste/upload its structured JSON in **Response review**. Validate evidence, prices, provenance, uncertainty and duplicates before explicitly approving immutable paper forecasts and alerts. Actual bets require their own separate manual ledger confirmation; no wager is submitted.
 
-The reported Day 5 reconciliation is displayed only as an unverified reference. No original export has been supplied and no records, funding or bookmaker balance are invented from those totals. Historical Import now supports selecting a relevant conversation from a user-provided extracted official JSON export and manually mapping its messages. Unknown facts remain null. Experiment rules/day attestations are retained in an append-only context journal. **Export complete experiment** downloads the ledger and historical archive together for a private local backup; restoration remains a separate future reviewed workflow.
+The reported Day 5 reconciliation is displayed only as an unverified reference. Two structured recovery sources are staged locally for review; the original full export remains unavailable. No records, funding or bookmaker balance are invented from the checkpoint totals. Historical Import now supports selecting a relevant conversation from a user-provided extracted official JSON export and manually mapping its messages. Unknown facts remain null. Experiment rules/day attestations are retained in an append-only context journal. **Export complete experiment** downloads the ledger and historical archive together for a private local backup; restoration remains a separate future reviewed workflow.
 
 Read the [complete continuity guide](docs/research-continuity.md), [conversation intake instructions](docs/conversation-intake.md), [research response JSON Schema](docs/research-response.schema.json), and [verification limits](docs/verification.md). The optional [The Odds API readiness adapter](docs/odds-provider.md) stays disabled and is not called by the handoff. There are no live odds or OpenAI API requests, paid dependencies or new billing requirements.
 

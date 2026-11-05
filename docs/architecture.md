@@ -96,3 +96,15 @@ Installed-SDK tests intercept transport to exercise expiry, refresh, invalid ses
 The optional The Odds API readiness factory is server-only and disabled by default. Its injected transport adapter validates quota, timestamps and precise market identities. It has no route, poller or connection to Research Handoff. Demo fallback is clearly synthetic; a private disabled adapter returns no synthetic markets. See the odds runbook for process-local quota limitations.
 
 The historical schema is now approved/deployed. Exact catalog, anonymous and 11 ordinary-user read/negative checks passed; positive hosted research lifecycle is still separately unverified because private storage rejects synthetic sources. Never relabel a fixture to make a hosted write pass. Read [research-continuity.md](research-continuity.md) and the current verification report for complete boundaries.
+
+## Personal workspace and supplementary review
+
+`workspace-verification.ts` accepts only existing-identity/read capabilities and returns a sanitized report. Its Settings panel uses the current Supabase singleton and normal repositories, checks identity before/after parallel reads, and discards mismatched results. It never writes or requests credentials.
+
+`imports/paper-supplement.ts` extends the existing staging adapter, not database storage. It retains two immutable local source manifests, reconciles described paper counts, flags uncertain identities and excludes exact duplicate rows without merging evidence. `review-warnings.ts` derives review classes without altering strict hosted payloads. Recovered summary records remain excluded from forecast accuracy/Brier calculations even if a later result is recorded. All migration files and hosted ownership/provenance rules remain unchanged.
+
+## Versioned memory and owner checkpoints
+
+`handoff/methodology.ts` uses v2 raw context envelopes in the existing immutable journal; source snapshots/SQL shapes are unchanged. Day-only journals retain earlier methodology/original rules. `continuity-evidence.ts` re-parses hashed local source manifests, with explicit per-account browser retention independent of Supabase records. `owner-checkpoint.ts` maps owner placement claims into existing nullable historical snapshots; reported quotes/ranges remain source metadata and previews cannot commit before separate approval. Handoff groups and provisional financial context never enter actual bankroll calculations.
+
+Research response v1 retains backwards compatibility with optional nullable `createdAt`. Application session/content and semantic selection guards recheck loaded records and staged proposals at confirmation. Existing SQL uniqueness/revision/RLS controls remain unchanged. CLV is a separate pure calculation helper and has no live provider or persistence claim. See [research memory](research-memory.md).

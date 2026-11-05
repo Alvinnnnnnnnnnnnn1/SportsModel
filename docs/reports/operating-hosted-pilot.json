@@ -1,0 +1,37 @@
+{
+  "projectRef": "ilgoswfckkzpoktabbfi",
+  "scope": "User-executed approved genuine single-paper pilot in the existing normal authenticated UI; retained exports compared offline plus fresh normal-user read report. No privileged verification.",
+  "verifiedAt": "2026-11-04T12:36:27.968Z",
+  "evidence": {
+    "completeExportSha256": "7e839372a5ae742dbd9ef463c99a9df3e7720a800352f447bb4ab190b2b47c5d",
+    "normalReadReportSha256": "acba63023738c23650e5a0ea79dfc6164cbbc6dd27a57034645f57ff9968ab7e"
+  },
+  "results": {
+    "settingsStored": true,
+    "settingsAuditEntries": 3,
+    "recordedDepositsCents": 0,
+    "actualBets": 0,
+    "fundingTransactions": 0,
+    "approvedHistoricalRecords": 1,
+    "historicalBatches": 1,
+    "paperTrackingStates": 1,
+    "historicalNotifications": 1,
+    "notificationRead": true,
+    "notificationDismissed": true,
+    "historicalAuditEntries": 10,
+    "historyRevision": 5,
+    "sourceForecastAndNullsUnchanged": true,
+    "sourceBytesAndHashMatch": true,
+    "actualWorkspaceUnchangedByPilot": true,
+    "duplicateRegistrationBlockedByImporterAgainstSavedSnapshot": true,
+    "combinedHistoricalPaperSourceCoverage": 15,
+    "newHostedAnonymousDenials": 8
+  },
+  "unverified": [
+    "Fresh nonempty cross-account JWT probe on the personal record",
+    "Deliberate hosted duplicate INSERT or retrospective forecast edit",
+    "New official event-result verification or hosted result correction",
+    "Hosted signup delivery and long-duration session testing",
+    "Full-backup restore"
+  ]
+}

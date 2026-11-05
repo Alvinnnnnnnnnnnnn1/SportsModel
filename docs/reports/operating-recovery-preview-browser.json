@@ -1,0 +1,35 @@
+{
+  "scope": "Local read-only actual supplied source preview; no hosted requests or commits",
+  "checks": [
+    {
+      "name": "primary recovery validates locally without saving",
+      "passed": true
+    },
+    {
+      "name": "supplement gives 28 separate review items and reconciles 15 historical papers",
+      "passed": true
+    },
+    {
+      "name": "blocking, review and information classifications are visible without changing source",
+      "passed": true
+    },
+    {
+      "name": "complete downloaded preview contains all rows, source hashes, nulls and immutable provenance",
+      "passed": true
+    },
+    {
+      "name": "downloaded local archive restores the same locked combined review",
+      "passed": true
+    },
+    {
+      "name": "mobile review has no viewport overflow",
+      "passed": true
+    },
+    {
+      "name": "zero external requests, browser exceptions or workspace writes; original files unchanged",
+      "passed": true
+    }
+  ],
+  "externalRequests": [],
+  "runtimeErrors": []
+}

@@ -108,7 +108,7 @@ export function guardRecoveryPreviewMapping(preview: ImportPreview): void {
       throw new Error('Historical paper predictions cannot be converted into actual wagers during recovery review.');
     }
     if (snapshot.verification === 'user_confirmed') throw new Error('Recovery extraction remains unverified. Its internal approval flags do not authorize an import or independent verification claim.');
-    if (snapshot.externalId !== (text(source.reference) ?? text(source.id))) throw new Error('Original recovered reference IDs must be retained; metadata identifiers are not original source facts.');
+    if (snapshot.externalId !== (text(source.reference) ?? text(source.id) ?? text(source.external_review_id))) throw new Error('Original recovered reference IDs must be retained; metadata identifiers are not original source facts.');
   }
 }
 function reconcile(source: SourceObject, actual: SourceObject[], settledPapers: SourceObject[], unresolvedPapers: SourceObject[], cashProposals: SourceObject[], paperProposals: SourceObject[], globalIssues: ImportIssue[]): RecoveryReconciliation {

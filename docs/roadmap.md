@@ -47,3 +47,11 @@ An optional future AI integration can summarize documented research and cite its
 Only after verified data ingestion and persistence, add an idempotent scheduler, background run status, source freshness checks, duplicate alert suppression and failure observability. Select infrastructure compatible with an explicitly agreed cost budget. A manual Run Daily Research button does not imply unattended daily execution.
 
 Implement and test a real push subscription/service worker only if background notifications are wanted. Until then, describe browser alerts as open-tab notifications. Automatic wager execution, bookmaker logins, real-money transfers, public subscriptions and social features remain outside EdgeLab's scope.
+
+## Immediate operating transition
+
+The existing personal settings and approved one-paper archive/tracking/notification pilot are verified. Do not repeat that import. Keep incomplete old records outside the actual ledger. The next task is to source-attest the original experiment context, then use the existing daily prompt/response/manual paper approval workflow and complete JSON backups. No new provider integration or infrastructure is needed for that transition. See [operating guide](operating-edgelab.md).
+
+## Next after methodology/checkpoint review
+
+Approve reconstructed methodology separately from the owner checkpoint archive. Obtain accepted execution prices, exact placement times and receipt references before any financial-ledger mapping; preserve original staged claims and quotes. Resolve remaining original history/rules and paper registration evidence without retrospective edits. A receipt-backed amendment/canonical registration workflow is the next concrete data-integrity task; paid/live feeds remain unnecessary.

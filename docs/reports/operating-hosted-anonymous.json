@@ -1,0 +1,55 @@
+{
+  "projectRef": "ilgoswfckkzpoktabbfi",
+  "checkedAt": "2026-11-04T12:33:25.189Z",
+  "scope": "Hosted anonymous public-key read probes after user-reported single-paper archive save. No authenticated or write requests.",
+  "results": [
+    {
+      "name": "anonymous table historical_workspace_revisions",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_import_batches",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_research_records",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_paper_results",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_notifications",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous table historical_audit_history",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous history load RPC",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous legacy load RPC",
+      "status": 401,
+      "code": "42501",
+      "passed": true
+    }
+  ]
+}

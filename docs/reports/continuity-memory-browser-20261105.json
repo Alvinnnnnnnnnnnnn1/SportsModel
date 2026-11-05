@@ -1,0 +1,35 @@
+{
+  "scope": "Synthetic local browser, no hosted requests or personal records",
+  "results": [
+    {
+      "name": "draft methodology and source gaps generate no records",
+      "passed": true
+    },
+    {
+      "name": "attached recovery and owner claims remain local while active Day6 stays uncompleted",
+      "passed": true
+    },
+    {
+      "name": "explicit local retention survives tabs and reload without importing source claims",
+      "passed": true
+    },
+    {
+      "name": "methodology requires policy approval and final append confirmation",
+      "passed": true
+    },
+    {
+      "name": "backup includes saved policy and separately labelled local source evidence",
+      "passed": true
+    },
+    {
+      "name": "owner checkpoint importer is preview-only and never fills accepted odds",
+      "passed": true
+    },
+    {
+      "name": "mobile continuity layout and isolated transport remain usable",
+      "passed": true
+    }
+  ],
+  "network": [],
+  "runtimeErrors": []
+}

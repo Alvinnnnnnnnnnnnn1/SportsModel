@@ -1,0 +1,7 @@
+import {it,expect} from 'vitest';import {calculateClv,type IdentifiedPrice} from '@/lib/domain/clv';
+const original:IdentifiedPrice={eventId:'SYNTHETIC-event',marketId:'SYNTHETIC-market',selection:'SYNTHETIC-home',line:'moneyline',decimalOdds:2,timestamp:'2026-11-05T00:00:00Z',source:'SYNTHETIC original',kind:'original_forecast'};
+const closing:IdentifiedPrice={...original,decimalOdds:1.8,timestamp:'2026-11-05T01:00:00Z',kind:'closing'};
+it('calculates defined price CLV for matching attributable registered and closing quotes',()=>{expect(calculateClv(original,closing,'2026-11-05T02:00:00Z').priceImprovementPercent).toBeCloseTo(11.111111);});
+it.each(['eventId','marketId','selection','line'] as const)('rejects different %s instead of comparing unrelated markets',key=>{expect(calculateClv(original,{...closing,[key]:'different'},'2026-11-05T02:00:00Z').priceImprovementPercent).toBeNull();});
+it('does not treat reported execution quotes or later comparison quotes as CLV',()=>{expect(calculateClv({...original,kind:'reported_quote'},closing,'2026-11-05T02:00:00Z').priceImprovementPercent).toBeNull();expect(calculateClv(original,{...closing,kind:'comparison'},'2026-11-05T02:00:00Z').priceImprovementPercent).toBeNull();});
+it('requires real times, sources and finite prices',()=>{for(const change of [{timestamp:null},{source:null},{decimalOdds:NaN},{timestamp:'2026-11-06T00:00:00Z'}])expect(calculateClv(original,{...closing,...change},'2026-11-05T02:00:00Z').priceImprovementPercent).toBeNull();});

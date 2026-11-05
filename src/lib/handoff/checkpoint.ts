@@ -9,7 +9,7 @@ export const DAY_5_CHECKPOINT = Object.freeze({
   modelledRealisedProfitCents: -70, allocatedExperimentalBalanceCents: 49930,
   paperSettledCount: 11, paperWon: 8, paperLost: 3, paperPending: 4,
   noNewCashBetDays: [4, 5] as const,
-  note: 'Unverified reconciliation checkpoint supplied by the user. Allocated balance is not a verified Sportsbet balance or proof of A$500 deposited. Six settled wager count versus bonus return classification needs source clarification; no seventh wager is inferred.',
+  note: 'Unverified reconciliation checkpoint supplied by the user. Allocated balance is not a verified Sportsbet balance or proof of A$500 deposited. Recovered source describes five cash wagers and one bonus wager, not independently execution-verified; no seventh wager is inferred.',
 });
 export interface ReconciliationLine { key: string; label: string; expected: number; observed: number; matches: boolean; unit: 'count' | 'AUD_cents'; }
 export interface CheckpointReconciliation { status: 'unverified_reference'; comparisonScope: 'all_current_records_not_day5_filtered'; lines: ReconciliationLine[]; warnings: string[]; observedLedgerProfitCents: number; unresolvedActualRecords: number; fundingInferred: false; }
@@ -23,7 +23,7 @@ export function reconcileDay5Checkpoint(appData: AppData, history: HistoricalWor
   const paperOutcomes = [...appData.paperPredictions.map(paper => paper.outcome), ...importedPapers.map(record => history.paperResults.find(result => result.recordId === record.id)?.outcome ?? record.snapshot.outcome)];
   const realised = bets.filter(bet => bet.outcome !== 'pending').reduce((sum, bet) => sum + betProfit(bet), 0);
   const lines = [
-    compare('actualSettledCount', 'Settled actual wagers (count ambiguity remains)', 6, decisive.length),
+    compare('actualSettledCount', 'Reported settled wagers including bonus', 6, decisive.length),
     compare('actualWon', 'Actual wins', 2, decisive.filter(bet => bet.outcome === 'won').length),
     compare('actualLost', 'Actual losses', 4, decisive.filter(bet => bet.outcome === 'lost').length),
     compare('cashStakeCents', 'Decisive cash stakes', 3000, settledCash.reduce((sum, bet) => sum + bet.stakeCents, 0), 'AUD_cents'),

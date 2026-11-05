@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { WorkspaceVerification } from "./workspace-verification";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -17,7 +19,8 @@ import {
 import { useApp } from "@/components/app-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getSupabaseClient } from "@/lib/persistence";
+import { createSupabaseRepository, getSupabaseClient } from "@/lib/persistence";
+import { assertSettingsReadback } from "@/lib/workspace-verification";
 import {
   signInWithEmail,
   signOutCurrentSession,
@@ -70,12 +73,17 @@ export function Settings() {
     setError("");
     setSavingSettings(true);
     try {
-      await updateSettings({
+      const expected = {
         ...data.settings,
         fundingCapCents: parseAmount(fundingCap),
         defaultStakeCents: parseAmount(defaultStake),
-      });
-      notify("Experiment settings saved · change recorded in audit history");
+      };
+      await updateSettings(expected);
+      if (mode === "supabase") {
+        if (!user) throw new Error("Your private session changed. Reload before checking the saved settings.");
+        assertSettingsReadback(expected, await createSupabaseRepository(user.id).load(), data.audit.filter(entry => entry.entityType === "settings").length + 1);
+      }
+      notify(mode === "supabase" ? "Private settings saved and read back · change recorded in audit history" : "Demo settings saved · change recorded in local audit history");
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Unable to save settings.",
@@ -170,6 +178,7 @@ export function Settings() {
           {error}
         </p>
       )}
+      <WorkspaceVerification />
       <div className="grid items-start gap-5 xl:grid-cols-2">
         <section className="panel p-5 sm:p-6">
           <SectionTitle
@@ -297,11 +306,14 @@ export function Settings() {
           {configured && <AuthPanel />}
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
             <span className="text-xs text-slate-500">
-              Export a local backup of this workspace.
+              Export ledger/settings only. Use the complete experiment backup to include historical sources and paper results.
             </span>
             <Button variant="outline" size="sm" onClick={exportData}>
               <Download className="mr-1.5 size-3.5" />
               Export JSON
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/research">Complete experiment backup</Link>
             </Button>
           </div>
         </section>

@@ -6,7 +6,7 @@ import { emptyHistoricalWorkspace } from '@/lib/imports/types';
 import { createDemoHistoricalRepository, createSupabaseHistoricalRepository, HistoricalStorageError } from '@/lib/imports/repository';
 import type { HistoricalRepository } from '@/lib/imports/types';
 import { commitHistoricalImport, prepareImportCommit, registerHistoricalPaper, settleHistoricalPaper, createHistoricalNotification, markHistoricalNotificationRead, dismissHistoricalNotification, financialReview } from '@/lib/imports';
-import { commitApprovedResearch, type ResearchPreview } from '@/lib/handoff';
+import { commitApprovedResearch, type ResearchPreview, type PriorResearchSelection } from '@/lib/handoff';
 interface HistoryContextValue {
   history: HistoricalWorkspace; loading: boolean; error: string | null; needsMigration: boolean;
   reload: () => void;
@@ -16,7 +16,7 @@ interface HistoryContextValue {
   registerPaper: (id: string) => Promise<void>;
   markRead: (id: string) => Promise<void>; dismiss: (id: string) => Promise<void>;
   confirmActual: (id: string) => Promise<void>;
-  approveResearch: (preview: ResearchPreview, decisions: ImportDecision[], verification: VerificationStatus, confirmDayCompletion: boolean) => Promise<void>;
+  approveResearch: (preview: ResearchPreview, decisions: ImportDecision[], verification: VerificationStatus, confirmDayCompletion: boolean, previousProposals?: PriorResearchSelection[]) => Promise<void>;
 }
 const Context = createContext<HistoryContextValue | null>(null);
 export function useHistory() { const value = useContext(Context); if (!value) throw new Error('Historical workspace context is unavailable'); return value; }
@@ -70,5 +70,5 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     if (!review.bet) throw new Error(review.issues.map(issue => issue.message).join(' '));
     await addBet({ ...review.bet, id, confirmedAt: new Date().toISOString() });
   };
-  return <Context.Provider value={{ history: displayed, loading: appLoading || state.identity !== identity || state.loading, error: state.identity === identity ? state.error : null, needsMigration: state.identity === identity && state.needsMigration, reload: () => setReloadVersion(value => value + 1), commitPreview: (preview, decisions, verification) => mutate(identity, value => commitHistoricalImport(value, prepareImportCommit(preview, decisions, verification, value.records))), registerPaper: id => mutate(identity, value => registerHistoricalPaper(value, id)), recordPaperResult: (id, result) => mutate(identity, value => settleHistoricalPaper(value, id, result)), approveResearch: (preview, decisions, verification, confirmDayCompletion) => mutate(identity, value => commitApprovedResearch(value, preview, decisions, verification, { confirmDayCompletion })), createNotification: id => mutate(identity, value => createHistoricalNotification(value, id)), markRead: id => mutate(identity, value => markHistoricalNotificationRead(value, id)), dismiss: id => mutate(identity, value => dismissHistoricalNotification(value, id)), confirmActual }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ history: displayed, loading: appLoading || state.identity !== identity || state.loading, error: state.identity === identity ? state.error : null, needsMigration: state.identity === identity && state.needsMigration, reload: () => setReloadVersion(value => value + 1), commitPreview: (preview, decisions, verification) => mutate(identity, value => commitHistoricalImport(value, prepareImportCommit(preview, decisions, verification, value.records))), registerPaper: id => mutate(identity, value => registerHistoricalPaper(value, id)), recordPaperResult: (id, result) => mutate(identity, value => settleHistoricalPaper(value, id, result)), approveResearch: (preview, decisions, verification, confirmDayCompletion, previousProposals) => mutate(identity, value => commitApprovedResearch(value, preview, decisions, verification, { confirmDayCompletion, previousProposals })), createNotification: id => mutate(identity, value => createHistoricalNotification(value, id)), markRead: id => mutate(identity, value => markHistoricalNotificationRead(value, id)), dismiss: id => mutate(identity, value => dismissHistoricalNotification(value, id)), confirmActual }}>{children}</Context.Provider>;
 }

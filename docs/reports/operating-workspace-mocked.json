@@ -1,0 +1,39 @@
+{
+  "mode": "local browser with mocked existing session and intercepted Supabase responses",
+  "hostedVerification": false,
+  "createdAt": "2026-11-04T12:07:17.570Z",
+  "results": [
+    {
+      "name": "demo disables the private read-only checker without creating private records",
+      "passed": true
+    },
+    {
+      "name": "an already signed-in mocked session reads both workspaces without account setup or writes",
+      "passed": true
+    },
+    {
+      "name": "download exposes counts and stored settings while excluding every fake credential and identity",
+      "passed": true
+    },
+    {
+      "name": "browser reload retains the mocked session and repeats reads without persisting anything",
+      "passed": true
+    },
+    {
+      "name": "missing stored settings remain null and never turn the A$500 cap into a deposit",
+      "passed": true
+    },
+    {
+      "name": "switching back to demo removes the private report without modifying either workspace",
+      "passed": true
+    },
+    {
+      "name": "all checks used blocked external transport without browser runtime errors",
+      "passed": true
+    }
+  ],
+  "saveCalls": 0,
+  "authReads": 21,
+  "unexpectedRequests": [],
+  "runtimeErrors": []
+}

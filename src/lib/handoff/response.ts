@@ -1,11 +1,96 @@
 import { researchResponseSchema, type ResearchCandidate, type ResearchResponse } from './contract';
-import type { HistoricalRecord, ImportCommit, ImportDecision, ImportIssue, ImportPreview, VerificationStatus, HistoricalWorkspace } from '@/lib/imports/types';
+import type { HistoricalRecord, ImportCommit, ImportDecision, ImportIssue, ImportPreview, VerificationStatus, HistoricalWorkspace, HistoricalSnapshot, ImportPreviewRow, ImportDuplicate } from '@/lib/imports/types';
 import { parseHistoricalSource, prepareImportCommit, sha256, commitHistoricalImport, createHistoricalNotification, registerHistoricalPaper, validateHistoricalTransition } from '@/lib/imports';
 export interface ResearchCandidateReview { id: string; rowNumber: number; candidate: ResearchCandidate; issues: ImportIssue[]; impliedProbability: number | null; calculatedEv: number | null; freshness: 'unknown' | 'fresh' | 'stale' | 'future'; }
-export interface ResearchPreview { response: ResearchResponse; importPreview: ImportPreview; candidateReviews: ResearchCandidateReview[]; passReviews: { id: string; rowNumber: number; reason: string }[]; }
+export interface ResearchPreview { response: ResearchResponse; importPreview: ImportPreview; candidateReviews: ResearchCandidateReview[]; passReviews: { id: string; rowNumber: number; reason: string }[]; sessionFingerprint: string; }
 export const melbourneDate = (date = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Australia/Melbourne', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
 const warning = (field: string, code: string, message: string): ImportIssue => ({ field, code, message, severity: 'warning' });
 const error = (field: string, code: string, message: string): ImportIssue => ({ field, code, message, severity: 'error' });
+/** Stage-only selections are review evidence, never registered predictions or financial records. */
+export type PriorResearchSelection = Pick<HistoricalSnapshot, 'sport' | 'eventId' | 'event' | 'participant' | 'marketId' | 'market' | 'selection' | 'line' | 'bookmaker' | 'odds' | 'predictionAt' | 'sourceReference'> & { id?: string; ownerConfirmedPlaced?: boolean };
+export interface ResearchSessionMetadata { responseId: string; createdAt: string | null; researchDay: number; researchDate: string; dayStatus: string; sessionFingerprint: string | null; }
+export function researchSessionMetadata(record: HistoricalRecord): ResearchSessionMetadata | null {
+  const value = record.transformations.find(change => change.rule === 'research_response_context_metadata')?.normalized;
+  if (!value || typeof value !== 'object') return null;
+  const meta = value as Record<string, unknown>;
+  if (!Number.isSafeInteger(meta.researchDay) || Number(meta.researchDay) < 1 || typeof meta.researchDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(meta.researchDate) || !['draft','completed'].includes(String(meta.dayStatus)) || typeof meta.responseId !== 'string') return null;
+  return { responseId: meta.responseId, createdAt: typeof meta.createdAt === 'string' ? meta.createdAt : null, researchDay: Number(meta.researchDay), researchDate: meta.researchDate, dayStatus: String(meta.dayStatus), sessionFingerprint: typeof meta.sessionFingerprint === 'string' ? meta.sessionFingerprint : null };
+}
+const canonicalValue = (value: unknown): unknown => Array.isArray(value) ? value.map(canonicalValue) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalValue((value as Record<string, unknown>)[key])])) : typeof value === 'string' ? value.normalize('NFKC').trim() : value;
+const identityText = (value: string | null | undefined) => value?.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase() || null;
+/** Reordering records or renaming response/row IDs is not a new research session. */
+export function semanticResearchSession(response: ResearchResponse): string {
+  const withoutId = <T extends { id: string }>(entry: T) => { const { id, ...content } = entry; void id; return JSON.stringify(canonicalValue(content)); };
+  return JSON.stringify(canonicalValue({ researchDate: response.researchDate, researchDay: response.researchDay, source: response.source, researchMethod: response.researchMethod, sourceUrls: [...response.sourceUrls].sort(), rulesSourceReference: response.rulesSourceReference, candidates: response.candidates.map(withoutId).sort(), passes: response.passes.map(withoutId).sort() }));
+}
+function findSessionMatch(responseId: string, fingerprint: string, existingRecords: HistoricalRecord[]): HistoricalRecord | undefined {
+  return existingRecords.find(record => { const metadata = researchSessionMetadata(record); return metadata && (metadata.responseId === responseId || Boolean(fingerprint && metadata.sessionFingerprint === fingerprint)); });
+}
+function sameKnown(a: string | null, b: string | null): boolean { const left = identityText(a), right = identityText(b); return left !== null && right !== null && left === right; }
+function knownIdentity(aId: string | null, bId: string | null, aText: string | null, bText: string | null): boolean { return aId && bId ? aId === bId : sameKnown(aText, bText); }
+function rawOddsTime(record: HistoricalRecord | ImportPreviewRow): string | null { const raw = record.raw; return raw && typeof raw === 'object' && 'oddsTimestamp' in raw && typeof raw.oddsTimestamp === 'string' ? raw.oddsTimestamp : null; }
+/** Strong duplicate identity needs explicit fixture/market/selection/line and quote times. Weak evidence stays probable. */
+function selectionMatch(a: PriorResearchSelection, b: PriorResearchSelection, context: { unregistered: boolean; aOddsTime: string | null; bOddsTime: string | null }): ImportDuplicate['level'] | null {
+  if (a.sport && b.sport && a.sport !== b.sport) return null;
+  if (a.eventId && b.eventId && a.eventId !== b.eventId) return null;
+  if (a.marketId && b.marketId && a.marketId !== b.marketId) return null;
+  if (a.line != null && b.line != null && !sameKnown(a.line, b.line)) return null;
+  const event = knownIdentity(a.eventId, b.eventId, a.event, b.event);
+  const market = knownIdentity(a.marketId, b.marketId, a.market, b.market);
+  const selection = sameKnown(a.selection, b.selection);
+  if (event && market && selection) {
+    const sameQuote = a.sport !== null && a.sport === b.sport && sameKnown(a.line, b.line) && sameKnown(a.bookmaker, b.bookmaker) && a.odds !== null && a.odds === b.odds && a.predictionAt !== null && a.predictionAt === b.predictionAt && context.aOddsTime !== null && context.aOddsTime === context.bOddsTime;
+    return sameQuote && !context.unregistered ? 'exact' : 'probable';
+  }
+  if (!context.unregistered) return null;
+  // A proposal with missing fixture identity cannot prove a duplicate, but must not disappear from review.
+  const participant = identityText(a.participant), previousParticipant = identityText(b.participant), previousSelection = identityText(b.selection), currentSelection = identityText(a.selection);
+  const namedOverlap = participant && (participant === previousParticipant || previousSelection?.includes(participant));
+  const textualOverlap = currentSelection && previousSelection && (currentSelection === previousSelection || currentSelection.length >= 8 && previousSelection.includes(currentSelection));
+  const conflictingKnownEvent = a.event && b.event && !event;
+  const conflictingKnownMarket = a.market && b.market && !market && !identityText(a.market)?.includes(identityText(b.market)!) && !identityText(b.market)?.includes(identityText(a.market)!);
+  return !conflictingKnownEvent && !conflictingKnownMarket && (namedOverlap || textualOverlap) ? 'probable' : null;
+}
+function applyResearchIdentityReview(rows: ImportPreviewRow[], responseId: string, fingerprint: string, existingRecords: HistoricalRecord[], previousProposals: PriorResearchSelection[], now: Date): void {
+  const session = findSessionMatch(responseId, fingerprint, existingRecords);
+  for (const row of rows) {
+    const add = (recordId: string, level: ImportDuplicate['level'], reason: string) => {
+      const previous = row.duplicates.find(item => item.recordId === recordId);
+      if (previous?.level === 'exact' || previous?.level === level && previous.reason === reason) return;
+      row.duplicates = row.duplicates.filter(item => item.recordId !== recordId);
+      row.duplicates.push({ recordId, level, reason });
+    };
+    if (session) {
+      add(session.id, 'exact', 'This research session is already registered: the response ID or source content matches. Renaming IDs is not a new session.');
+      if (!row.issues.some(issue => issue.code === 'duplicate_research_session')) row.issues.push(error('id', 'duplicate_research_session', 'This research session already has registered source rows. Review the saved session instead of importing it again.'));
+    }
+    if (!row.snapshot.selection || row.snapshot.selection === 'Pass — no prediction registered') continue;
+    const requireCurrentEvidence = () => {
+      if (row.snapshot.kind !== 'paper') return;
+      const raw = row.raw && typeof row.raw === 'object' ? row.raw as Partial<ResearchCandidate> : {};
+      const quoteAge = raw.oddsTimestamp ? now.getTime() - Date.parse(raw.oddsTimestamp) : null;
+      const complete = row.snapshot.sport && row.snapshot.event && row.snapshot.market && row.snapshot.selection && row.snapshot.line && row.snapshot.bookmaker && row.snapshot.odds !== null && row.snapshot.predictionAt && raw.startsAt && raw.oddsSource && quoteAge !== null && quoteAge >= -300000 && quoteAge <= 86400000 && raw.evidence?.length;
+      if (!complete && !row.issues.some(issue => issue.code === 'proposal_requires_current_evidence')) row.issues.push(error('provenance', 'proposal_requires_current_evidence', 'An old proposal cannot supply missing current fixture, market, quote timestamp, attributable odds or supporting evidence. Obtain a fresh source-supported pre-event decision before paper registration, or retain this response as watch/pass.'));
+    };
+    for (const record of existingRecords) {
+      const proposal = record.snapshot.kind !== 'paper';
+      const level = selectionMatch(row.snapshot, record.snapshot, { unregistered: proposal, aOddsTime: rawOddsTime(row), bOddsTime: rawOddsTime(record) });
+      if (level && record.snapshot.kind === null) requireCurrentEvidence();
+      if (level) add(record.id, level, proposal ? 'Selection overlaps an unregistered prior proposal or actual-source archive. Review fixture, line and original quote before a separate paper decision; this research approval does not register an additional actual wager.' : level === 'exact' ? 'The exact selection, line, original odds and quote/prediction times are already registered, even though IDs differ.' : 'Selection overlaps an existing forecast; missing or changed prices/times require an explicit keep-separate decision, never an automatic merge.');
+    }
+    for (const earlier of rows.filter(other => other.rowNumber < row.rowNumber)) {
+      const level = selectionMatch(row.snapshot, earlier.snapshot, { unregistered: earlier.snapshot.kind !== 'paper', aOddsTime: rawOddsTime(row), bOddsTime: rawOddsTime(earlier) });
+      if (level) add(`row:${earlier.rowNumber}`, level, level === 'exact' ? 'This response repeats the same selection, price and quote/prediction times under a different row ID.' : 'This response repeats an overlapping selection/proposal; explicitly review it before retaining another row.');
+    }
+    for (const [index, proposal] of previousProposals.entries()) {
+      const level = selectionMatch(row.snapshot, proposal, { unregistered: true, aOddsTime: rawOddsTime(row), bOddsTime: null });
+      if (level) requireCurrentEvidence();
+      if(level&&proposal.ownerConfirmedPlaced&&row.snapshot.kind==='paper'&&!row.issues.some(i=>i.code==='owner_placed_requires_distinct_paper_registration'))row.issues.push(error('decision','owner_placed_requires_distinct_paper_registration','This selection is linked to an owner-confirmed actual placement. A distinct original paper registration is not established; retain watch/pass or separately review source proof rather than double-counting it as an independent paper position.'));
+      if (level) add(`proposal:${proposal.id ?? proposal.sourceReference ?? index}`, 'probable', proposal.ownerConfirmedPlaced?'Local continuity evidence links this selection to an owner-confirmed actual placement, not verified execution. Do not count the old proposal as an independent paper registration.':'Unverified local continuity evidence contains an overlapping unregistered proposal. It is not a prediction or placed wager; require fresh source-supported event/odds evidence and explicit review before paper registration.');
+    }
+  }
+}
+
 export function reviewResearchCandidate(candidate: ResearchCandidate, now = new Date()): Omit<ResearchCandidateReview, 'rowNumber'> {
   const issues: ImportIssue[] = [];
   for (const field of ['sport', 'event', 'startsAt', 'participant', 'market', 'selection', 'line', 'bookmaker', 'originalOdds', 'oddsTimestamp', 'oddsSource', 'predictionTimestamp', 'strategy'] as const) if (candidate[field] === null) issues.push(warning(field, 'missing_research_fact', 'Missing source information remains null; no available bookmaker price or prediction fact is inferred.'));
@@ -23,13 +108,16 @@ export function reviewResearchCandidate(candidate: ResearchCandidate, now = new 
   if (estimate.value !== null) {
     if (estimate.origin === 'llm') issues.push(error('probability', 'llm_probability_forbidden', 'LLM-generated numerical betting probabilities cannot be registered. Supply a documented deterministic model or an attributable external forecast.'));
     if (!estimate.origin || estimate.origin === 'unknown' || !estimate.source || !estimate.method || !estimate.modelVersion || !estimate.timestamp || !candidate.predictionTimestamp) issues.push(error('probability', 'incomplete_probability_provenance', 'A numerical probability requires original source, numerical methodology, model version, forecast timestamp and a non-LLM origin.'));
-    if (estimate.method && /\b(?:chatgpt|llm|large language model|language model generated|gut feel|intuition)\b/i.test(estimate.method)) issues.push(error('probability.method', 'unsupported_probability_method', 'The stated method does not establish a reproducible numerical probability.'));
+    if ([estimate.source, estimate.method, estimate.modelVersion].some(value => value && /\b(?:chatgpt|llm|gpt(?:-?\d[a-z\d.-]*)?|claude|gemini|large language model|language model generated|gut feel|intuition)\b/i.test(value))) issues.push(error('probability.method', 'unsupported_probability_method', 'The stated method does not establish a reproducible numerical probability.'));
+    if (estimate.timestamp && Date.parse(estimate.timestamp) > now.getTime() + 300000) issues.push(error('probability.timestamp', 'future_probability_timestamp', 'The probability source timestamp cannot be in the future relative to review time.'));
     if (candidate.predictionTimestamp && estimate.timestamp && Date.parse(estimate.timestamp) > Date.parse(candidate.predictionTimestamp)) issues.push(error('probability.timestamp', 'future_model_information', 'Model information cannot postdate the original forecast.'));
-    if (!candidate.evidence.length) issues.push(warning('probability', 'unverified_model_claim', 'Methodology text is retained as a source claim; no numerical model or source has been independently verified.'));
+    if (!candidate.evidence.length || candidate.evidence.some(item => item.verification === 'unverified')) issues.push(warning('probability', 'unverified_model_claim', 'Methodology and origin labels are source claims, not independent verification. Review the numerical inputs and forecast independence before interpreting this probability.'));
   }
+  const completeOddsProvenance = Boolean(candidate.bookmaker && candidate.oddsSource && candidate.oddsTimestamp);
+  if (candidate.originalOdds !== null && !completeOddsProvenance) issues.push(warning('originalOdds', 'incomplete_odds_provenance', 'A supplied price needs its original bookmaker, attributable source and timestamp. Preserve the supplied value as an unverified claim; EV is unavailable until its provenance is complete.'));
   const impliedProbability = candidate.originalOdds === null ? null : 1 / candidate.originalOdds;
   const defensible = estimate.value !== null && estimate.origin !== 'llm' && !issues.some(issue => issue.severity === 'error' && issue.field.startsWith('probability'));
-  const calculatedEv = defensible && candidate.originalOdds !== null ? estimate.value! * candidate.originalOdds - 1 : null;
+  const calculatedEv = defensible && completeOddsProvenance && candidate.originalOdds !== null ? estimate.value! * candidate.originalOdds - 1 : null;
   if (candidate.estimatedEv !== null && (calculatedEv === null || Math.abs(candidate.estimatedEv - calculatedEv) > 0.000001)) issues.push(error('estimatedEv', 'inconsistent_ev', 'Reported EV cannot be reconciled with source odds and a supported numerical probability. EV must be null when those inputs are unavailable.'));
   let freshness: ResearchCandidateReview['freshness'] = 'unknown';
   if (candidate.oddsTimestamp) {
@@ -47,7 +135,7 @@ export function reviewResearchCandidate(candidate: ResearchCandidate, now = new 
   return { id: candidate.id, candidate, issues, impliedProbability, calculatedEv, freshness };
 }
 /** Bounded parsing. Raw candidate objects and the exact full response remain immutable source evidence. */
-export async function parseResearchResponse(input: { text: string; sourceName: string; verification: VerificationStatus; existingRecords?: HistoricalRecord[]; now?: Date }): Promise<ResearchPreview> {
+export async function parseResearchResponse(input: { text: string; sourceName: string; verification: VerificationStatus; existingRecords?: HistoricalRecord[]; previousProposals?: PriorResearchSelection[]; now?: Date }): Promise<ResearchPreview> {
   if (new TextEncoder().encode(input.text).byteLength > 1048576) throw new Error('Research responses are limited to 1 MiB.');
   let decoded: unknown;
   try { decoded = JSON.parse(input.text.replace(/^\uFEFF/, '')); } catch { throw new Error('Malformed research JSON. Use the versioned EdgeLab research response template.'); }
@@ -55,6 +143,7 @@ export async function parseResearchResponse(input: { text: string; sourceName: s
   if (!parsed.success) throw new Error('Research response schema validation failed: ' + parsed.error.issues.slice(0, 12).map(issue => `${issue.path.join('.') || 'response'}: ${issue.message}`).join('; '));
   const response = parsed.data;
   const now = input.now ?? new Date();
+  const sessionFingerprint = await sha256(semanticResearchSession(response));
   const candidateReviews = response.candidates.map((candidate, index) => ({ ...reviewResearchCandidate(candidate, now), rowNumber: index + 1 }));
   const rows = response.candidates.map(candidate => ({
     externalId: `${response.id}:${candidate.id}`, eventId: candidate.eventId, marketId: candidate.marketId,
@@ -80,16 +169,21 @@ export async function parseResearchResponse(input: { text: string; sourceName: s
     row.transformations.unshift({ field: 'record', original: structuredClone(row.raw), normalized: structuredClone(row.snapshot), rule: 'research_response_v1_to_nullable_historical_snapshot' });
     const candidateReview = candidateReviews.find(review => review.rowNumber === row.rowNumber);
     if (candidateReview) row.issues.push(...candidateReview.issues);
+    if (!response.createdAt) row.issues.push(warning('createdAt', 'missing_research_creation_time', 'Research creation time was not supplied. It remains unknown and is not substituted from the research date, event date or import time.'));
+    else if (Date.parse(response.createdAt) > now.getTime() + 300000) row.issues.push(error('createdAt', 'future_research_creation_time', 'Research creation time cannot be in the future.'));
     if (!response.source || !response.researchMethod) row.issues.push(warning('researchMethod', 'missing_research_provenance', 'Source or research method was not supplied; claims remain unverified.'));
     if (response.researchDate !== melbourneDate(now)) row.issues.push(warning('researchDate', 'different_research_date', 'The declared Melbourne research date differs from today; confirm the intended day before registration.'));
     if (input.verification !== 'synthetic') row.issues.push(warning('verification', 'manual_source_verification', 'Approval is a user attestation. EdgeLab has not visited links, checked bookmaker prices or verified model claims.'));
-    const metadata = { format: response.format, version: response.version, responseId: response.id, researchDay: response.researchDay, researchDate: response.researchDate, dayStatus: response.dayStatus, sourceRecordId: [...response.candidates, ...response.passes][row.rowNumber - 1].id };
+    const metadata = { format: response.format, version: response.version, responseId: response.id, researchDay: response.researchDay, researchDate: response.researchDate, dayStatus: response.dayStatus, sourceRecordId: [...response.candidates, ...response.passes][row.rowNumber - 1].id, createdAt: response.createdAt ?? null, sessionFingerprint };
     row.transformations.push({ field: 'researchMetadata', original: null, normalized: metadata, rule: 'research_response_context_metadata' });
   }
-  return { response, importPreview: preview, candidateReviews, passReviews };
+  applyResearchIdentityReview(preview.rows, response.id, sessionFingerprint, input.existingRecords ?? [], input.previousProposals ?? [], now);
+  return { response, importPreview: preview, candidateReviews, passReviews, sessionFingerprint };
 }
-export function prepareResearchCommit(preview: ResearchPreview, decisions: ImportDecision[], verification: VerificationStatus, existingRecords: HistoricalRecord[] = [], options: { confirmDayCompletion?: boolean; now?: Date } = {}): ImportCommit {
+export function prepareResearchCommit(preview: ResearchPreview, decisions: ImportDecision[], verification: VerificationStatus, existingRecords: HistoricalRecord[] = [], options: { confirmDayCompletion?: boolean; previousProposals?: PriorResearchSelection[]; now?: Date } = {}): ImportCommit {
   const confirmationTime = options.now ?? new Date();
+  if (findSessionMatch(preview.response.id, preview.sessionFingerprint, existingRecords)) throw new Error('This research session is a duplicate of an already registered session. Do not change its IDs to register it again.');
+  if (preview.response.createdAt && Date.parse(preview.response.createdAt) > confirmationTime.getTime() + 300000) throw new Error('Research creation time is in the future. Re-parse and review the source.');
   for (const decision of decisions.filter(decision => decision.include)) {
     const original = preview.candidateReviews.find(review => review.rowNumber === decision.rowNumber);
     if (!original) continue;
@@ -97,6 +191,12 @@ export function prepareResearchCommit(preview: ResearchPreview, decisions: Impor
     if (current.issues.some(issue => issue.severity === 'error') || current.issues.some(issue => !original.issues.some(old => old.code === issue.code && old.field === issue.field))) throw new Error('Research data changed or became stale after preview. Re-parse and review the current source before confirmation.');
   }
   const reviewed = structuredClone(preview.importPreview);
+  applyResearchIdentityReview(reviewed.rows, preview.response.id, preview.sessionFingerprint, existingRecords, options.previousProposals ?? [], confirmationTime);
+  for (const decision of decisions.filter(item => item.include)) {
+    const row = reviewed.rows.find(item => item.rowNumber === decision.rowNumber);
+    if (row?.duplicates.some(item => item.level === 'exact')) throw new Error('This research selection is an exact duplicate of an existing forecast.');
+    if (row?.duplicates.some(item => item.level === 'probable') && !decision.allowProbableDuplicate) throw new Error('This selection overlaps an earlier forecast or unregistered proposal. Review the probable duplicate explicitly before registration.');
+  }
   if (options.confirmDayCompletion) {
     if (preview.response.dayStatus !== 'completed') throw new Error('Only a source explicitly marked completed can be confirmed as a completed research day.');
     for (const row of reviewed.rows) row.transformations.push({ field: 'researchDay', original: null, normalized: preview.response.researchDay, rule: 'owner_confirmed_day_completion' });
@@ -111,7 +211,7 @@ export function researchMetadata(record: HistoricalRecord): { researchDay: numbe
 }
 
 /** One atomic historical save: reviewed records, initial paper state and in-app alerts. */
-export function commitApprovedResearch(workspace: HistoricalWorkspace, preview: ResearchPreview, decisions: ImportDecision[], verification: VerificationStatus, options: { confirmDayCompletion?: boolean; now?: Date } = {}): HistoricalWorkspace {
+export function commitApprovedResearch(workspace: HistoricalWorkspace, preview: ResearchPreview, decisions: ImportDecision[], verification: VerificationStatus, options: { confirmDayCompletion?: boolean; previousProposals?: PriorResearchSelection[]; now?: Date } = {}): HistoricalWorkspace {
   const commit = prepareResearchCommit(preview, decisions, verification, workspace.records, options);
   let next = commitHistoricalImport(workspace, commit);
   for (const record of commit.records.filter(record => record.snapshot.kind === 'paper')) {

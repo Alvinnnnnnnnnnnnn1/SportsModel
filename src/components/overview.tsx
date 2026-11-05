@@ -37,7 +37,7 @@ import {
 export function Overview() {
   const { data, mode, running, runResearch, notify } = useApp();
   const { history } = useHistory();
-  const importedPaperCount = history.records.filter(record => record.snapshot.kind === "paper" || record.snapshot.kind === null && history.paperResults.some(result => result.recordId === record.id)).length;
+  const importedPaperCount = history.paperResults.length;
   const [now] = useState(() => Date.now());
   const [addOpen, setAddOpen] = useState(false);
   const [days, setDays] = useState("30");

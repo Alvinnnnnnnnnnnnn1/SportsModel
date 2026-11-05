@@ -1,0 +1,489 @@
+{
+  "scope": "Local production build, fresh synthetic browsers. External transport blocked/mocked; no personal session or hosted writes. Live provider audits are separate.",
+  "createdAt": "2026-11-05T14:23:13.693006+00:00",
+  "totalPassed": 103,
+  "totalChecks": 103,
+  "suites": [
+    {
+      "suite": "Daily cycle",
+      "sourceReport": "docs/reports/daily-workflow-browser.json",
+      "passed": 15,
+      "total": 15,
+      "checks": [
+        {
+          "name": "existing synthetic archive is preserved and is not financially backfilled",
+          "passed": true
+        },
+        {
+          "name": "research JSON imports to actionable sources without automatic actual or paper positions",
+          "passed": true
+        },
+        {
+          "name": "one-time placed confirmation prefills selection but requires distinct accepted odds and time",
+          "passed": true
+        },
+        {
+          "name": "paper approval is separate and keeps the original forecast immutable",
+          "passed": true
+        },
+        {
+          "name": "results check is honest about manual coverage and excludes legacy claims",
+          "passed": true
+        },
+        {
+          "name": "results prompt contains exact unresolved IDs and a separate versioned response contract",
+          "passed": true
+        },
+        {
+          "name": "manual results are entered together with explicit evidence, terms and actual payout",
+          "passed": true
+        },
+        {
+          "name": "batch cancellation and final authorization prevent premature financial writes",
+          "passed": true
+        },
+        {
+          "name": "replaying the exact results response performs no second settlement",
+          "passed": true
+        },
+        {
+          "name": "invalid result identities remain blocked without changing authoritative records",
+          "passed": true
+        },
+        {
+          "name": "analytics update from persisted actual and paper results without manufactured funding",
+          "passed": true
+        },
+        {
+          "name": "paper evaluation exports qualifying results and labels synthetic historical exclusions",
+          "passed": true
+        },
+        {
+          "name": "sports proxy rejects anonymous and cross-origin reads without spending provider quota",
+          "passed": true
+        },
+        {
+          "name": "the next handoff includes persisted results without completing or advancing Day 6",
+          "passed": true
+        },
+        {
+          "name": "browser reload and mobile daily workspace preserve source history and saved positions",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "suite": "Routes and mobile",
+      "sourceReport": "/private/tmp/edgelab-master-routes/results.json",
+      "passed": 22,
+      "total": 22,
+      "checks": [
+        {
+          "name": "overview desktop",
+          "passed": true
+        },
+        {
+          "name": "route /ledger",
+          "passed": true
+        },
+        {
+          "name": "route /research",
+          "passed": true
+        },
+        {
+          "name": "route /paper",
+          "passed": true
+        },
+        {
+          "name": "route /analytics",
+          "passed": true
+        },
+        {
+          "name": "route /notifications",
+          "passed": true
+        },
+        {
+          "name": "route /settings",
+          "passed": true
+        },
+        {
+          "name": "cancelled manual drafts make no financial writes and execution facts are not prefilled",
+          "passed": true
+        },
+        {
+          "name": "manual bet confirmation and audited settlement",
+          "passed": true
+        },
+        {
+          "name": "parlay individual leg settlement",
+          "passed": true
+        },
+        {
+          "name": "bonus payout reconciliation and cancelling a final financial review preserve actual totals",
+          "passed": true
+        },
+        {
+          "name": "demo reload persistence",
+          "passed": true
+        },
+        {
+          "name": "settings funding record and audit",
+          "passed": true
+        },
+        {
+          "name": "run simulated daily research",
+          "passed": true
+        },
+        {
+          "name": "research detail and immutable paper registration",
+          "passed": true
+        },
+        {
+          "name": "paper settlement preserves forecast and actual finance",
+          "passed": true
+        },
+        {
+          "name": "notification test read dismiss and history",
+          "passed": true
+        },
+        {
+          "name": "research actual record needs manual confirmation",
+          "passed": true
+        },
+        {
+          "name": "open-tab browser permission feature",
+          "passed": true
+        },
+        {
+          "name": "all mobile routes have no document overflow",
+          "passed": true
+        },
+        {
+          "name": "mobile layout",
+          "passed": true
+        },
+        {
+          "name": "no browser runtime exceptions or external requests",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "suite": "Auth failures/session forms",
+      "sourceReport": "/private/tmp/edgelab-master-auth.json",
+      "passed": 11,
+      "total": 11,
+      "checks": [
+        {
+          "name": "signup keeps confirmation pending and uses the fixed local callback",
+          "passed": true
+        },
+        {
+          "name": "unconfirmed sign-in fails safely and confirmed sign-in opens an empty private workspace",
+          "passed": true
+        },
+        {
+          "name": "failed authenticated funding submission retains its draft and does not publish a financial record",
+          "passed": true
+        },
+        {
+          "name": "retrying the authenticated form persists exactly once and survives browser refresh",
+          "passed": true
+        },
+        {
+          "name": "unchanged private settings save is read back with an audit and no extra funding",
+          "passed": true
+        },
+        {
+          "name": "acknowledged settings writes without persistence fail readback instead of claiming success",
+          "passed": true
+        },
+        {
+          "name": "local logout clears private UI and browser tokens while restoring isolated demo records",
+          "passed": true
+        },
+        {
+          "name": "a browser reload refreshes a genuinely expired session before reading private data",
+          "passed": true
+        },
+        {
+          "name": "revoked browser sessions fail closed without submitting a stale authenticated form",
+          "passed": true
+        },
+        {
+          "name": "failed authentication callbacks clear URL parameters and show controlled errors",
+          "passed": true
+        },
+        {
+          "name": "no external requests or browser runtime exceptions escaped the isolated transport",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "suite": "Historical import",
+      "sourceReport": "/private/tmp/edgelab-master-import/report.json",
+      "passed": 12,
+      "total": 12,
+      "checks": [
+        {
+          "name": "all eight application routes still render",
+          "passed": true
+        },
+        {
+          "name": "malformed JSON creates no stored records",
+          "passed": true
+        },
+        {
+          "name": "file upload validates automatically and invalid UTF-8 creates no records",
+          "passed": true
+        },
+        {
+          "name": "JSON preview, unknown nulls and explicit batch approval",
+          "passed": true
+        },
+        {
+          "name": "exact duplicates blocked without modifying archive",
+          "passed": true
+        },
+        {
+          "name": "paper forecast frozen and per-leg settlement audited",
+          "passed": true
+        },
+        {
+          "name": "explicitly cleared result timestamp stays unknown when editor reopens",
+          "passed": true
+        },
+        {
+          "name": "notifications deduplicate, persist read and add unknown record to paper",
+          "passed": true
+        },
+        {
+          "name": "separate financial confirmation registers bonus entry without funding",
+          "passed": true
+        },
+        {
+          "name": "CSV file upload and manual entry work through review",
+          "passed": true
+        },
+        {
+          "name": "mobile import layout remains usable",
+          "passed": true
+        },
+        {
+          "name": "no browser errors or external network",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "suite": "Research handoff",
+      "sourceReport": "/private/tmp/edgelab-master-handoff/report.json",
+      "passed": 17,
+      "total": 17,
+      "checks": [
+        {
+          "name": "fresh local workspace has no imported experiment history",
+          "passed": true
+        },
+        {
+          "name": "explicitly selected synthetic conversation maps multiple records without saving",
+          "passed": true
+        },
+        {
+          "name": "historical archive requires explicit review and retains selected source provenance",
+          "passed": true
+        },
+        {
+          "name": "actual historical entry reaches ledger only through separate manual financial confirmation",
+          "passed": true
+        },
+        {
+          "name": "owner-attested context is append-only and distinct from the unverified Day 5 checkpoint",
+          "passed": true
+        },
+        {
+          "name": "Run Daily Research produces and copies a self-contained prompt without research or financial writes",
+          "passed": true
+        },
+        {
+          "name": "malformed research JSON and LLM probabilities are blocked before registration",
+          "passed": true
+        },
+        {
+          "name": "missing bookmaker prices remain null and require explicit review rather than invented odds",
+          "passed": true
+        },
+        {
+          "name": "batch selection and approval cancellation leave research, paper and financial state unchanged",
+          "passed": true
+        },
+        {
+          "name": "approved structured research atomically registers paper, pass history and an in-app alert",
+          "passed": true
+        },
+        {
+          "name": "duplicate research responses are rejected without duplicate predictions or alerts",
+          "passed": true
+        },
+        {
+          "name": "outstanding-result reminders deduplicate and retain source navigation",
+          "passed": true
+        },
+        {
+          "name": "final event and individual leg results persist without changing the frozen forecast or cash ledger",
+          "passed": true
+        },
+        {
+          "name": "analytics and the next conversation use persisted results and confirmed day progression",
+          "passed": true
+        },
+        {
+          "name": "complete continuity export contains both workspaces, original sources, rules and audits",
+          "passed": true
+        },
+        {
+          "name": "mobile handoff and conversation intake have no document overflow",
+          "passed": true
+        },
+        {
+          "name": "all verification used synthetic local state without browser errors or escaped network requests",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "suite": "Continuity/methodology",
+      "sourceReport": "/private/tmp/edgelab-master-continuity.json",
+      "passed": 7,
+      "total": 7,
+      "checks": [
+        {
+          "name": "draft methodology and source gaps generate no records",
+          "passed": true
+        },
+        {
+          "name": "attached recovery and owner claims remain local while active Day6 stays uncompleted",
+          "passed": true
+        },
+        {
+          "name": "explicit local retention survives tabs and reload without importing source claims",
+          "passed": true
+        },
+        {
+          "name": "methodology requires policy approval and final append confirmation",
+          "passed": true
+        },
+        {
+          "name": "backup includes saved policy and separately labelled local source evidence",
+          "passed": true
+        },
+        {
+          "name": "owner checkpoint importer is preview-only and never fills accepted odds",
+          "passed": true
+        },
+        {
+          "name": "mobile continuity layout and isolated transport remain usable",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "suite": "Wager claims/isolation",
+      "sourceReport": "/private/tmp/edgelab-master-claims.json",
+      "passed": 12,
+      "total": 12,
+      "checks": [
+        {
+          "name": "existing mocked private workspace loads approved policy and paper without setup or writes",
+          "passed": true
+        },
+        {
+          "name": "malformed claim files are rejected before retention or archive writes",
+          "passed": true
+        },
+        {
+          "name": "file selection previews owner reports while accepted execution odds remain unknown",
+          "passed": true
+        },
+        {
+          "name": "explicit local retention survives Overview and Ledger refresh without financial writes",
+          "passed": true
+        },
+        {
+          "name": "archive review supports bulk selection, warning acknowledgement and cancellation without writes",
+          "passed": true
+        },
+        {
+          "name": "one explicit archive confirmation persists reports only and shows the exact saved records",
+          "passed": true
+        },
+        {
+          "name": "saved historical summaries survive clearing local attachment and page reload",
+          "passed": true
+        },
+        {
+          "name": "exact duplicate source cannot be reimported or registered a second time",
+          "passed": true
+        },
+        {
+          "name": "another mocked account cannot see the first account attachment or saved claim summary",
+          "passed": true
+        },
+        {
+          "name": "demo does not inherit private claims or accept an owner-reported source",
+          "passed": true
+        },
+        {
+          "name": "mobile claim review and summary fit without document overflow",
+          "passed": true
+        },
+        {
+          "name": "all transport is mocked and no financial writes or runtime errors occurred",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "suite": "Private read-only workspace",
+      "sourceReport": "/private/tmp/edgelab-master-workspace.json",
+      "passed": 7,
+      "total": 7,
+      "checks": [
+        {
+          "name": "demo disables the private read-only checker without creating private records",
+          "passed": true
+        },
+        {
+          "name": "an already signed-in mocked session reads both workspaces without account setup or writes",
+          "passed": true
+        },
+        {
+          "name": "download exposes counts and stored settings while excluding every fake credential and identity",
+          "passed": true
+        },
+        {
+          "name": "browser reload retains the mocked session and repeats reads without persisting anything",
+          "passed": true
+        },
+        {
+          "name": "missing stored settings remain null and never turn the A$500 cap into a deposit",
+          "passed": true
+        },
+        {
+          "name": "switching back to demo removes the private report without modifying either workspace",
+          "passed": true
+        },
+        {
+          "name": "all checks used blocked external transport without browser runtime errors",
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "finalDailyBundleCheck": {
+    "passed": 15,
+    "failed": 0,
+    "report": "docs/reports/daily-workflow-browser.json"
+  }
+}

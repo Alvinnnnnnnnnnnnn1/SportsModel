@@ -186,3 +186,9 @@ Settings includes a read-only check using the existing authenticated session and
 ## Versioned context / owner checkpoint continuation
 
 No fourth migration is required or prepared. Context v2 and methodology text live inside the existing immutable raw journal source, with the same strictly validated historical snapshot shape and normal owner-bound RPCs. Owner checkpoint reviews use nullable snapshots and separate raw quote/range provenance; unknown execution fields are not filled to satisfy financial constraints. Preview guards block the staged owner checkpoint until separately approved. All three deployed migration files remain unchanged. See [research memory](research-memory.md) and [Day 6 review](day6-review-status.md).
+
+## Daily settlement persistence — 6 November 2026
+
+No migration was added or applied. Daily app settlements reuse `edgelab_save_workspace`; imported-paper result evidence/legs and audits reuse `edgelab_save_history`. Source snapshots remain immutable. Existing user ownership, RLS and revision conflicts remain enforced. A mixed batch spans two transactions and reports partial success; unchanged replay is idempotent. Research-to-actual links use an audited notes marker rather than misusing the core `research_candidates` foreign key. Local PostgreSQL tests exercise these paths with two normal authenticated roles and anonymous rejection; this is not proof of a new hosted write.
+
+Provider quota JSON is local operational state only; it stores no credentials or betting records. Provider reads never write tables. Real production history, Methodology Revision 1, eight archived wager claims, Maxey and Day 6/7 records were not changed by this development.

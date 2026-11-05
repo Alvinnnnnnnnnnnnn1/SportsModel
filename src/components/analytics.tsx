@@ -18,6 +18,7 @@ import {
 import { cn, money, percent, signedMoney } from "@/lib/utils";
 import { CalibrationChart, GroupChart, PerformanceChart } from "./charts";
 import { SimulationNote, StatCard } from "./shared";
+import { PaperLearning } from "./paper-learning";
 import { ImportedPaperSummary } from "./imports/imported-paper";
 export function Analytics() {
   const { data, mode } = useApp();
@@ -248,6 +249,7 @@ export function Analytics() {
         </div>
       </section>
       <ImportedPaperSummary />
+      <PaperLearning />
       {mode === "demo" && <SimulationNote />}
     </div>
   );

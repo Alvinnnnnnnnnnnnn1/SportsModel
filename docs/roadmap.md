@@ -1,57 +1,29 @@
-# Development roadmap
+# EdgeLab development roadmap — 6 November 2026
 
-## Completed foundation: hosted bookkeeping and access checks
+## Current usable workflow
 
-The two approved migrations are deployed. The hosted two-account report passed 17/17 groups: normal password JWTs, manual ledger/funding/settings persistence, settlement/audits, cross-account bet protection, anonymous/deletion restrictions, stale revisions, SDK session restoration and account A's browser sign-in/F5/demo separation/logout. See [verification](deployment-verification.md) for evidence and precise limits. Retain the labelled synthetic accounts/records; do not replay the write harness against them.
+The existing authenticated workspace and Demo remain separate. Historical review/import, the ledger, paper tracking, notifications, settings, JSON backup and approved Methodology Revision 1 are preserved. Do not recreate the owner's account or repeat archived real-history imports. The eight historical wager claims and historical Maxey remain source evidence with their existing classifications; neither an aggregate checkpoint nor the A$500 funding cap creates funding.
 
-## Completed locally: controlled historical intake and lifecycle
+The daily workspace now supports reviewed research intake, separate actual/paper decisions, Watch/Pass journals, a unified result queue, separate settlement JSON, explicit batch approval, replay prevention and analytics/handoff refresh. See [daily operation](daily-workflow.md) and [verification](master-verification.md).
 
-CSV/JSON/manual source intake now has bounded parsing, nullable missing facts, validation, audited manual resolution, exact/probable duplicate review, explicit archive confirmation and immutable source provenance. Separate financial confirmation registers only complete, consistent actual records; paper and funding never silently mix. Imported paper results/legs, hypothetical performance, notification idempotency/read/dismiss and paper registration are implemented. The new schema and isolated repositories are prepared locally. No real history was imported.
+## Optional sports-data stage
 
-Installed-SDK tests cover expired refresh, invalid/revoked sessions, signup/confirmation state, callback failures, logout and authenticated saves with mocked transport. The existing two-user hosted checkpoint remains preserved. Local PostgreSQL and browser checks are distinct from hosted verification; see [verification](verification.md).
+Server-only TheSportsDB/API-NBA/API-Basketball adapters, persistent quota state, queues, cache, exact identity review and conservative player-stat grading are implemented. Explicitly reviewed identity journals enable user-triggered result checks; provider observations never automatically settle or place a wager. Current support is sample-specific: recent NBL and historical NBA/NBL statistics were demonstrated; current NBA coverage remains unverified. TheSportsDB has limited fixture coverage and no demonstrated sampled player statistics. Tennis retains source/manual fallback. See [coverage and setup](sports-data.md).
 
-## Current checkpoint: deployed history and manual research continuation
+Keep local single-process access disabled unless configured. No polling, free-to-paid upgrade, bookmaker login or API-generated bookmaker price is authorized. No migration is currently needed.
 
-The historical migration was explicitly approved/deployed and its exact hosted catalog passed. The secure two-user hosted read/negative report passed **11/11** checks without changing historical snapshots. Anonymous access was rejected. Positive hosted history/paper/notification round trips remain unverified; preserve synthetic rejection instead of relabelling fixtures to force a pass.
+## Next practical step
 
-The zero-cost Research Handoff is implemented: owner-attested context journals, current prompt generation/copy, structured response contract and validation, manual candidate review, atomic immutable paper/alert registration, separate actual confirmation, results and analytics. User-selected conversation JSON supports manual multi-record mapping with original references; no real export/history has been supplied or imported. See [research-continuity.md](research-continuity.md).
+Use the next genuine daily research session in the existing private account. Generate/copy the prompt, import and review the structured response, and approve one eligible pre-event paper forecast. Check provider status read-only if configured, otherwise use the results prompt/manual evidence path. Hosted positive verification of the new flow needs genuine evidence and explicit UI approval; local synthetic tests do not replace it. Do not relabel synthetic research or invent missing ticket details to pass database restrictions.
 
-## Recommended next stage: source review and genuine private pilot
+Before any financial registration, separately confirm the accepted execution price, stake, placement time, terms and actual result/payout. Existing unresolved claims remain under review. No development task has modified hosted financial data.
 
-Obtain the original Days 1–5 source from the user and manually map a tiny sample. Review missing facts, day membership, duplicate identities and the unverified checkpoint reconciliation before explicit import approval. Source totals never justify inventing stakes, a funding transaction or a bookmaker balance. Confirm the full original rule set and completed day separately in the context journal.
+## Evaluation and forecasting stage
 
-After separately authorized genuine-source registration, verify a small positive hosted paper/notification/result lifecycle and non-empty two-account isolation using ordinary users. Keep existing records/accounts; use no service-role proof or synthetic relabelling. Complete an authorized email confirmation callback and real long-duration session checks if needed. No additional migrations are currently required for the manual handoff.
+The paper-evaluation export supplies a reproducible source/result dataset, strict eligibility exclusions, sample sizes, hit rate, calibration, Brier/log loss, original implied-odds benchmarks, grouped model/market/sport/track results and forecast errors. Missing CLV, input features and cutoffs remain null. It does not establish a betting advantage.
 
-Add a reviewed complete-backup restore path and explicit historical day scoping before larger migrations. Add source-supported adjusted parlay settlement prices separately from immutable original odds before partial-void wins can enter financial totals. Build a durable provider quota ledger only before any future exposed The Odds API endpoint; the readiness adapter remains disabled and untested against live prices.
+Collect an adequate independent pre-event sample before training. Offline manifest checks are foundational: chronological training/validation/freeze/test boundaries, leakage checks, exact dataset identity and minimum independent fixture counts. Parameter fitting, walk-forward experiment execution, validated calibration, joint SGM simulation and an authoritative owner-approved model activation/rollback registry remain unimplemented. No model activates automatically.
 
-## Strengthen the local research workflow
+Source V3 methodology evidence is staged privately and unapproved. Preserve Revision 1 until a separate owner-reviewed methodology change. Infrastructure changes must not change funding/staking rules.
 
-Add interaction tests for the manual confirmation form, parlay settlement, paper snapshots, notification read/dismiss flows and workspace switching. Maintain the existing local PostgreSQL, hosted catalog and secure two-user harnesses, keeping account-independent tests fast. Validate Melbourne daylight-saving boundary input and recorded UTC ordering. Keep account-independent unit tests fast.
-
-Improve research-run idempotency and record run failure details, cancellation and partial provider errors. Add explicit source freshness rules and reproducible model manifests before accepting non-synthetic research. Add per-entity repositories and pagination when dataset size warrants them. Add opt-in reviewed backup/import tools with strict mode and provenance checks rather than copying demo history to production.
-
-## Introduce documented data sources
-
-Research genuinely free, permitted data sources with clear coverage and licensing for NBA, NBL, ATP and WTA. Verify source terms, update frequency, timestamps and availability before implementing a provider. Integrate one sport and one market first, with recorded raw snapshots, rate limits, retry policy and visible stale/missing-data states. Do not introduce paid APIs or billing dependencies without a separate explicit decision.
-
-The Odds API adapter is currently a placeholder, not a commitment that a particular free quota meets the app's needs. Do not scrape bookmaker sites or connect bookmaker accounts.
-
-## Validate numerical models separately
-
-Implement a deterministic, explainable numerical baseline and retain training/evaluation splits, source versions and forecast timestamps. Register predictions before outcomes and evaluate out of sample with Brier score, calibration and adequate samples. Separate the evidence for forecast quality from illustrative EV arithmetic. Never infer a statistical edge from synthetic fixtures or a small hit rate.
-
-An optional future AI integration can summarize documented research and cite its sources. It must not supply numerical model probabilities or alter the registered forecast. No OpenAI API or other paid service is required for the MVP.
-
-## Scheduling and monitoring later
-
-Only after verified data ingestion and persistence, add an idempotent scheduler, background run status, source freshness checks, duplicate alert suppression and failure observability. Select infrastructure compatible with an explicitly agreed cost budget. A manual Run Daily Research button does not imply unattended daily execution.
-
-Implement and test a real push subscription/service worker only if background notifications are wanted. Until then, describe browser alerts as open-tab notifications. Automatic wager execution, bookmaker logins, real-money transfers, public subscriptions and social features remain outside EdgeLab's scope.
-
-## Immediate operating transition
-
-The existing personal settings and approved one-paper archive/tracking/notification pilot are verified. Do not repeat that import. Keep incomplete old records outside the actual ledger. The next task is to source-attest the original experiment context, then use the existing daily prompt/response/manual paper approval workflow and complete JSON backups. No new provider integration or infrastructure is needed for that transition. See [operating guide](operating-edgelab.md).
-
-## Next after methodology/checkpoint review
-
-Approve reconstructed methodology separately from the owner checkpoint archive. Obtain accepted execution prices, exact placement times and receipt references before any financial-ledger mapping; preserve original staged claims and quotes. Resolve remaining original history/rules and paper registration evidence without retrospective edits. A receipt-backed amendment/canonical registration workflow is the next concrete data-integrity task; paid/live feeds remain unnecessary.
+Later work may include a reviewed backup-restore path and comparable original/closing-price snapshots. Scheduled monitoring, paid providers and deployments require separate approval. Hosted email-confirmation and long-duration refresh behavior still need their documented genuine-user verification where not already established.

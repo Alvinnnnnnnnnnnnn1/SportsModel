@@ -65,3 +65,11 @@ Incomplete historical claims continue to use **Review actual-ledger registration
 ## Verification boundaries
 
 Regression checks use synthetic fixtures, isolated browser contexts and ephemeral PostgreSQL. Hosted personal records are never used as development fixtures. See [verification results](verification.md) for completed commands and exact scope; local checks do not imply a new hosted write or independent sports-source verification.
+
+## Daily workspace extensions — 6 November 2026
+
+Daily research intake archives reviewed immutable candidates only. It neither registers a position nor completes a research day. Confirm Placed invokes the existing explicit financial ticket review; Track as Paper has a separate pre-event approval. Watch/Pass append decision journals without rewriting original classifications. Day completion remains its own owner-confirmed source journal.
+
+Result imports use a separate strict settlement-response v1. Manual and provider-prefilled drafts remain proposals. Only the reviewed batch's final authorization persists eligible outcomes; actual payout is separately confirmed. Missing terms, source identity or exceptional-rule resolution block the row. Exact settlement replay does not create another audit/result. App and history workspaces save in separate transactions; partial success is visible and retry targets only remaining rows.
+
+Offline model manifest review cannot approve, activate or replace a model. The approved methodology remains unchanged. No new hosted development writes are authorized by these UI additions.

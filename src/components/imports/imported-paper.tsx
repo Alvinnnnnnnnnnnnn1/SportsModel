@@ -44,7 +44,7 @@ function PaperRegistration({ record, onClose }: { record: HistoricalRecord; onCl
 }
 export function ImportedPaperSummary() {
   const { history } = useHistory();
-  const records = history.records.filter(r => r.snapshot.kind === 'paper' || r.snapshot.kind === null && history.paperResults.some(result => result.recordId === r.id));
+  const records = history.records.filter(r => history.paperResults.some(result => result.recordId === r.id));
   if (!records.length) return null;
   const results = records.map(record => computeHypothetical(record, history.paperResults.find(r => r.recordId === record.id)));
   const financial = results.filter(r => r.profitCents !== null); const scored = results.filter(r => r.brierScore !== null); const accurate = results.filter(r => r.accuracyEligible);

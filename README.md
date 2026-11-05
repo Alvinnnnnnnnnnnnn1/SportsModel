@@ -101,7 +101,7 @@ The built-in email service currently restricts delivery to organization team-mem
 
 The historical migration `202611040001_historical_import.sql` was explicitly approved and deployed to `ilgoswfckkzpoktabbfi`. Remote history and the exact hosted catalog passed verification (20 tables, 20 RLS policies); anonymous access was rejected on all six historical tables and both RPCs. No real experiment history was imported. Ordinary-user positive historical lifecycle verification remains separate; see the current verification report. See [historical import](docs/historical-import.md), [deployed history schema](docs/database.md#historical-import-schema--deployed-after-approval), and the [exact migration review](docs/historical-migration-review.md).
 
-There is no demo-to-private import. Mock research and test alerts run only in Demo mode, and simulated records are rejected by the private repository/database. RLS restricts records to `auth.uid()`; RPC writes are atomic with a workspace revision check. Live sports/OpenAI providers remain unconnected. Supabase's [Free plan](https://supabase.com/pricing) is sufficient for this setup; no paid hosting or billing account is required by EdgeLab.
+There is no demo-to-private import. Mock research and test alerts run only in Demo mode, and simulated records are rejected by the private repository/database. RLS restricts records to `auth.uid()`; RPC writes are atomic with a workspace revision check. OpenAI remains unconnected. Optional server-only sports inspection is disabled by default; its coverage is reported separately. Supabase's [Free plan](https://supabase.com/pricing) is sufficient for this setup; no paid hosting or billing account is required by EdgeLab.
 
 ## Checks
 
@@ -129,6 +129,12 @@ The lockfile resolves a compatible stable toolchain: Next.js 16.4, React 19.3, T
 
 Read [`docs/architecture.md`](docs/architecture.md), [`docs/database.md`](docs/database.md), [`docs/roadmap.md`](docs/roadmap.md) and [`AGENTS.md`](AGENTS.md).
 
-Future adapters for The Odds API, OpenAI, NBA, NBL and ATP/WTA statistics deliberately fail with a clear “not configured” error and make no live request. No paid SDKs are installed. Scheduled jobs, live odds ingestion, verified model training and background push remain future work.
+The Odds API readiness and OpenAI integration remain optional/unconnected. Hybrid free sports-data adapters now support explicitly requested, authenticated local inspection; no request runs on page load. ATP/WTA retain manual evidence fallback. No paid SDKs are installed. Scheduled polling, automatic odds ingestion, validated model training and background push remain future work.
 
-The recommended next stage is ordinary-user hosted historical verification and a user-reviewed Days 1–5 source migration, followed by one authorized real email-confirmation flow if needed. Local auth transport tests cover expiry/refresh and failure cases; hosted email delivery and positive hosted historical/paper/notification lifecycle writes remain unverified; the historical schema deployment and anonymous restrictions have passed. Retain existing synthetic accounts/records; see [verification](docs/verification.md) and [roadmap](docs/roadmap.md).
+The current daily-workflow implementation and precise verification limits are documented in [Daily workflow](docs/daily-workflow.md), [sports data](docs/sports-data.md) and [master verification](docs/master-verification.md). Existing hosted history is preserved; this development made no hosted writes or migrations. Normal-user hosted checks of the new batch flow still require a separately approved genuine-record pilot.
+
+## Daily operation
+
+Research → Run Daily Research → copy prompt to a separate conversation → Daily workspace → Import research JSON → review/archive candidates → Confirm Placed / Track as Paper / Watch / Pass → Results and settlements → reviewed batch confirmation. Overview, Ledger, Paper and Analytics then use saved results. Actual ticket odds/payout and financial consent remain separate from research claims. Export complete experiment provides a read-only backup.
+
+The optional Analytics paper-evaluation export excludes retrospective history and unsupported probabilities. Offline model review checks chronology and leakage but does not train or activate a model. No validated statistical advantage is claimed. Approved Methodology Revision 1 remains authoritative; recovered V3 source material is staged privately as unapproved evidence.

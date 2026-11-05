@@ -1,0 +1,71 @@
+{
+  "scope": "Synthetic local daily workflow; no hosted requests or personal browser context",
+  "createdAt": "2026-11-05T14:21:00.259Z",
+  "hostedVerification": false,
+  "checksPassed": 15,
+  "checksFailed": 0,
+  "results": [
+    {
+      "name": "existing synthetic archive is preserved and is not financially backfilled",
+      "passed": true
+    },
+    {
+      "name": "research JSON imports to actionable sources without automatic actual or paper positions",
+      "passed": true
+    },
+    {
+      "name": "one-time placed confirmation prefills selection but requires distinct accepted odds and time",
+      "passed": true
+    },
+    {
+      "name": "paper approval is separate and keeps the original forecast immutable",
+      "passed": true
+    },
+    {
+      "name": "results check is honest about manual coverage and excludes legacy claims",
+      "passed": true
+    },
+    {
+      "name": "results prompt contains exact unresolved IDs and a separate versioned response contract",
+      "passed": true
+    },
+    {
+      "name": "manual results are entered together with explicit evidence, terms and actual payout",
+      "passed": true
+    },
+    {
+      "name": "batch cancellation and final authorization prevent premature financial writes",
+      "passed": true
+    },
+    {
+      "name": "replaying the exact results response performs no second settlement",
+      "passed": true
+    },
+    {
+      "name": "invalid result identities remain blocked without changing authoritative records",
+      "passed": true
+    },
+    {
+      "name": "analytics update from persisted actual and paper results without manufactured funding",
+      "passed": true
+    },
+    {
+      "name": "paper evaluation exports qualifying results and labels synthetic historical exclusions",
+      "passed": true
+    },
+    {
+      "name": "sports proxy rejects anonymous and cross-origin reads without spending provider quota",
+      "passed": true
+    },
+    {
+      "name": "the next handoff includes persisted results without completing or advancing Day 6",
+      "passed": true
+    },
+    {
+      "name": "browser reload and mobile daily workspace preserve source history and saved positions",
+      "passed": true
+    }
+  ],
+  "externalRequests": [],
+  "runtimeErrors": []
+}

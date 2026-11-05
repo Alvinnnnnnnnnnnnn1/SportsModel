@@ -21,6 +21,10 @@
 - Research methodology approval, original-rule completeness, owner-reported active day and source-confirmed completion are separate. Local continuity evidence never registers positions or affects bankroll. Owner-linked former proposals need distinct paper registration proof before independent paper tracking.
 - Approval statuses are overlapping presentation dimensions, not stored verification upgrades. Archived is not financially registered; owner-attested and evidence-supplied are not independently verified; historical source results are not qualifying forecast settlements. Keep one clear final action at each meaningful persistence/financial boundary, with explicit warning review and individual probable-duplicate decisions.
 
+- The daily workspace archives research before separate actual/paper approval. Results use `edgelab.settlement-response` v1, exact identities and a final owner-approved batch. App and history RPCs are separate transactions; retain partial-success and replay protection. A historical record UUID must not become a core research-candidate FK; preserve its audited origin marker.
+- Optional sports reads require server-only `API_SPORTS_KEY`, explicit local-single-process enablement, normal auth and same-origin loopback access. Preserve quota counters/locks in ignored `.local/sports-provider`; no polling, paid upgrades or synthetic private fallback. Exact provider identity mappings are separately owner-reviewed source journals, not forecasts or settlements. Live coverage is sample-specific; see docs/sports-data.md.
+- Paper learning excludes retrospective/incomplete history and unsupported forecasts. Keep source/sample classifications in exports; do not manufacture CLV, missing features or input cutoffs. Offline manifest checks do not train/activate/promote models. Recovered V3 material remains unapproved evidence; approved Revision 1 is unchanged.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

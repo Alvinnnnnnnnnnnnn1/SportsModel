@@ -1,0 +1,1157 @@
+{
+  "format": "edgelab.api-sports-coverage-audit",
+  "createdAt": "2026-11-05T13:56:14.923Z",
+  "simulated": false,
+  "applicationWrites": 0,
+  "results": [
+    {
+      "provider": "api-nba",
+      "operation": "status",
+      "parameters": {},
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:45:32.346Z",
+      "responseCount": null,
+      "observationCount": 0,
+      "statisticsCompleteness": [],
+      "subscription": {
+        "active": true,
+        "plan": "Free",
+        "dailyLimit": 100,
+        "dailyUsed": 0
+      }
+    },
+    {
+      "provider": "api-nba",
+      "operation": "leagues",
+      "parameters": {},
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:45:42.061Z",
+      "responseCount": 6,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "seasons",
+      "parameters": {},
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:45:51.481Z",
+      "responseCount": 12,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "games",
+      "parameters": {
+        "league": "standard",
+        "season": "2026",
+        "date": "2026-11-03"
+      },
+      "succeeded": false,
+      "code": "UNAVAILABLE",
+      "error": "Provider rejected the request or this subscription does not cover it.",
+      "limitation": "No completed game in the sampled day; no IDs or statistics inferred."
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "status",
+      "parameters": {},
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:46:02.380Z",
+      "responseCount": null,
+      "observationCount": 0,
+      "statisticsCompleteness": [],
+      "subscription": {
+        "active": true,
+        "plan": "Free",
+        "dailyLimit": 100,
+        "dailyUsed": 0
+      }
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "leagues",
+      "parameters": {
+        "country": "Australia"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:46:11.760Z",
+      "responseCount": 16,
+      "observationCount": 0,
+      "statisticsCompleteness": [],
+      "nblDiscovery": {
+        "leagueId": 1,
+        "name": "NBL",
+        "season": "2026-2027",
+        "coverage": {
+          "games": {
+            "statistics": {
+              "teams": true,
+              "players": true
+            }
+          },
+          "standings": true,
+          "players": true,
+          "odds": true
+        }
+      }
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "games",
+      "parameters": {
+        "league": "1",
+        "season": "2026-2027"
+      },
+      "succeeded": false,
+      "code": "UNAVAILABLE",
+      "error": "Provider rejected the request or this subscription does not cover it.",
+      "limitation": "No completed game in the sampled season; no statistics inferred."
+    },
+    {
+      "provider": "api-nba",
+      "operation": "leagues",
+      "parameters": {},
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:47:27.506Z",
+      "responseCount": 6,
+      "discoveredLeagues": [
+        "africa",
+        "orlando",
+        "sacramento",
+        "standard",
+        "utah",
+        "vegas"
+      ],
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "seasons",
+      "parameters": {},
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:47:37.414Z",
+      "responseCount": 12,
+      "discoveredSeasons": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "games",
+      "parameters": {
+        "league": "standard",
+        "season": "2023",
+        "date": "2024-03-01"
+      },
+      "succeeded": false,
+      "code": "UNAVAILABLE",
+      "error": "Provider rejected the request or this subscription does not cover it.",
+      "providerMessage": "{\"plan\":\"Free plans do not have access to this date, try from 2026-11-04 to 2026-11-06.\"}",
+      "limitation": "No completed game or access in this sampled day; no IDs or statistics inferred."
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "leagues",
+      "parameters": {
+        "country": "Australia"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:47:48.017Z",
+      "responseCount": 16,
+      "observationCount": 0,
+      "statisticsCompleteness": [],
+      "nblDiscovery": {
+        "leagueId": 1,
+        "name": "NBL",
+        "season": "2023-2024",
+        "coverage": {
+          "games": {
+            "statistics": {
+              "teams": true,
+              "players": true
+            }
+          },
+          "standings": true,
+          "players": true,
+          "odds": false
+        }
+      }
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "games",
+      "parameters": {
+        "league": "1",
+        "season": "2023-2024"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:47:58.256Z",
+      "responseCount": 154,
+      "observationCount": 154,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "player_stats",
+      "parameters": {
+        "id": "394747"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:48:07.375Z",
+      "responseCount": 18,
+      "observationCount": 18,
+      "statisticsCompleteness": [
+        {
+          "eventId": "394747",
+          "playerId": "8",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "9",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "15",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "3",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "7",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "13",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "10",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "1",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "6",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "8704",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "8717",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "8709",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "8707",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "8706",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "8719",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "8713",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "8714",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "394747",
+          "playerId": "8708",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        }
+      ]
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "team_stats",
+      "parameters": {
+        "id": "394747"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:48:17.366Z",
+      "responseCount": 2,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "players",
+      "parameters": {
+        "team": "1",
+        "season": "2023-2024"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:48:27.430Z",
+      "responseCount": 16,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "games",
+      "parameters": {
+        "league": "standard",
+        "season": "2026",
+        "date": "2026-11-04"
+      },
+      "succeeded": false,
+      "code": "UNAVAILABLE",
+      "error": "Provider rejected the request or this subscription does not cover it.",
+      "providerMessage": "{\"plan\":\"Free plans do not have access to this season, try from 2022 to 2024.\"}",
+      "limitation": "No completed game or access in this sampled day; no IDs or statistics inferred."
+    },
+    {
+      "provider": "api-nba",
+      "operation": "games",
+      "parameters": {
+        "league": "standard",
+        "season": "2023"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:50:39.741Z",
+      "responseCount": 1390,
+      "observationCount": 1390,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "player_stats",
+      "parameters": {
+        "game": "12478"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:50:49.264Z",
+      "responseCount": 36,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "teams",
+      "parameters": {
+        "league": "standard"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:50:58.593Z",
+      "responseCount": 60,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "season_team_stats",
+      "parameters": {
+        "id": "8",
+        "season": "2023"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:51:08.635Z",
+      "responseCount": 1,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "players",
+      "parameters": {
+        "team": "8",
+        "season": "2023"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:51:18.757Z",
+      "responseCount": 25,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "team_stats",
+      "parameters": {
+        "id": "12478"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:51:28.608Z",
+      "responseCount": 2,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "standings",
+      "parameters": {
+        "league": "standard",
+        "season": "2023"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:51:38.593Z",
+      "responseCount": 30,
+      "observationCount": 0,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-nba",
+      "operation": "player_stats",
+      "parameters": {
+        "game": "12478"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:52:27.982Z",
+      "responseCount": 36,
+      "observationCount": 36,
+      "statisticsCompleteness": [
+        {
+          "eventId": "12478",
+          "playerId": "1901",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "4044",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "963",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "2593",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3407",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "817",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "2795",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "246",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3960",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "215",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "283",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "2862",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "433",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3961",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "164",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "2890",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3959",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "192",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "519",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "114",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "1845",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "2584",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3195",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "2608",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3470",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "4001",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "18",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "945",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "2807",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "2146",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "997",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "1001",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3154",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3465",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3456",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "12478",
+          "playerId": "3474",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        }
+      ]
+    },
+    {
+      "provider": "api-nba",
+      "operation": "games",
+      "parameters": {
+        "date": "2026-11-04"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:54:23.220Z",
+      "responseCount": 0,
+      "observationCount": 0,
+      "statisticsCompleteness": [],
+      "limitation": "No completed game or access in this sampled day; no IDs or statistics inferred."
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "leagues",
+      "parameters": {
+        "country": "Australia"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:54:24.292Z",
+      "responseCount": 16,
+      "observationCount": 0,
+      "statisticsCompleteness": [],
+      "nblDiscovery": {
+        "leagueId": 1,
+        "name": "NBL",
+        "season": "2026-2027",
+        "coverage": {
+          "games": {
+            "statistics": {
+              "teams": true,
+              "players": true
+            }
+          },
+          "standings": true,
+          "players": true,
+          "odds": true
+        }
+      }
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "games",
+      "parameters": {
+        "date": "2026-11-04"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:54:34.331Z",
+      "responseCount": 185,
+      "observationCount": 185,
+      "statisticsCompleteness": []
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "player_stats",
+      "parameters": {
+        "id": "501228"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:54:43.641Z",
+      "responseCount": 19,
+      "observationCount": 19,
+      "statisticsCompleteness": [
+        {
+          "eventId": "501228",
+          "playerId": "69",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "60353",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "67",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "8841",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "27165",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "29644",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "38376",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "682",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "58499",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "26294",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "65874",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "502",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "49",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "60355",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "53",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "61756",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "10411",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "53636",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        },
+        {
+          "eventId": "501228",
+          "playerId": "51869",
+          "points": true,
+          "rebounds": true,
+          "assists": true,
+          "madeThrees": true,
+          "minutes": true
+        }
+      ]
+    },
+    {
+      "provider": "api-basketball",
+      "operation": "games",
+      "parameters": {
+        "id": "501228"
+      },
+      "succeeded": true,
+      "cached": false,
+      "retrievedAt": "2026-11-05T13:56:14.921Z",
+      "responseCount": 1,
+      "observationCount": 1,
+      "sampleEvents": [
+        {
+          "eventId": "501228",
+          "startsAt": "2026-11-04T09:00:00.000Z",
+          "league": "NBL",
+          "season": "2026-2027",
+          "sport": "NBL",
+          "final": true
+        }
+      ],
+      "statisticsCompleteness": []
+    }
+  ],
+  "quotas": {
+    "api-nba": {
+      "utcDay": "2026-11-05",
+      "used": 18,
+      "dayBudget": 70,
+      "minuteUsed": 1,
+      "minuteBudget": 6,
+      "remainingDaily": 86,
+      "remainingMinute": 9,
+      "blockedUntil": 0,
+      "lastSuccess": "2026-11-05T13:54:23.220Z"
+    },
+    "api-basketball": {
+      "utcDay": "2026-11-05",
+      "used": 12,
+      "dayBudget": 70,
+      "minuteUsed": 1,
+      "minuteBudget": 6,
+      "remainingDaily": 90,
+      "remainingMinute": 9,
+      "blockedUntil": 0,
+      "lastSuccess": "2026-11-05T13:56:14.921Z"
+    }
+  }
+}

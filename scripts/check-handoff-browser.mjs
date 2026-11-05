@@ -312,7 +312,8 @@ try {
   });
   await test('analytics and the next conversation use persisted results and confirmed day progression', async () => {
     await route('/analytics'); const imported = page.getByRole('region', { name: 'Imported paper analytics', exact: true });
-    await imported.getByText('0.160', { exact: true }).waitFor(); await imported.getByText('-$0.50', { exact: true }).waitFor();
+    await imported.getByText('0.160', { exact: true }).waitFor(); // The old archived-only loss is not a paper position and must not enter tracked returns.
+    await imported.getByText('+$4.50', { exact: true }).waitFor();
     await route('/research'); await handoff().getByRole('button', { name: 'Run Daily Research', exact: true }).click();
     const prompt = await handoff().getByRole('textbox', { name: /^Generated research prompt/ }).inputValue();
     assert(prompt.includes('"latestConfirmedCompletedDay": 6')); assert(prompt.includes('"proposedResearchDay": 7'));

@@ -26,6 +26,7 @@ import {
 import { ApprovalStatusBadges } from "@/components/approval-status";
 import { money, dateTime } from "@/lib/utils";
 import { betReturn } from "@/lib/domain/calculations";
+import { readResearchRecordLink, withResearchRecordLink, type ResearchPlacement } from "@/lib/daily/placement";
 import { enteredMoneyCents, melbourneInput, originalOrEnteredTimestamp, readLedgerEvidence, reviewLedgerEntry, writeLedgerEvidence } from "@/lib/domain/ledger-review";
 
 const outcomeLabels: Record<Outcome, string> = {
@@ -35,7 +36,7 @@ const outcomeLabels: Record<Outcome, string> = {
   void: "Void",
 };
 
-type LegDraft = Omit<BetLeg, "odds"> & { odds: string };
+type LegDraft = Omit<BetLeg, "odds" | "sport"> & { odds: string; sport: Sport | "" };
 function newLeg(candidate?: Candidate): LegDraft {
   return {
     id: crypto.randomUUID(), sport: candidate?.sport ?? "NBA",
@@ -50,6 +51,7 @@ interface BetFormProps {
   onOpenChange: (open: boolean) => void;
   initial?: Bet;
   candidate?: Candidate;
+  research?: ResearchPlacement;
 }
 
 export function BetForm({
@@ -57,6 +59,7 @@ export function BetForm({
   onOpenChange,
   initial,
   candidate,
+  research,
 }: BetFormProps) {
   const [saving, setSaving] = useState(false);
   return (
@@ -69,10 +72,11 @@ export function BetForm({
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
         {open && (
           <BetFormDraft
-            key={initial?.id ?? candidate?.id ?? "new"}
+            key={initial?.id ?? candidate?.id ?? research?.recordId ?? "new"}
             onOpenChange={onOpenChange}
             initial={initial}
             candidate={candidate}
+            research={research}
             saving={saving}
             setSaving={setSaving}
           />
@@ -86,6 +90,7 @@ function BetFormDraft({
   onOpenChange,
   initial,
   candidate,
+  research,
   saving,
   setSaving,
 }: Omit<BetFormProps, "open"> & {
@@ -97,7 +102,7 @@ function BetFormDraft({
   const identity = mode === "demo" ? "demo" : user?.id ?? "signed-out";
   const [openedIdentity] = useState(identity);
   const [bookmaker, setBookmaker] = useState(
-    initial?.bookmaker ?? candidate?.bookmaker ?? "",
+    initial?.bookmaker ?? candidate?.bookmaker ?? research?.bookmaker ?? "",
   );
   const [stake, setStake] = useState(
     ((initial?.stakeCents ?? data.settings.defaultStakeCents) / 100).toFixed(2),
@@ -111,14 +116,14 @@ function BetFormDraft({
   const [placedAt, setPlacedAt] = useState(
     initial ? melbourneInput(initial.placedAt) : "",
   );
-  const [strategy, setStrategy] = useState<Strategy>(
-    initial?.strategy ?? candidate?.strategy ?? "A",
+  const [strategy, setStrategy] = useState<Strategy | "">(
+    initial?.strategy ?? candidate?.strategy ?? research?.strategy ?? (research ? "" : "A"),
   );
   const [outcome, setOutcome] = useState<Outcome>(
     initial?.outcome ?? "pending",
   );
   const [legs, setLegs] = useState<LegDraft[]>(() =>
-    initial ? initial.legs.map((leg) => ({ ...leg, odds: String(leg.odds) })) : [newLeg(candidate)],
+    initial ? initial.legs.map((leg) => ({ ...leg, odds: String(leg.odds) })) : research ? (research.legs.length ? research.legs.map(leg => ({ id: crypto.randomUUID(), sport: leg.sport ?? "" as const, event: leg.event ?? "", participant: leg.participant ?? "", market: leg.market ?? "", selection: leg.selection ?? "", line: leg.line ?? "", odds: "", outcome: "pending" as const, statistic: "" })) : [{ ...newLeg(), sport: "" as const }]) : [newLeg(candidate)],
   );
   const [notes, setNotes] = useState(initial ? readLedgerEvidence(initial.notes).notes : "");
   const [ticketReference, setTicketReference] = useState(initial ? readLedgerEvidence(initial.notes).ticketReference : "");
@@ -145,11 +150,12 @@ function BetFormDraft({
 
   const requirements = [
     ...(!bookmaker.trim() ? ["Enter the bookmaker."] : []),
+    ...(!strategy ? ["Choose the actual wager research track; unknown source classifications are not inferred."] : []),
     ...(!placedAt ? ["Enter the actual placement date and time."] : []),
     ...(!odds || !Number.isFinite(Number(odds)) || Number(odds) <= 1 ? ["Enter the accepted execution odds; a research quote is not an accepted price."] : []),
     ...(outcome !== "pending" && !settledAt ? ["Enter the original settlement date and time."] : []),
     ...legs.flatMap((leg, index) => {
-      const missing = [!leg.participant.trim() && "participant", !leg.event.trim() && "fixture", !leg.market.trim() && "market", !leg.selection.trim() && "selection", !leg.line.trim() && "threshold", legs.length > 1 && (!leg.odds || Number(leg.odds) <= 1) && "leg odds"].filter(Boolean);
+      const missing = [!leg.sport && "sport", !leg.participant.trim() && "participant", !leg.event.trim() && "fixture", !leg.market.trim() && "market", !leg.selection.trim() && "selection", !leg.line.trim() && "threshold", legs.length > 1 && (!leg.odds || Number(leg.odds) <= 1) && "leg odds"].filter(Boolean);
       return missing.length ? [`Leg ${index + 1}: enter ${missing.join(", ")}.`] : [];
     }),
   ];
@@ -168,7 +174,7 @@ function BetFormDraft({
         ...(outcome === "pending" ? {} : { settledAt: originalOrEnteredTimestamp(settledAt, initial?.settledAt) }),
         bookmaker: bookmaker.trim(), stakeCents: cents, stakeType, odds: Number(odds), outcome, strategy,
         legs: legs.map(leg => ({ ...leg, odds: Number(legs.length === 1 ? odds : leg.odds), event: leg.event.trim(), participant: leg.participant.trim(), market: leg.market.trim(), selection: leg.selection.trim(), line: leg.line.trim(), statistic: leg.statistic?.trim() || undefined })),
-        notes: writeLedgerEvidence(notes, ticketReference, recordedPayout),
+        notes: research ? withResearchRecordLink(writeLedgerEvidence(notes, ticketReference, recordedPayout), research.recordId) : initial && readResearchRecordLink(initial.notes) ? withResearchRecordLink(writeLedgerEvidence(notes, ticketReference, recordedPayout), readResearchRecordLink(initial.notes)!) : writeLedgerEvidence(notes, ticketReference, recordedPayout),
         confirmedAt: initial?.confirmedAt ?? new Date().toISOString(),
         ...(initial?.probability !== undefined ? { probability: initial.probability } : candidate?.probability !== undefined ? { probability: candidate.probability } : {}),
         ...(initial?.candidateId ? { candidateId: initial.candidateId } : candidate ? { candidateId: candidate.id } : {}),
@@ -231,6 +237,7 @@ function BetFormDraft({
       <form onSubmit={inspect} className="space-y-6">
         <ApprovalStatusBadges facts={{ mode, financialRegistered: !!initial, ownerAttested: !!initial, outcome: initial?.outcome }} />
         {linkedResearch && <p className="rounded-lg border border-border p-3 text-xs text-muted-foreground">Linked original research: {linkedResearch.selection} · research quote {linkedResearch.odds}. The accepted execution price must be entered separately; the original forecast stays unchanged.</p>}
+        {research && <div className="rounded-lg border border-primary/20 p-3 text-xs"><p>Imported research is prefilled below. Original quote: {research.quoteOdds ?? "unknown"} · quoted {research.quoteTimestamp ? dateTime(research.quoteTimestamp) : "time unknown"}. Enter accepted execution details once; the original source remains unchanged.</p><p className="mt-2 break-words text-[10px] text-muted-foreground">Source: {research.sourceReference} · Record {research.recordId}</p>{research.legs.some(leg=>leg.odds!==null)&&<p className="mt-2 text-[10px] text-muted-foreground">Research leg prices: {research.legs.map((leg,index)=>`${index+1}: ${leg.odds??"unknown"}`).join(" · ")}. These are source quotes, not accepted leg execution prices.</p>}</div>}
         <section className="rounded-lg border border-border p-3" aria-label="Ledger entry requirements"><p className="text-xs font-medium">{requirements.length ? `${requirements.length} outstanding requirements` : "Entry fields ready for validation"}</p>{requirements.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-muted-foreground">{requirements.map(item=><li key={item}>{item}</li>)}</ul>}<p className="mt-2 text-[10px] text-muted-foreground">This form is an unsaved draft until the final financial confirmation. Unknown facts must not be guessed.</p></section>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm">
@@ -325,6 +332,7 @@ function BetFormDraft({
               onChange={(event) => setStrategy(event.target.value as Strategy)}
               disabled={predictionLinked}
             >
+              <option value="" disabled>Select research track</option>
               {Object.entries(STRATEGIES).map(([key, label]) => (
                 <option key={key} value={key}>
                   Track {key} · {label}
@@ -388,6 +396,7 @@ function BetFormDraft({
                     }
                     disabled={predictionLinked}
                   >
+                    <option value="" disabled>Select sport</option>
                     {SPORTS.map((sport) => (
                       <option key={sport}>{sport}</option>
                     ))}
@@ -528,7 +537,7 @@ function BetFormDraft({
           )}
         </div>
         <label className="block space-y-2 text-sm">
-          <span className="label">Research notes</span>
+          <span className="label">{research ? 'Optional evidence / screenshot reference' : 'Research notes'}</span>
           <textarea
             className="input min-h-20 w-full resize-y"
             value={notes}

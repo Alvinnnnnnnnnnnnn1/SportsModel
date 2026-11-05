@@ -1,0 +1,133 @@
+{
+  "format": "edgelab.sportsdb-coverage-audit",
+  "createdAt": "2026-11-05T13:34:27.035Z",
+  "requests": 6,
+  "simulated": false,
+  "apiSportsRequests": 0,
+  "results": [
+    {
+      "url": "https://www.thesportsdb.com/api/v1/json/123/search_all_leagues.php?c=United+States&s=Basketball",
+      "httpStatus": 200,
+      "retrievedAt": "2026-11-05T13:34:11.686Z",
+      "arrayCounts": {
+        "countries": 5
+      },
+      "discoveredLeagues": [
+        {
+          "id": "5153",
+          "name": "Basketball All-Star Games"
+        },
+        {
+          "id": "4850",
+          "name": "FIBA AmeriCup"
+        },
+        {
+          "id": "4387",
+          "name": "NBA"
+        },
+        {
+          "id": "5506",
+          "name": "NBA Cup"
+        },
+        {
+          "id": "4388",
+          "name": "NBA G League"
+        }
+      ]
+    },
+    {
+      "url": "https://www.thesportsdb.com/api/v1/json/123/eventspastleague.php?id=4387",
+      "httpStatus": 200,
+      "retrievedAt": "2026-11-05T13:34:14.587Z",
+      "arrayCounts": {
+        "events": 1
+      },
+      "event": {
+        "id": "2601785",
+        "league": "NBA",
+        "date": "2026-11-05",
+        "status": "FT",
+        "hasHomeScore": true,
+        "hasAwayScore": true
+      }
+    },
+    {
+      "url": "https://www.thesportsdb.com/api/v1/json/123/lookupeventstats.php?id=2601785",
+      "httpStatus": 200,
+      "retrievedAt": "2026-11-05T13:34:17.712Z",
+      "arrayCounts": {
+        "eventstats": null
+      },
+      "statisticKeys": [],
+      "limitation": "One sampled event, truncated free response. No player-prop coverage established."
+    },
+    {
+      "url": "https://www.thesportsdb.com/api/v1/json/123/search_all_leagues.php?c=Australia&s=Basketball",
+      "httpStatus": 200,
+      "retrievedAt": "2026-11-05T13:34:20.891Z",
+      "arrayCounts": {
+        "countries": 5
+      },
+      "discoveredLeagues": [
+        {
+          "id": "4434",
+          "name": "Australian NBL"
+        },
+        {
+          "id": "5113",
+          "name": "Australian WNBL"
+        },
+        {
+          "id": "5667",
+          "name": "NBL1 Central"
+        },
+        {
+          "id": "5669",
+          "name": "NBL1 East"
+        },
+        {
+          "id": "5670",
+          "name": "NBL1 North"
+        }
+      ]
+    },
+    {
+      "url": "https://www.thesportsdb.com/api/v1/json/123/eventspastleague.php?id=4434",
+      "httpStatus": 200,
+      "retrievedAt": "2026-11-05T13:34:23.962Z",
+      "arrayCounts": {
+        "events": 1
+      },
+      "event": {
+        "id": "2487935",
+        "league": "Australian NBL",
+        "date": "2026-11-05",
+        "status": "FT",
+        "hasHomeScore": true,
+        "hasAwayScore": true
+      }
+    },
+    {
+      "url": "https://www.thesportsdb.com/api/v1/json/123/lookupeventstats.php?id=2487935",
+      "httpStatus": 200,
+      "retrievedAt": "2026-11-05T13:34:27.035Z",
+      "arrayCounts": {
+        "eventstats": null
+      },
+      "statisticKeys": [],
+      "limitation": "One sampled event, truncated free response. No player-prop coverage established."
+    }
+  ],
+  "connectivityCheck": {
+    "url": "https://www.thesportsdb.com/api/v1/json/123/searchteams.php?t=Arsenal",
+    "httpStatus": 200,
+    "teams": [
+      {
+        "id": "133604",
+        "name": "Arsenal",
+        "sport": "Soccer"
+      }
+    ],
+    "rawResponseSha256": "c9b5adfa850a4855f5a8fdcfd904bdd3f055755d24179bf96e4f5a05c625703b"
+  }
+}

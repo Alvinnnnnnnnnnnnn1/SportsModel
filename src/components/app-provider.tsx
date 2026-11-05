@@ -35,11 +35,15 @@ import {
   isSupabaseConfigured,
   type Repository,
 } from "@/lib/persistence";
-import type { HistoricalRecord, HistoricalPaperResult } from '@/lib/imports/types';
+import type { HistoricalRecord, HistoricalPaperResult, HistoricalWorkspace } from '@/lib/imports/types';
 import { addPaperResultReminder } from '@/lib/notifications/paper-reminders';
 import { paperApprovalBlocker } from '@/lib/approval/paper';
+import { readResearchRecordLink, researchPlacementDuplicate } from '@/lib/daily/placement';
+import { applyAppResultBatch, type ResultBatchSummary } from '@/lib/daily/result-batch';
+import type { SettlementResponse } from '@/lib/results';
 interface AppContextValue {
   data: AppData;
+  readCurrentData: () => AppData;
   mode: Mode;
   loading: boolean;
   error: string | null;
@@ -48,9 +52,11 @@ interface AppContextValue {
   running: boolean;
   setMode: (mode: Mode) => void;
   reload: () => void;
+  refresh: () => Promise<void>;
   notify: (message: string) => void;
   addBet: (bet: Bet) => Promise<void>;
   updateBet: (bet: Bet) => Promise<void>;
+  applyResultBatch: (response: SettlementResponse, selectedKeys: string[], history: HistoricalWorkspace) => Promise<ResultBatchSummary>;
   addPaper: (candidate: Candidate) => Promise<void>;
   settlePaper: (
     id: string,
@@ -201,7 +207,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
     return () => subscription.subscription.unsubscribe();
   }, [invalidateWorkspace]);
-  const mutate = useCallback((transform: (value: AppData) => AppData) => {
+  const mutate = useCallback((transform: (value: AppData) => AppData | Promise<AppData>) => {
     const epoch = generation.current;
     const task = queue.current
       .catch(() => {})
@@ -210,14 +216,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
           throw new Error(
             "Open an available workspace and sign in before saving.",
           );
-        const next = appDataSchema.parse(
-          transform(currentData.current),
-        ) as AppData;
-        await repository.current.save(next);
+        const selectedRepository = repository.current;
+        const before = currentData.current;
+        const proposed = await transform(before);
+        if (epoch !== generation.current || repository.current !== selectedRepository) throw new Error('This workspace changed. Reopen it before saving.');
+        if (proposed === before) return;
+        const next = appDataSchema.parse(proposed) as AppData;
+        await selectedRepository.save(next);
         if (epoch !== generation.current) return;
         currentData.current = next;
         setData(next);
       });
+    queue.current = task;
+    return task;
+  }, []);
+  const refresh = useCallback(() => {
+    const epoch = generation.current;
+    const task = queue.current.catch(() => {}).then(async () => {
+      const selected = repository.current;
+      if (epoch !== generation.current || !selected) throw new Error('Open the intended workspace and sign in before refreshing.');
+      try {
+        const loaded = await selected.load();
+        if (epoch !== generation.current || repository.current !== selected) throw new Error('This workspace changed during refresh.');
+        const checked = appDataSchema.parse(loaded ?? createEmptyData()) as AppData;
+        currentData.current = checked; setData(checked); setError(null);
+      } catch (cause) {
+        if (epoch === generation.current) setError(cause instanceof Error ? cause.message : 'Private records could not be refreshed.');
+        throw cause;
+      }
+    });
     queue.current = task;
     return task;
   }, []);
@@ -226,6 +253,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const parsed = betSchema.parse(bet) as Bet;
       if (value.bets.some((item) => item.id === parsed.id))
         throw new Error("This bet is already registered.");
+      const origin = readResearchRecordLink(parsed.notes);
+      if (origin && researchPlacementDuplicate(value.bets, origin)) throw new Error('An actual placement is already registered for this research record. Open its linked wager instead of confirming it again.');
       return {
         ...value,
         bets: [parsed, ...value.bets],
@@ -247,6 +276,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     mutate((value) => {
       const before = value.bets.find((item) => item.id === bet.id);
       if (!before) throw new Error("This entry no longer exists.");
+      if (readResearchRecordLink(before.notes) !== readResearchRecordLink(bet.notes)) throw new Error('Keep the original research source link when updating this wager.');
       const after = betSchema.parse({
         ...bet,
         confirmedAt: before.confirmedAt,
@@ -445,6 +475,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <Context.Provider
       value={{
         data,
+        readCurrentData: () => structuredClone(currentData.current),
         mode,
         loading,
         error,
@@ -466,8 +497,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setRevision((value) => value + 1);
         },
         notify,
+        refresh,
         addBet,
         updateBet,
+        applyResultBatch: async (response, selectedKeys, history) => {
+          let summary: ResultBatchSummary = { applied: [], alreadyApplied: [] };
+          await mutate(async value => {
+            const reviewed = await applyAppResultBatch(value, history, response, selectedKeys, mode);
+            summary = reviewed.summary;
+            return reviewed.data;
+          });
+          return summary;
+        },
         addPaper,
         settlePaper,
         runResearch,

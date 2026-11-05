@@ -7,6 +7,14 @@ const sourceUrl = z.string().max(2000).url().refine(value => { const url = new U
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => { const date = new Date(value + 'T00:00:00Z'); return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value; }, 'Use a valid calendar date.');
 const evidence = z.object({ claim: text, sourceUrl: sourceUrl.nullable(), observedAt: timestamp.nullable(), verification: z.enum(['source_linked', 'unverified']) }).strict();
 const probability = z.object({ value: z.number().min(0).max(1).nullable(), origin: z.enum(['deterministic_model', 'external_forecast', 'llm', 'unknown']).nullable(), source: shortText.nullable(), method: shortText.nullable(), modelVersion: shortText.nullable(), timestamp: timestamp.nullable() }).strict();
+// Optional backward-compatible v1 extension. Unknown individual-leg prices stay
+// null; the candidate originalOdds is the quoted ticket price, never a product.
+export const researchLegSchema = z.object({
+  id: z.string().uuid(), sport: z.enum(['NBA', 'NBL', 'ATP', 'WTA']).nullable(),
+  eventId: shortText.nullable(), event: shortText.nullable(), participant: shortText.nullable(),
+  marketId: shortText.nullable(), market: shortText.nullable(), selection: shortText.nullable(),
+  line: z.string().trim().min(1).max(100).nullable(), odds: price.nullable(),
+}).strict();
 export const researchCandidateSchema = z.object({
   id: z.string().trim().min(1).max(100), sport: z.enum(['NBA', 'NBL', 'ATP', 'WTA']).nullable(),
   eventId: shortText.nullable(), event: shortText.nullable(), startsAt: timestamp.nullable(),
@@ -14,6 +22,7 @@ export const researchCandidateSchema = z.object({
   selection: shortText.nullable(), line: z.string().trim().min(1).max(100).nullable(),
   bookmaker: shortText.nullable(), originalOdds: price.nullable(), oddsTimestamp: timestamp.nullable(),
   oddsSource: shortText.nullable(), oddsSourceUrl: sourceUrl.nullable(), predictionTimestamp: timestamp.nullable(),
+  legs: z.array(researchLegSchema).min(1).max(20).optional(),
   probability, strategy: z.enum(['A', 'B', 'C']).nullable(),
   evidence: z.array(evidence).max(30), sourceUrls: z.array(sourceUrl).max(30),
   confidence: z.enum(['low', 'medium', 'high', 'unknown']), uncertainty: text.nullable(),

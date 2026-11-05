@@ -20,7 +20,14 @@ const canonicalValue = (value: unknown): unknown => Array.isArray(value) ? value
 const identityText = (value: string | null | undefined) => value?.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase() || null;
 /** Reordering records or renaming response/row IDs is not a new research session. */
 export function semanticResearchSession(response: ResearchResponse): string {
-  const withoutId = <T extends { id: string }>(entry: T) => { const { id, ...content } = entry; void id; return JSON.stringify(canonicalValue(content)); };
+  const withoutId = (entry: { id: string }) => {
+    const { id, ...content } = entry; void id;
+    const facts: Record<string, unknown> = { ...content };
+    if (Array.isArray(facts.legs)) facts.legs = facts.legs.map(leg => {
+      const { id: legId, ...original } = leg; void legId; return original;
+    }).sort((a, b) => JSON.stringify(canonicalValue(a)).localeCompare(JSON.stringify(canonicalValue(b))));
+    return JSON.stringify(canonicalValue(facts));
+  };
   return JSON.stringify(canonicalValue({ researchDate: response.researchDate, researchDay: response.researchDay, source: response.source, researchMethod: response.researchMethod, sourceUrls: [...response.sourceUrls].sort(), rulesSourceReference: response.rulesSourceReference, candidates: response.candidates.map(withoutId).sort(), passes: response.passes.map(withoutId).sort() }));
 }
 function findSessionMatch(responseId: string, fingerprint: string, existingRecords: HistoricalRecord[]): HistoricalRecord | undefined {
@@ -104,6 +111,14 @@ export function reviewResearchCandidate(candidate: ResearchCandidate, now = new 
   if (!candidate.sourceUrls.length && !candidate.oddsSourceUrl && !candidate.evidence.some(item => item.sourceUrl)) issues.push(warning('sourceUrls', 'unverifiable_sources', 'No source URLs were provided. A source label does not establish independent verification.'));
   if (candidate.evidence.some(item => item.verification === 'unverified' || !item.sourceUrl)) issues.push(warning('evidence', 'unverified_evidence', 'Some supporting evidence is explicitly unverified or has no source link.'));
   if (!candidate.uncertainty) issues.push(warning('uncertainty', 'missing_uncertainty', 'Limitations/uncertainty were not documented.'));
+  const namedMulti = /\b(?:sgm|parlay|same.game multi)\b/i.test(candidate.market ?? '');
+  if (namedMulti && !candidate.legs?.length) issues.push(error('legs', 'missing_multi_legs', 'A multi needs the exact individual source legs before paper registration; no legs are inferred from its description.'));
+  if (namedMulti && (candidate.probability.value !== null || candidate.estimatedEv !== null)) issues.push(error('probability', 'unsupported_joint_probability', 'Combined probability unavailable — correlation not validated.'));
+  if (candidate.legs) {
+    if (new Set(candidate.legs.map(leg => leg.id)).size !== candidate.legs.length) issues.push(error('legs', 'duplicate_leg_ids', 'Each individual research leg needs a unique identity.'));
+    for (const [index, leg] of candidate.legs.entries()) for (const field of ['sport', 'event', 'participant', 'market', 'selection', 'line'] as const) if (leg[field] === null) issues.push(error(`legs.${index}.${field}`, 'missing_leg_identity', 'Missing individual market identity prevents pre-event paper registration. Keep this proposal under review.'));
+    if (candidate.legs.length > 1 && (candidate.probability.value !== null || candidate.estimatedEv !== null)) issues.push(error('probability', 'unsupported_joint_probability', 'Combined probability unavailable — correlation not validated. Preserve leg forecasts as source evidence; combined probability and EV must remain null.'));
+  }
   const estimate = candidate.probability;
   if (estimate.value !== null) {
     if (estimate.origin === 'llm') issues.push(error('probability', 'llm_probability_forbidden', 'LLM-generated numerical betting probabilities cannot be registered. Supply a documented deterministic model or an attributable external forecast.'));
@@ -149,6 +164,7 @@ export async function parseResearchResponse(input: { text: string; sourceName: s
     externalId: `${response.id}:${candidate.id}`, eventId: candidate.eventId, marketId: candidate.marketId,
     kind: candidate.decision === 'pass' || candidate.decision === 'watch' ? null : 'paper', sport: candidate.sport,
     event: candidate.event, participant: candidate.participant, market: candidate.market, selection: candidate.selection, line: candidate.line,
+    ...(candidate.legs ? { legs: candidate.legs.map(leg => ({ ...leg, outcome: 'pending', statistic: null })) } : {}),
     bookmaker: candidate.bookmaker, odds: candidate.originalOdds, predictionAt: candidate.predictionTimestamp,
     probability: candidate.probability.value, probabilitySource: candidate.probability.source, probabilityMethod: candidate.probability.method, modelVersion: candidate.probability.modelVersion,
     strategy: candidate.strategy, sourceReference: `edgelab:research-response:${response.id}:${candidate.id}`,

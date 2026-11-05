@@ -1,0 +1,67 @@
+{
+  "scope": "Synthetic local browser regression with fake authenticated users and in-memory RPC transport; no hosted calls, real records or personal browser profile",
+  "hostedVerification": false,
+  "createdAt": "2026-11-05T02:11:27.502Z",
+  "checksPassed": 12,
+  "checksFailed": 0,
+  "results": [
+    {
+      "name": "existing mocked private workspace loads approved policy and paper without setup or writes",
+      "passed": true
+    },
+    {
+      "name": "malformed claim files are rejected before retention or archive writes",
+      "passed": true
+    },
+    {
+      "name": "file selection previews owner reports while accepted execution odds remain unknown",
+      "passed": true
+    },
+    {
+      "name": "explicit local retention survives Overview and Ledger refresh without financial writes",
+      "passed": true
+    },
+    {
+      "name": "existing importer requires row selection, warnings and a separate final archive confirmation",
+      "passed": true
+    },
+    {
+      "name": "explicit simulated archive approval persists reports only and preserves prior audit and policy",
+      "passed": true
+    },
+    {
+      "name": "saved historical summaries survive clearing local attachment and page reload",
+      "passed": true
+    },
+    {
+      "name": "exact duplicate source cannot be reimported or registered a second time",
+      "passed": true
+    },
+    {
+      "name": "another mocked account cannot see the first account attachment or saved claim summary",
+      "passed": true
+    },
+    {
+      "name": "demo does not inherit private claims or accept an owner-reported source",
+      "passed": true
+    },
+    {
+      "name": "mobile claim review and summary fit without document overflow",
+      "passed": true
+    },
+    {
+      "name": "all transport is mocked and no financial writes or runtime errors occurred",
+      "passed": true
+    }
+  ],
+  "counters": {
+    "authReads": 51,
+    "workspaceReads": 17,
+    "historyReads": 16,
+    "historySaves": 1,
+    "financialWriteAttempts": 0,
+    "unexpectedExternalRequests": 0,
+    "unexpectedMockRequests": 0,
+    "runtimeErrors": 0
+  }
+}

@@ -21,6 +21,8 @@ const { chromium } = createRequire(path.resolve(runtimePath, "package.json"))(
   "playwright",
 );
 const baseUrl = option("--url") ?? "http://localhost:3000";
+const origin = new URL(baseUrl);
+if (origin.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname)) throw new Error('Only a local synthetic QA server is permitted.');
 const browserPath =
   option("--browser") ??
   (process.platform === "darwin"
@@ -41,6 +43,13 @@ fs.mkdirSync(artifacts, { recursive: true });
     locale: "en-AU",
     timezoneId: "Australia/Melbourne",
     reducedMotion: "reduce",
+  });
+  const externalRequests = [];
+  await context.route('**/*', route => {
+    const requestUrl = new URL(route.request().url());
+    if (requestUrl.origin === origin.origin) return route.continue();
+    externalRequests.push(requestUrl.origin);
+    return route.abort('blockedbyclient');
   });
   const page = await context.newPage();
   const errors = [];
@@ -71,6 +80,18 @@ fs.mkdirSync(artifacts, { recursive: true });
       .getByText("Loading workspace…", { exact: true })
       .waitFor({ state: "hidden", timeout: 20000 });
   }
+  async function openEligibleResearch(action) {
+    const reviews = page.locator('.panel').filter({ has: page.getByLabel('Search research candidates', { exact: true }) }).getByRole('button', { name: 'Review', exact: false });
+    for (let index = 0; index < await reviews.count(); index++) {
+      await reviews.nth(index).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.waitFor();
+      const target = dialog.getByRole('button', { name: action, exact: true });
+      if (await target.count() && await target.isEnabled()) return dialog;
+      await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'hidden' });
+    }
+    throw new Error('No eligible synthetic research selection for this action.');
+  }
   await test("overview desktop", async () => {
     await route("/");
     await page.getByRole("heading", { level: 1 }).waitFor();
@@ -93,6 +114,17 @@ fs.mkdirSync(artifacts, { recursive: true });
       await page.getByRole("heading", { level: 1 }).waitFor();
       assert(!(await page.getByRole("heading", { name: "404" }).count()));
     });
+  await test("cancelled manual drafts make no financial writes and execution facts are not prefilled", async () => {
+    await route('/ledger');
+    const before = await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1')));
+    await page.getByRole('button', { name: 'Record bet', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    assert.equal(await dialog.getByLabel('Accepted decimal odds', { exact: true }).inputValue(), '');
+    assert.equal(await dialog.getByLabel('Placed at · Melbourne', { exact: true }).inputValue(), '');
+    await dialog.getByLabel('Bookmaker', { exact: true }).fill('SYNTHETIC cancelled draft');
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1'))), before);
+  });
   await test("manual bet confirmation and audited settlement", async () => {
     await route("/ledger");
     await page.getByRole("button", { name: "Record bet", exact: true }).click();
@@ -101,7 +133,9 @@ fs.mkdirSync(artifacts, { recursive: true });
       .getByLabel("Bookmaker", { exact: true })
       .fill("QA Synthetic Bookmaker");
     await dialog.getByLabel("Stake · AUD", { exact: true }).fill("5.00");
-    await dialog.getByLabel("Decimal odds", { exact: true }).fill("2.10");
+    await dialog.getByLabel('Placed at · Melbourne', { exact: true }).fill('2026-01-15T12:00');
+    await dialog.getByLabel('Sportsbook ticket reference · optional', { exact: true }).fill('QA-SYNTHETIC-TICKET-1');
+    await dialog.getByLabel("Accepted decimal odds", { exact: true }).fill("2.10");
     await dialog
       .getByLabel("Participant / team", { exact: true })
       .fill("QA Test Player");
@@ -115,8 +149,13 @@ fs.mkdirSync(artifacts, { recursive: true });
       .getByLabel("Exact selection", { exact: true })
       .fill("QA Over 20.5 points");
     await dialog.getByLabel("Line / threshold", { exact: true }).fill("20.5");
-    await dialog.getByRole("checkbox").check();
-    await dialog.getByRole("button", { name: "Confirm & record bet" }).click();
+    const beforeReview = await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1')));
+    await dialog.getByRole('button', { name: 'Review financial registration', exact: true }).click();
+    const confirm = dialog.getByRole('button', { name: 'Confirm financial registration', exact: true });
+    assert(await confirm.isDisabled());
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1'))), beforeReview);
+    await dialog.getByRole('checkbox').check();
+    await confirm.click();
     await dialog.waitFor({ state: "hidden" });
     await page.getByLabel("Search ledger").fill("QA Over");
     await page
@@ -127,7 +166,12 @@ fs.mkdirSync(artifacts, { recursive: true });
     await edit
       .getByLabel("Recorded statistic", { exact: true })
       .fill("25 points (synthetic QA)");
-    await edit.getByRole("button", { name: "Save audited changes" }).click();
+    await edit.getByLabel('Settled at · Melbourne', { exact: true }).fill('2026-01-16T12:00');
+    await edit.getByLabel('Actual cash payout · AUD', { exact: true }).fill('10.50');
+    await edit.getByRole('button', { name: 'Review ledger update', exact: true }).click();
+    assert(await edit.getByRole('button', { name: 'Confirm settlement / audited update', exact: true }).isDisabled());
+    await edit.getByRole('checkbox').check();
+    await edit.getByRole('button', { name: 'Confirm settlement / audited update', exact: true }).click();
     await edit.waitFor({ state: "hidden" });
     await page
       .getByRole("button", {
@@ -138,6 +182,9 @@ fs.mkdirSync(artifacts, { recursive: true });
     await page.getByText("25 points (synthetic QA)", { exact: true }).waitFor();
     assert(await page.getByText("Audit history", { exact: true }).isVisible());
     assert(await page.getByText("+$5.50", { exact: true }).isVisible());
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1')).bets.find(bet => bet.legs[0].selection === 'QA Over 20.5 points'));
+    assert.match(saved.notes, /QA-SYNTHETIC-TICKET-1/);
+    assert.match(saved.notes, /recorded cash payout cents.*1050/);
   });
   await test("parlay individual leg settlement", async () => {
     await page.getByLabel("Search ledger").fill("");
@@ -146,7 +193,8 @@ fs.mkdirSync(artifacts, { recursive: true });
     await dialog
       .getByLabel("Bookmaker", { exact: true })
       .fill("QA Synthetic Parlay");
-    await dialog.getByLabel("Decimal odds", { exact: true }).fill("3.80");
+    await dialog.getByLabel("Accepted decimal odds", { exact: true }).fill("3.80");
+    await dialog.getByLabel('Placed at · Melbourne', { exact: true }).fill('2026-01-15T12:00');
     await dialog.getByRole("button", { name: "Add leg" }).click();
     for (let i = 0; i < 2; i++) {
       const field = dialog.locator("fieldset").nth(i);
@@ -165,8 +213,13 @@ fs.mkdirSync(artifacts, { recursive: true });
         .getByLabel("Leg decimal odds")
         .fill(i === 0 ? "1.90" : "2.00");
     }
-    await dialog.getByRole("checkbox").check();
-    await dialog.getByRole("button", { name: "Confirm & record bet" }).click();
+    const beforeReview = await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1')));
+    await dialog.getByRole('button', { name: 'Review financial registration', exact: true }).click();
+    const confirm = dialog.getByRole('button', { name: 'Confirm financial registration', exact: true });
+    assert(await confirm.isDisabled());
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1'))), beforeReview);
+    await dialog.getByRole('checkbox').check();
+    await confirm.click();
     await dialog.waitFor({ state: "hidden" });
     await page.getByLabel("Search ledger").fill("QA Multi");
     await page
@@ -186,13 +239,58 @@ fs.mkdirSync(artifacts, { recursive: true });
       .nth(1)
       .getByLabel("Leg outcome", { exact: true })
       .selectOption("lost");
-    await dialog.getByRole("button", { name: "Save audited changes" }).click();
+    await dialog.getByLabel('Settled at · Melbourne', { exact: true }).fill('2026-01-16T12:00');
+    await dialog.getByLabel('Actual cash payout · AUD', { exact: true }).fill('0.00');
+    await dialog.getByRole('button', { name: 'Review ledger update', exact: true }).click();
+    await dialog.getByRole('checkbox').check();
+    await dialog.getByRole('button', { name: 'Confirm settlement / audited update', exact: true }).click();
     await dialog.waitFor({ state: "hidden" });
     assert(
       await page
         .getByText("2-leg parlay · QA Multi Over 10.5", { exact: true })
         .isVisible(),
     );
+  });
+  await test('bonus payout reconciliation and cancelling a final financial review preserve actual totals', async () => {
+    await route('/ledger');
+    const before = await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1')));
+    async function enterBonus() {
+      await page.getByRole('button', { name: 'Record bet', exact: true }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByLabel('Bookmaker', { exact: true }).fill('QA SYNTHETIC BONUS');
+      await dialog.getByLabel('Stake · AUD', { exact: true }).fill('5.00');
+      await dialog.getByLabel('Stake type', { exact: true }).selectOption('bonus');
+      await dialog.getByLabel('Accepted decimal odds', { exact: true }).fill('1.86');
+      await dialog.getByLabel('Placed at · Melbourne', { exact: true }).fill('2026-01-15T12:00');
+      await dialog.getByLabel('Participant / team', { exact: true }).fill('QA Bonus Player');
+      await dialog.getByLabel('Event', { exact: true }).fill('QA Bonus fixture');
+      await dialog.getByLabel('Exact market', { exact: true }).fill('Player points');
+      await dialog.getByLabel('Exact selection', { exact: true }).fill('QA Bonus over 10.5');
+      await dialog.getByLabel('Line / threshold', { exact: true }).fill('10.5');
+      await dialog.getByLabel('Bet outcome', { exact: true }).selectOption('won');
+      await dialog.getByLabel('Settled at · Melbourne', { exact: true }).fill('2026-01-16T12:00');
+      return dialog;
+    }
+    let dialog = await enterBonus();
+    await dialog.getByLabel('Actual cash payout · AUD', { exact: true }).fill('9.30');
+    await dialog.getByRole('button', { name: 'Review financial registration', exact: true }).click();
+    await dialog.getByText(/recorded cash payout does not match/).waitFor();
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1'))), before);
+    await dialog.getByLabel('Actual cash payout · AUD', { exact: true }).fill('4.30');
+    await dialog.getByRole('button', { name: 'Review financial registration', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1'))), before);
+    dialog = await enterBonus();
+    await dialog.getByLabel('Actual cash payout · AUD', { exact: true }).fill('4.30');
+    await dialog.getByRole('button', { name: 'Review financial registration', exact: true }).click();
+    await dialog.getByRole('checkbox').check();
+    await dialog.getByRole('button', { name: 'Confirm financial registration', exact: true }).click();
+    await dialog.waitFor({ state: 'hidden' });
+    const after = await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1')));
+    assert.equal(after.bets.length, before.bets.length + 1);
+    assert.equal(after.bets[0].stakeType, 'bonus');
+    assert.match(after.bets[0].notes, /recorded cash payout cents.*430/);
+    assert.deepEqual(after.transactions, before.transactions);
   });
   await test("demo reload persistence", async () => {
     await page.reload();
@@ -242,10 +340,7 @@ fs.mkdirSync(artifacts, { recursive: true });
     assert.equal(after, before + 1);
   });
   await test("research detail and immutable paper registration", async () => {
-    await page
-      .locator(".panel").filter({ has: page.getByLabel("Search research candidates", { exact: true }) }).getByRole("button", { name: "Review", exact: false })
-      .first()
-      .click();
+    await openEligibleResearch('Add to paper tracking');
     await page.getByRole("dialog").waitFor();
     await page
       .getByRole("dialog")
@@ -358,10 +453,7 @@ fs.mkdirSync(artifacts, { recursive: true });
     const before = await page.evaluate(() =>
       JSON.parse(localStorage.getItem("edgelab:demo:v1")),
     );
-    await page
-      .locator(".panel").filter({ has: page.getByLabel("Search research candidates", { exact: true }) }).getByRole("button", { name: "Review", exact: false })
-      .first()
-      .click();
+    await openEligibleResearch('Record actual bet');
     await page
       .getByRole("dialog")
       .getByRole("button", { name: "Record actual bet", exact: true })
@@ -370,14 +462,15 @@ fs.mkdirSync(artifacts, { recursive: true });
     await dialog
       .getByRole("heading", { name: "Record a manual bet", exact: true })
       .waitFor();
-    assert(!(await dialog.getByRole("checkbox").isChecked()));
-    assert(
-      await dialog.getByLabel("Exact selection", { exact: true }).isDisabled(),
-    );
-    await dialog.getByRole("checkbox").check();
-    await dialog
-      .getByRole("button", { name: "Confirm & record bet", exact: true })
-      .click();
+    assert(await dialog.getByLabel('Exact selection', { exact: true }).isDisabled());
+    assert.equal(await dialog.getByLabel('Accepted decimal odds', { exact: true }).inputValue(), '');
+    await dialog.getByLabel('Accepted decimal odds', { exact: true }).fill('2.10');
+    await dialog.getByRole('button', { name: 'Use current placement time', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Review financial registration', exact: true }).click();
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1'))), before);
+    assert(await dialog.getByRole('button', { name: 'Confirm financial registration', exact: true }).isDisabled());
+    await dialog.getByRole('checkbox').check();
+    await dialog.getByRole('button', { name: 'Confirm financial registration', exact: true }).click();
     await page
       .getByRole("heading", { name: "Record a manual bet", exact: true })
       .waitFor({ state: "hidden" });
@@ -458,11 +551,12 @@ fs.mkdirSync(artifacts, { recursive: true });
       .waitFor();
     await page.setViewportSize({ width: 1440, height: 1100 });
   });
-  await test("no browser runtime exceptions", async () =>
-    assert.deepEqual(errors, []));
+  await test("no browser runtime exceptions or external requests", async () => {
+    assert.deepEqual(errors, []); assert.deepEqual(externalRequests, []);
+  });
   fs.writeFileSync(
     path.join(artifacts, "results.json"),
-    JSON.stringify({ results, errors }, null, 2),
+    JSON.stringify({ scope: "Fresh synthetic Demo browser only; external requests blocked; no hosted data or personal session", results, errors, externalRequests }, null, 2),
   );
   await browser.close();
   if (results.some((r) => !r.passed)) process.exitCode = 1;

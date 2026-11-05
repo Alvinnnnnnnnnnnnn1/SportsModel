@@ -23,7 +23,10 @@ import {
   type Sport,
   type Strategy,
 } from "@/lib/domain/types";
-import { betSchema } from "@/lib/domain/validation";
+import { ApprovalStatusBadges } from "@/components/approval-status";
+import { money, dateTime } from "@/lib/utils";
+import { betReturn } from "@/lib/domain/calculations";
+import { enteredMoneyCents, melbourneInput, originalOrEnteredTimestamp, readLedgerEvidence, reviewLedgerEntry, writeLedgerEvidence } from "@/lib/domain/ledger-review";
 
 const outcomeLabels: Record<Outcome, string> = {
   pending: "Pending",
@@ -32,52 +35,13 @@ const outcomeLabels: Record<Outcome, string> = {
   void: "Void",
 };
 
-function melbourneInput(iso: string): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Australia/Melbourne",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date(iso));
-  const value = (name: string) =>
-    parts.find((p) => p.type === name)?.value ?? "";
-  return `${value("year")}-${value("month")}-${value("day")}T${value("hour")}:${value("minute")}`;
-}
-
-function utcFromMelbourne(value: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value))
-    throw new Error("Enter a valid placement date and time.");
-  const wall = Date.parse(`${value}:00Z`);
-  let utc = wall;
-  for (let i = 0; i < 3; i++) {
-    const rendered = Date.parse(
-      `${melbourneInput(new Date(utc).toISOString())}:00Z`,
-    );
-    utc += wall - rendered;
-  }
-  const iso = new Date(utc).toISOString();
-  if (melbourneInput(iso) !== value)
-    throw new Error(
-      "That Melbourne time does not exist because of daylight saving. Choose another time.",
-    );
-  return iso;
-}
-
-function newLeg(candidate?: Candidate): BetLeg {
+type LegDraft = Omit<BetLeg, "odds"> & { odds: string };
+function newLeg(candidate?: Candidate): LegDraft {
   return {
-    id: crypto.randomUUID(),
-    sport: candidate?.sport ?? "NBA",
-    event: candidate?.event ?? "",
-    participant: candidate?.participant ?? "",
-    market: candidate?.market ?? "",
-    selection: candidate?.selection ?? "",
-    line: candidate?.line ?? "",
-    odds: candidate?.odds ?? 1.9,
-    outcome: "pending",
-    statistic: "",
+    id: crypto.randomUUID(), sport: candidate?.sport ?? "NBA",
+    event: candidate?.event ?? "", participant: candidate?.participant ?? "",
+    market: candidate?.market ?? "", selection: candidate?.selection ?? "", line: candidate?.line ?? "",
+    odds: "", outcome: "pending", statistic: "",
   };
 }
 
@@ -128,7 +92,10 @@ function BetFormDraft({
   saving: boolean;
   setSaving: (saving: boolean) => void;
 }) {
-  const { data, mode, addBet, updateBet, notify } = useApp();
+  const { data, mode, user, addBet, updateBet, notify } = useApp();
+  const linkedResearch = candidate ?? data.candidates.find(item => item.id === initial?.candidateId) ?? data.paperPredictions.find(item => item.candidate.id === initial?.candidateId)?.candidate;
+  const identity = mode === "demo" ? "demo" : user?.id ?? "signed-out";
+  const [openedIdentity] = useState(identity);
   const [bookmaker, setBookmaker] = useState(
     initial?.bookmaker ?? candidate?.bookmaker ?? "",
   );
@@ -139,10 +106,10 @@ function BetFormDraft({
     initial?.stakeType ?? "cash",
   );
   const [odds, setOdds] = useState(
-    String(initial?.odds ?? candidate?.odds ?? 1.9),
+    initial ? String(initial.odds) : "",
   );
   const [placedAt, setPlacedAt] = useState(
-    melbourneInput(initial?.placedAt ?? new Date().toISOString()),
+    initial ? melbourneInput(initial.placedAt) : "",
   );
   const [strategy, setStrategy] = useState<Strategy>(
     initial?.strategy ?? candidate?.strategy ?? "A",
@@ -150,15 +117,21 @@ function BetFormDraft({
   const [outcome, setOutcome] = useState<Outcome>(
     initial?.outcome ?? "pending",
   );
-  const [legs, setLegs] = useState<BetLeg[]>(() =>
-    initial ? initial.legs.map((leg) => ({ ...leg })) : [newLeg(candidate)],
+  const [legs, setLegs] = useState<LegDraft[]>(() =>
+    initial ? initial.legs.map((leg) => ({ ...leg, odds: String(leg.odds) })) : [newLeg(candidate)],
   );
-  const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [confirmed, setConfirmed] = useState(Boolean(initial));
+  const [notes, setNotes] = useState(initial ? readLedgerEvidence(initial.notes).notes : "");
+  const [ticketReference, setTicketReference] = useState(initial ? readLedgerEvidence(initial.notes).ticketReference : "");
+  const [settledAt, setSettledAt] = useState(initial?.settledAt ? melbourneInput(initial.settledAt) : "");
+  const [payout, setPayout] = useState(() => { const recorded = initial ? readLedgerEvidence(initial.notes).payoutCents : null; return recorded === null ? "" : (recorded / 100).toFixed(2); });
+  const [confirmed, setConfirmed] = useState(false);
+  const [reviewBet, setReviewBet] = useState<Bet | null>(null);
+  const [reviewIssues, setReviewIssues] = useState<string[]>([]);
+  const [draftId] = useState(() => initial?.id ?? crypto.randomUUID());
   const [error, setError] = useState("");
   const predictionLinked = Boolean(initial?.candidateId || candidate);
 
-  function changeLeg(id: string, update: Partial<BetLeg>) {
+  function changeLeg(id: string, update: Partial<LegDraft>) {
     setLegs((current) =>
       current.map((leg) => (leg.id === id ? { ...leg, ...update } : leg)),
     );
@@ -170,123 +143,75 @@ function BetFormDraft({
       setLegs((current) => current.map((leg) => ({ ...leg, outcome: value })));
   }
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    if (!confirmed) {
-      setError("Confirm the manual ledger entry before saving.");
-      return;
-    }
-    if (mode === "supabase" && candidate?.oddsProvenance.simulated) {
-      setError(
-        "Simulated research cannot be saved in the private workspace. Use demo mode.",
-      );
-      return;
-    }
+  const requirements = [
+    ...(!bookmaker.trim() ? ["Enter the bookmaker."] : []),
+    ...(!placedAt ? ["Enter the actual placement date and time."] : []),
+    ...(!odds || !Number.isFinite(Number(odds)) || Number(odds) <= 1 ? ["Enter the accepted execution odds; a research quote is not an accepted price."] : []),
+    ...(outcome !== "pending" && !settledAt ? ["Enter the original settlement date and time."] : []),
+    ...legs.flatMap((leg, index) => {
+      const missing = [!leg.participant.trim() && "participant", !leg.event.trim() && "fixture", !leg.market.trim() && "market", !leg.selection.trim() && "selection", !leg.line.trim() && "threshold", legs.length > 1 && (!leg.odds || Number(leg.odds) <= 1) && "leg odds"].filter(Boolean);
+      return missing.length ? [`Leg ${index + 1}: enter ${missing.join(", ")}.`] : [];
+    }),
+  ];
+
+  function inspect(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError(""); setReviewIssues([]); setConfirmed(false);
+    if (identity !== openedIdentity) { setError("This workspace changed. Close and reopen the entry before reviewing it."); return; }
+    if (mode === "supabase" && candidate?.oddsProvenance.simulated) { setError("Synthetic research stays in Demo; it cannot enter the private ledger."); return; }
     try {
-      const cents = Math.round(Number(stake) * 100);
-      if (!/^\d+(\.\d{1,2})?$/.test(stake) || cents <= 0)
-        throw new Error(
-          "Enter a stake greater than zero with at most two decimal places.",
-        );
-      if (
-        outcome === "won" &&
-        (legs.some(
-          (leg) => leg.outcome === "lost" || leg.outcome === "pending",
-        ) ||
-          !legs.some((leg) => leg.outcome === "won"))
-      )
-        throw new Error(
-          "A won bet needs won or void legs, including at least one won leg. Update each leg outcome below.",
-        );
-      if (outcome === "lost" && !legs.some((leg) => leg.outcome === "lost"))
-        throw new Error(
-          "Record at least one lost leg before marking the bet lost.",
-        );
-      if (outcome === "void" && !legs.every((leg) => leg.outcome === "void"))
-        throw new Error("Mark every leg void before marking the bet void.");
-      const placedAtUtc = utcFromMelbourne(placedAt);
-      const parsed = betSchema.safeParse({
-        id: initial?.id ?? crypto.randomUUID(),
-        placedAt: placedAtUtc,
-        ...(outcome === "pending"
-          ? {}
-          : {
-              settledAt:
-                initial?.outcome === outcome && initial.settledAt
-                  ? initial.settledAt
-                  : new Date().toISOString(),
-            }),
-        bookmaker: bookmaker.trim(),
-        stakeCents: cents,
-        stakeType,
-        odds: Number(odds),
-        outcome,
-        strategy,
-        legs: legs.map((leg) => ({
-          ...leg,
-          event: leg.event.trim(),
-          participant: leg.participant.trim(),
-          market: leg.market.trim(),
-          selection: leg.selection.trim(),
-          line: leg.line.trim(),
-          statistic: leg.statistic?.trim() || undefined,
-        })),
-        notes: notes.trim(),
+      const cents = enteredMoneyCents(stake, "a stake");
+      const placement = originalOrEnteredTimestamp(placedAt, initial?.placedAt);
+      const unchangedSettlement = !!initial && initial.outcome === outcome && initial.odds === Number(odds) && initial.stakeCents === cents && initial.stakeType === stakeType;
+      const recordedPayout = outcome === "pending" || !payout.trim() ? null : enteredMoneyCents(payout, "the cash payout", true);
+      const value = {
+        id: draftId, placedAt: placement,
+        ...(outcome === "pending" ? {} : { settledAt: originalOrEnteredTimestamp(settledAt, initial?.settledAt) }),
+        bookmaker: bookmaker.trim(), stakeCents: cents, stakeType, odds: Number(odds), outcome, strategy,
+        legs: legs.map(leg => ({ ...leg, odds: Number(legs.length === 1 ? odds : leg.odds), event: leg.event.trim(), participant: leg.participant.trim(), market: leg.market.trim(), selection: leg.selection.trim(), line: leg.line.trim(), statistic: leg.statistic?.trim() || undefined })),
+        notes: writeLedgerEvidence(notes, ticketReference, recordedPayout),
         confirmedAt: initial?.confirmedAt ?? new Date().toISOString(),
-        ...(initial?.probability !== undefined
-          ? { probability: initial.probability }
-          : candidate?.probability !== undefined
-            ? { probability: candidate.probability }
-            : {}),
-        ...(initial?.candidateId
-          ? { candidateId: initial.candidateId }
-          : candidate
-            ? { candidateId: candidate.id }
-            : {}),
-        oddsProvenance: initial?.oddsProvenance ?? {
-          source:
-            mode === "demo"
-              ? "Synthetic manual bookmaker record"
-              : "Manual bookmaker record",
-          timestamp: placedAtUtc,
-          method: "User-entered decimal price; no live verification",
-          modelVersion: "manual-entry-v1",
-          simulated: mode === "demo",
-        },
-        ...(initial?.probabilityProvenance
-          ? { probabilityProvenance: initial.probabilityProvenance }
-          : candidate?.probabilityProvenance
-            ? { probabilityProvenance: candidate.probabilityProvenance }
-            : {}),
-      });
-      if (!parsed.success) {
-        setError(
-          parsed.error.issues
-            .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-            .join(" · "),
-        );
-        return;
-      }
-      setSaving(true);
-      if (initial) await updateBet(parsed.data);
-      else await addBet(parsed.data);
-      notify(
-        initial
-          ? "Ledger entry updated · audit record preserved"
-          : "Manual bet recorded in your ledger",
-      );
-      onOpenChange(false);
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Unable to save this entry. Please try again.",
-      );
-    } finally {
-      setSaving(false);
-    }
+        ...(initial?.probability !== undefined ? { probability: initial.probability } : candidate?.probability !== undefined ? { probability: candidate.probability } : {}),
+        ...(initial?.candidateId ? { candidateId: initial.candidateId } : candidate ? { candidateId: candidate.id } : {}),
+        oddsProvenance: initial?.oddsProvenance ?? { source: mode === "demo" ? "Synthetic manual bookmaker record" : "Manual bookmaker record", timestamp: placement, method: "Owner-entered accepted price; no live verification", modelVersion: "manual-entry-v1", simulated: mode === "demo" },
+        ...(initial?.probabilityProvenance ? { probabilityProvenance: initial.probabilityProvenance } : candidate?.probabilityProvenance ? { probabilityProvenance: candidate.probabilityProvenance } : {}),
+      };
+      // A non-financial edit preserves an existing settled return without pretending
+      // its calculated value is newly supplied external payout evidence.
+      const reviewed = reviewLedgerEntry(value, recordedPayout ?? (initial && unchangedSettlement && initial.outcome !== "pending" ? betReturn(initial) : null));
+      if (!reviewed.bet) { setReviewIssues(reviewed.issues); setError("Resolve the outstanding requirements before financial review."); return; }
+      setReviewBet(reviewed.bet);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "This entry could not be reviewed."); }
   }
+
+  async function saveReviewed() {
+    if (!reviewBet || !confirmed || saving) return;
+    if (identity !== openedIdentity) { setError("This workspace changed. Close and reopen the entry before saving."); return; }
+    setSaving(true); setError("");
+    try {
+      if (initial) await updateBet(reviewBet); else await addBet(reviewBet);
+      notify(initial ? "Ledger update saved · audit history preserved" : "Financial registration saved · no funding created");
+      onOpenChange(false);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Your changes were not saved."); }
+    finally { setSaving(false); }
+  }
+
+  if (identity !== openedIdentity) return <><DialogHeader><DialogTitle>Workspace changed</DialogTitle><DialogDescription>This unsaved entry belongs to the previous workspace. Close it and reopen the intended workspace before recording a wager.</DialogDescription></DialogHeader><DialogFooter><Button onClick={() => onOpenChange(false)}>Close unsaved entry</Button></DialogFooter></>;
+
+  if (reviewBet) return <>
+    <DialogHeader><DialogTitle>{initial ? reviewBet.outcome !== "pending" ? "Review wager settlement / update" : "Review audited ledger update" : "Review financial registration"}</DialogTitle><DialogDescription>Review once, then explicitly authorize the financial save. This records a manually placed wager; no bet is submitted and no deposit is created.</DialogDescription></DialogHeader>
+    <ApprovalStatusBadges facts={{ mode, financialRegistered: !!initial, ownerAttested: !!initial, outcome: initial?.outcome }} />
+    <dl className="grid grid-cols-2 gap-4 rounded-xl border border-border p-4 text-xs">
+      <div><dt className="text-muted-foreground">Accepted / final settlement odds</dt><dd className="mt-1">{reviewBet.odds}</dd></div><div><dt className="text-muted-foreground">Stake</dt><dd className="mt-1">{money(reviewBet.stakeCents)} · {reviewBet.stakeType}</dd></div>
+      <div><dt className="text-muted-foreground">Placed at · Melbourne</dt><dd className="mt-1">{dateTime(reviewBet.placedAt)}</dd></div><div><dt className="text-muted-foreground">Outcome</dt><dd className="mt-1 capitalize">{reviewBet.outcome}</dd></div>
+      {reviewBet.settledAt && <div><dt className="text-muted-foreground">Settled at · Melbourne</dt><dd className="mt-1">{dateTime(reviewBet.settledAt)}</dd></div>}
+      {reviewBet.outcome !== "pending" && <div><dt className="text-muted-foreground">Calculated cash return</dt><dd className="mt-1">{money(betReturn(reviewBet))}</dd><p className="mt-1 text-[10px] text-muted-foreground">{payout.trim() ? "Matches the entered payout." : "Existing registered return retained; no new external payout evidence supplied."}</p></div>}
+      <div><dt className="text-muted-foreground">Bookmaker / ticket</dt><dd className="mt-1">{reviewBet.bookmaker} · {ticketReference || "Ticket reference not supplied"}</dd></div><div><dt className="text-muted-foreground">Research strategy</dt><dd className="mt-1">Track {reviewBet.strategy}</dd></div>
+    </dl>
+    <section className="space-y-2" aria-label="Reviewed wager selections">{reviewBet.legs.map((leg,index)=><div key={leg.id} className="rounded-lg border border-border p-3 text-xs"><p>{index+1}. {leg.sport} · {leg.event} · {leg.participant}</p><p className="mt-1 text-muted-foreground">{leg.market} · {leg.selection} · line {leg.line} · price {leg.odds} · {leg.outcome}</p></div>)}</section>
+    <label className="flex items-start gap-3 rounded-lg border border-border p-3 text-xs leading-relaxed"><input type="checkbox" checked={confirmed} onChange={event=>setConfirmed(event.target.checked)} /><span>{mode === "demo" ? "I confirm this is a synthetic ledger test." : "I confirm these details match my manually placed wager."} I authorize {initial ? "this audited ledger update" : "financial registration"} and its effect on actual-ledger totals.</span></label>
+    {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
+    <DialogFooter><Button variant="ghost" disabled={saving} onClick={()=>onOpenChange(false)}>Cancel</Button><Button variant="outline" disabled={saving} onClick={()=>{setReviewBet(null);setConfirmed(false);setError("");}}>Back to entry</Button><Button disabled={!confirmed||saving} onClick={()=>void saveReviewed()}>{saving ? "Saving…" : initial ? reviewBet.outcome !== "pending" ? "Confirm settlement / audited update" : "Confirm audited changes" : "Confirm financial registration"}</Button></DialogFooter>
+  </>;
 
   return (
     <>
@@ -303,7 +228,10 @@ function BetFormDraft({
             : "Paper predictions are tracked separately."}
         </DialogDescription>
       </DialogHeader>
-      <form onSubmit={submit} className="space-y-6">
+      <form onSubmit={inspect} className="space-y-6">
+        <ApprovalStatusBadges facts={{ mode, financialRegistered: !!initial, ownerAttested: !!initial, outcome: initial?.outcome }} />
+        {linkedResearch && <p className="rounded-lg border border-border p-3 text-xs text-muted-foreground">Linked original research: {linkedResearch.selection} · research quote {linkedResearch.odds}. The accepted execution price must be entered separately; the original forecast stays unchanged.</p>}
+        <section className="rounded-lg border border-border p-3" aria-label="Ledger entry requirements"><p className="text-xs font-medium">{requirements.length ? `${requirements.length} outstanding requirements` : "Entry fields ready for validation"}</p>{requirements.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-muted-foreground">{requirements.map(item=><li key={item}>{item}</li>)}</ul>}<p className="mt-2 text-[10px] text-muted-foreground">This form is an unsaved draft until the final financial confirmation. Unknown facts must not be guessed.</p></section>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm">
             <span className="label">Bookmaker</span>
@@ -321,10 +249,12 @@ function BetFormDraft({
             <span className="label">Placed at · Melbourne</span>
             <Input
               type="datetime-local"
+              aria-label="Placed at · Melbourne"
               value={placedAt}
               onChange={(event) => setPlacedAt(event.target.value)}
               required
             />
+            <Button type="button" variant="ghost" size="sm" onClick={() => setPlacedAt(melbourneInput(new Date().toISOString()))}>Use current placement time</Button>
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-2 text-sm">
@@ -355,7 +285,7 @@ function BetFormDraft({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-2 text-sm">
-              <span className="label">Decimal odds</span>
+              <span className="label">Accepted decimal odds</span>
               <Input
                 type="number"
                 min="1.0001"
@@ -384,6 +314,8 @@ function BetFormDraft({
               </select>
             </label>
           </div>
+          <label className="space-y-2 text-sm sm:col-span-2"><span className="label">Sportsbook ticket reference · optional</span><Input value={ticketReference} onChange={event=>setTicketReference(event.target.value)} maxLength={200} placeholder="Leave blank when unavailable" /></label>
+          {outcome !== "pending" && <><label className="space-y-2 text-sm"><span className="label">Settled at · Melbourne</span><Input type="datetime-local" value={settledAt} onChange={event=>setSettledAt(event.target.value)} required /></label><label className="space-y-2 text-sm"><span className="label">Actual cash payout · AUD</span><Input aria-label="Actual cash payout · AUD" type="number" min="0" step="0.01" value={payout} onChange={event=>setPayout(event.target.value)} placeholder="Enter zero for a loss" /><p className="text-[10px] text-muted-foreground">Required for a new settlement or changed financial amounts; bonus face value is not cash returned.</p></label></>}
           <label className="space-y-2 text-sm sm:col-span-2">
             <span className="label">Research strategy</span>
             <select
@@ -527,16 +459,15 @@ function BetFormDraft({
                   />
                 </label>
                 <label className="space-y-1.5 text-xs">
-                  <span className="label">Leg decimal odds</span>
+                  <span className="label">Leg decimal odds{legs.length === 1 ? " · uses accepted single price" : ""}</span>
                   <Input
                     type="number"
                     min="1.0001"
                     step="0.0001"
                     max="10000"
-                    value={leg.odds}
-                    onChange={(event) =>
-                      changeLeg(leg.id, { odds: Number(event.target.value) })
-                    }
+                    value={legs.length === 1 ? odds : leg.odds}
+                    readOnly={legs.length === 1}
+                    onChange={(event) => changeLeg(leg.id, { odds: event.target.value })}
                     required
                   />
                 </label>
@@ -606,20 +537,7 @@ function BetFormDraft({
             maxLength={4000}
           />
         </label>
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 p-3 text-xs leading-relaxed text-slate-300">
-          <input
-            type="checkbox"
-            className="mt-0.5 accent-emerald-400"
-            checked={confirmed}
-            onChange={(event) => setConfirmed(event.target.checked)}
-            required
-          />
-          <span>
-            {mode === "demo"
-              ? "I confirm this is a synthetic demo ledger entry. It does not represent a real wager."
-              : "I confirm that I placed this bet manually outside EdgeLab and that these details match my own record."}
-          </span>
-        </label>
+        <p className="text-[11px] leading-relaxed text-muted-foreground">Missing source details? Keep this unsaved form open or preserve the evidence through Historical Import. Closing Cancel discards only this draft; registered records stay unchanged.</p>
         {error && (
           <p
             role="alert"
@@ -628,6 +546,7 @@ function BetFormDraft({
             {error}
           </p>
         )}
+        {reviewIssues.length > 0 && <ul className="list-disc space-y-1 pl-4 text-xs text-amber-200">{[...new Set(reviewIssues)].map(issue=><li key={issue}>{issue}</li>)}</ul>}
         <DialogFooter>
           <Button
             type="button"
@@ -638,11 +557,7 @@ function BetFormDraft({
             Cancel
           </Button>
           <Button type="submit" disabled={saving}>
-            {saving
-              ? "Saving…"
-              : initial
-                ? "Save audited changes"
-                : "Confirm & record bet"}
+            {initial ? "Review ledger update" : "Review financial registration"}
           </Button>
         </DialogFooter>
       </form>

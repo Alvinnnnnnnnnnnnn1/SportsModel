@@ -25,7 +25,7 @@ export function prepareImportCommit(preview: ImportPreview, decisions: ImportDec
             throw new Error(`Row ${row.rowNumber} has unresolved errors.`);
         if (row.issues.some(v => v.severity === 'warning') && !decision.acknowledgeIncomplete)
             throw new Error(`Row ${row.rowNumber} needs explicit acknowledgement of missing or unverified information.`);
-        const duplicates = detectHistoricalDuplicates(row.snapshot, row.fingerprint, [...existingRecords, ...records]);
+        const duplicates = detectHistoricalDuplicates(row.snapshot, row.fingerprint, [...existingRecords, ...records], [], row.raw);
         if (duplicates.some(d => d.level === 'exact'))
             throw new Error(`Row ${row.rowNumber} is an exact duplicate; it was not merged or imported.`);
         if (duplicates.some(d => d.level === 'probable') && !decision.allowProbableDuplicate)
@@ -41,7 +41,7 @@ export function commitHistoricalImport(workspace: HistoricalWorkspace, commit: I
         throw new Error('This import batch is already registered.');
     const seen = [...workspace.records];
     for (const record of commit.records) {
-        const duplicates = detectHistoricalDuplicates(record.snapshot, record.fingerprint, seen);
+        const duplicates = detectHistoricalDuplicates(record.snapshot, record.fingerprint, seen, [], record.raw);
         if (duplicates.some(d => d.level === 'exact'))
             throw new Error('An exact duplicate appeared after preview; refresh and review again.');
         if (duplicates.some(d => d.level === 'probable') && !record.probableDuplicateConfirmed)

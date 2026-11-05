@@ -24,7 +24,7 @@ The full revised text is in [experiment-methodology.proposed.md](experiment-meth
 4. Leave day numbers, completed-day evidence and dates blank for methodology-only approval. Leave Original methodology text blank unless you have the actual source. Leave the original-completeness attestation unchecked.
 5. Check Include this methodology revision in the proposed journal entry, then check the statement beginning I reviewed the full proposed document and sources (Approve proposed methodology content).
 6. Click Review versioned context. Inspect the full proposed JSON, including the policy, sources and hash. This review has not saved anything.
-7. Only if you approve that exact preview, check the final append confirmation and click Append approved versioned context.
+7. Only if you approve that exact preview, click Confirm context save. The content-approval checkbox already reviewed the policy; this final button is the explicit persistence authorization. Cancel review returns without saving.
 
 The final action creates the owner-approved immutable context/audit entry. It does not register a wager, paper position, deposit, historical result or completed research day. If the UI shows an already saved methodology or revision 2 or higher, preserve that saved version and review a separate proposed revision; do not replace approved text silently.
 

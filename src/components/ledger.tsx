@@ -18,7 +18,10 @@ import { BetForm } from "@/components/bet-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { betProfit } from "@/lib/domain/calculations";
+import { HistoricalWagerClaimsSummary } from "@/components/imports/wager-claims-review";
+import { ApprovalStatusBadges } from "@/components/approval-status";
+import { readLedgerEvidence } from "@/lib/domain/ledger-review";
+import { betProfit, betReturn } from "@/lib/domain/calculations";
 import {
   SPORTS,
   STRATEGIES,
@@ -150,6 +153,8 @@ export function Ledger() {
           note="Won, lost and void"
         />
       </div>
+
+      <HistoricalWagerClaimsSummary />
 
       <section className="panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] p-4 sm:px-5">
@@ -344,8 +349,9 @@ function LedgerRows({
   onToggle: () => void;
   onEdit: () => void;
 }) {
-  const { data } = useApp();
+  const { data, mode } = useApp();
   const first = bet.legs[0];
+  const linkedResearch = data.candidates.find(item => item.id === bet.candidateId) ?? data.paperPredictions.find(item => item.candidate.id === bet.candidateId)?.candidate;
   const profit = betProfit(bet);
   const audits = data.audit
     .filter((entry) => entry.entityType === "bet" && entry.entityId === bet.id)
@@ -416,13 +422,14 @@ function LedgerRows({
         <td className="px-4 py-4">
           <div className="flex items-center justify-end gap-1">
             <Button
-              variant="ghost"
-              size="icon"
+              variant="outline"
+              size="sm"
               onClick={onEdit}
               aria-label={`Edit ${first?.selection ?? "entry"}`}
-              className="size-8 text-slate-500 hover:text-white"
+              className="text-[10px]"
             >
               <Pencil className="size-3.5" />
+              {bet.outcome === "pending" ? "Settle wager" : "Review / edit"}
             </Button>
             <Button
               variant="ghost"
@@ -445,6 +452,7 @@ function LedgerRows({
         <tr className="border-b border-white/[0.07] bg-black/10">
           <td colSpan={7} className="p-5">
             <div className="space-y-4">
+              <ApprovalStatusBadges facts={{ mode, financialRegistered: true, ownerAttested: true, outcome: bet.outcome }} />
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-slate-400">
                   Track {bet.strategy} · {STRATEGIES[bet.strategy]}{" "}
@@ -455,10 +463,16 @@ function LedgerRows({
                 <Button variant="outline" size="sm" onClick={onEdit}>
                   <Pencil className="mr-1.5 size-3" />
                   {bet.outcome === "pending"
-                    ? "Record outcome / edit"
+                    ? "Settle registered wager"
                     : "Edit with audit"}
                 </Button>
               </div>
+              <dl className="grid grid-cols-2 gap-4 rounded-lg border border-border p-3 text-xs sm:grid-cols-3">
+                <div><dt className="text-muted-foreground">Original research odds</dt><dd className="mt-1">{linkedResearch?.odds ?? "Unknown / not linked"}</dd></div>
+                <div><dt className="text-muted-foreground">Accepted / final settlement odds</dt><dd className="mt-1">{bet.odds}</dd></div>
+                <div><dt className="text-muted-foreground">Ticket reference</dt><dd className="mt-1">{readLedgerEvidence(bet.notes).ticketReference || "Not supplied"}</dd></div>
+                <div><dt className="text-muted-foreground">Cash returned</dt><dd className="mt-1">{bet.outcome === "pending" ? "Not settled" : money(betReturn(bet))}</dd><p className="mt-1 text-[10px] text-muted-foreground">{readLedgerEvidence(bet.notes).payoutCents === null ? "Calculated from registered settlement; external payout evidence not supplied" : "Owner-recorded payout reconciled at confirmation"}</p></div>
+              </dl>
               <div className="grid gap-2">
                 {bet.legs.map((leg, index) => (
                   <div

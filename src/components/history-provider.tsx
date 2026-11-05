@@ -7,6 +7,8 @@ import { createDemoHistoricalRepository, createSupabaseHistoricalRepository, His
 import type { HistoricalRepository } from '@/lib/imports/types';
 import { commitHistoricalImport, prepareImportCommit, registerHistoricalPaper, settleHistoricalPaper, createHistoricalNotification, markHistoricalNotificationRead, dismissHistoricalNotification, financialReview } from '@/lib/imports';
 import { commitApprovedResearch, type ResearchPreview, type PriorResearchSelection } from '@/lib/handoff';
+import { findHistoricalLedgerMatches } from '@/lib/imports/wager-claims';
+import { readArchivedWagerClaim } from '@/lib/imports/wager-claim-provenance';
 interface HistoryContextValue {
   history: HistoricalWorkspace; loading: boolean; error: string | null; needsMigration: boolean;
   reload: () => void;
@@ -66,6 +68,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     if (!record || record.snapshot.kind !== 'actual') throw new Error('Only an actual record can be registered in the actual ledger.');
     if (mode === 'supabase' && record.snapshot.verification === 'synthetic') throw new Error('Synthetic records stay in Demo.');
     if (data.bets.some(bet => bet.id === id)) throw new Error('This record is already registered in the ledger.');
+    if (readArchivedWagerClaim(record) && findHistoricalLedgerMatches(record, data.bets).length) throw new Error('This source or selection overlaps an existing actual wager. Review the duplicate evidence before financial registration; no second bet was recorded.');
     const review = financialReview(record);
     if (!review.bet) throw new Error(review.issues.map(issue => issue.message).join(' '));
     await addBet({ ...review.bet, id, confirmedAt: new Date().toISOString() });

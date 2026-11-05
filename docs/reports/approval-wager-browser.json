@@ -1,0 +1,67 @@
+{
+  "scope": "Synthetic local browser regression with fake authenticated users and in-memory RPC transport; no hosted calls, real records or personal browser profile",
+  "hostedVerification": false,
+  "createdAt": "2026-11-05T03:26:51.767Z",
+  "checksPassed": 12,
+  "checksFailed": 0,
+  "results": [
+    {
+      "name": "existing mocked private workspace loads approved policy and paper without setup or writes",
+      "passed": true
+    },
+    {
+      "name": "malformed claim files are rejected before retention or archive writes",
+      "passed": true
+    },
+    {
+      "name": "file selection previews owner reports while accepted execution odds remain unknown",
+      "passed": true
+    },
+    {
+      "name": "explicit local retention survives Overview and Ledger refresh without financial writes",
+      "passed": true
+    },
+    {
+      "name": "archive review supports bulk selection, warning acknowledgement and cancellation without writes",
+      "passed": true
+    },
+    {
+      "name": "one explicit archive confirmation persists reports only and shows the exact saved records",
+      "passed": true
+    },
+    {
+      "name": "saved historical summaries survive clearing local attachment and page reload",
+      "passed": true
+    },
+    {
+      "name": "exact duplicate source cannot be reimported or registered a second time",
+      "passed": true
+    },
+    {
+      "name": "another mocked account cannot see the first account attachment or saved claim summary",
+      "passed": true
+    },
+    {
+      "name": "demo does not inherit private claims or accept an owner-reported source",
+      "passed": true
+    },
+    {
+      "name": "mobile claim review and summary fit without document overflow",
+      "passed": true
+    },
+    {
+      "name": "all transport is mocked and no financial writes or runtime errors occurred",
+      "passed": true
+    }
+  ],
+  "counters": {
+    "authReads": 53,
+    "workspaceReads": 16,
+    "historyReads": 16,
+    "historySaves": 1,
+    "financialWriteAttempts": 0,
+    "unexpectedExternalRequests": 0,
+    "unexpectedMockRequests": 0,
+    "runtimeErrors": 0
+  }
+}

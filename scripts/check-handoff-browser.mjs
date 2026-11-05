@@ -44,6 +44,7 @@ const response = {
   passes: [{ id: 'SYNTHETIC-browser-pass-1', sport: 'WTA', event: null,
     reason: 'SYNTHETIC pass: source-supported current odds are unavailable. No opportunity is inferred.', sourceUrls: [] }],
 };
+response.candidates.push({ ...structuredClone(response.candidates[0]), id: 'SYNTHETIC-browser-watch-1', eventId: 'SYNTHETIC-browser-watch-event', event: 'SYNTHETIC watchlist fixture event', participant: 'SYNTHETIC watchlist player', decision: 'watch', proposedStatus: 'paper_only' });
 const originalMessage = 'SYNTHETIC historical mapping fixture only. Record one fictional cash win and one fictional paper loss from the explicit structured fields provided by this test. No real experiment history.';
 const conversation = {
   id: 'SYNTHETIC-browser-experiment-conversation', title: 'SYNTHETIC Sports Betting Experiment source',
@@ -107,14 +108,20 @@ async function test(name, work) {
   }
 }
 async function approveArchive() {
-  const wizard = page.getByRole('heading', { name: 'Controlled source import', exact: true }).locator('..').locator('..');
-  await wizard.getByRole('button', { name: 'Select valid rows', exact: true }).click();
-  for (const checkbox of await wizard.getByRole('checkbox', { name: 'I reviewed the missing/unverified information.', exact: true }).all()) await checkbox.check();
-  await wizard.getByRole('button', { name: 'Review final confirmation', exact: true }).click();
-  await wizard.getByRole('checkbox', { name: /^I reviewed the proposed records, classifications/ }).check();
-  await wizard.getByRole('button', { name: 'Save approved archive records', exact: true }).click();
-  await wizard.getByRole('button', { name: 'Save approved archive records', exact: true }).waitFor({ state: 'hidden' });
+  const wizard = page.getByRole('region', { name: 'Historical import approval', exact: true });
+  const before = await history();
+  await wizard.getByRole('button', { name: 'Select all eligible rows', exact: true }).click();
+  const warningApproval = wizard.getByRole('checkbox', { name: 'Acknowledge selected archive warnings', exact: true });
+  if (await warningApproval.count()) await warningApproval.check();
+  await wizard.getByRole('button', { name: 'Review archive import', exact: true }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Confirm archive import', exact: true });
+  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+  same(await history(), before, 'Cancelling archive approval must not save any source record.');
+  await wizard.getByRole('button', { name: 'Review archive import', exact: true }).click();
+  await confirmation.getByRole('button', { name: 'Confirm archive import', exact: true }).click();
+  await wizard.getByRole('region', { name: 'Archive import complete', exact: true }).waitFor();
 }
+
 function handoff() { return page.getByRole('region', { name: 'Research Handoff', exact: true }); }
 function reviewRegion() { return page.getByRole('region', { name: 'Research response review', exact: true }); }
 async function reviewResponse(value) {
@@ -141,20 +148,26 @@ try {
     await intake.getByLabel('Mapped fields for source message 2', { exact: true }).fill(JSON.stringify(mappedRecords, null, 2));
     await intake.getByRole('checkbox', { name: /^I selected only the relevant experiment conversation/ }).check();
     await intake.getByRole('button', { name: 'Prepare mapped records for review', exact: true }).click();
-    await page.getByLabel('Mapped research records').waitFor();
-    const source = JSON.parse(await page.getByLabel('Mapped research records').inputValue());
-    assert.equal(source.records.length, 2); assert.equal(source.records[0].sourceExcerpt.messageId, 'SYNTHETIC-message-answer');
-    assert.equal(source.records[0].sourceExcerpt.text, originalMessage);
+    const wizard = page.getByRole('region', { name: 'Historical import approval', exact: true });
+    await wizard.getByRole('button', { name: 'Select all eligible rows', exact: true }).waitFor();
+    const first = wizard.getByRole('row').filter({hasText:'SYNTHETIC historical cash team'});
+    await first.getByRole('button', {name:'Review source',exact:true}).click();
+    const sourceDialog = page.getByRole('dialog', {name:'Review source row 1',exact:true});
+    const exact = sourceDialog.getByText('Original row and transformations', {exact:true});
+    if (await exact.count()) await exact.click();
+    const source = JSON.parse(await sourceDialog.locator('pre').last().textContent());
+    assert.equal(source.original.sourceExcerpt.messageId, 'SYNTHETIC-message-answer');
+    assert.equal(source.original.sourceExcerpt.text, originalMessage);
     assert(!JSON.stringify(source).includes('UNRELATED PRIVATE CONVERSATION MUST NOT BE RETAINED'));
-    assert(source.provenance.originalSelectedConversation.mapping['synthetic-alternative']);
+    await sourceDialog.getByRole('button', {name:'Close',exact:true}).click();
     assert.equal(await history(), null); same(await financial(), initialFinancial, 'Preparing a source must not change synthetic financial records.');
   });
   await test('historical archive requires explicit review and retains selected source provenance', async () => {
-    await page.getByRole('button', { name: 'Validate mapped JSON', exact: true }).click();
-    await page.getByRole('button', { name: 'Select valid rows', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Select all eligible rows', exact: true }).waitFor();
     assert.equal(await history(), null); await approveArchive();
     const saved = await history(); assert.equal(saved.records.length, 2);
     assert(saved.batches[0].rawSource.includes('SYNTHETIC-message-answer'));
+    assert(JSON.parse(saved.batches[0].rawSource).provenance.originalSelectedConversation.mapping['synthetic-alternative']);
     assert(!saved.batches[0].rawSource.includes('UNRELATED PRIVATE CONVERSATION MUST NOT BE RETAINED'));
     assert(saved.records.every(record => record.snapshot.verification === 'synthetic'));
     same(await financial(), initialFinancial, 'Archiving actual-source records must not register a bet or funding.');
@@ -166,7 +179,7 @@ try {
     await page.getByRole('dialog').getByRole('button', { name: 'Review actual-ledger registration', exact: true }).click();
     const dialog = page.getByRole('dialog'); const button = dialog.getByRole('button', { name: 'Confirm financial registration', exact: true });
     assert(await button.isDisabled()); await dialog.getByRole('checkbox').check(); await button.click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Already in actual ledger', exact: true }).waitFor();
+    await page.getByRole('dialog').getByRole('button', { name: 'Review registered wager', exact: true }).waitFor();
     registeredFinancial = await financial(); assert.equal(registeredFinancial.bets.length, initialFinancial.bets.length + 1);
     same(registeredFinancial.transactions, initialFinancial.transactions, 'No funding can be inferred from an imported actual bet.');
     const bet = registeredFinancial.bets.find(item => item.id === record.id); assert.equal(bet.stakeCents, 500); assert.equal(bet.outcome, 'won'); assert.equal(bet.odds, 2);
@@ -175,13 +188,13 @@ try {
   });
   await test('owner-attested context is append-only and distinct from the unverified Day 5 checkpoint', async () => {
     await route('/research'); await handoff().getByRole('button', { name: 'Experiment context', exact: true }).click();
+    await handoff().getByText('Original-source journal · advanced', {exact:true}).click();
     const journal = page.getByRole('region', { name: 'Experiment context journal', exact: true });
     await journal.getByLabel('Source-confirmed completed day', { exact: true }).fill('5');
     await journal.getByLabel('Experiment context source reference', { exact: true }).fill('synthetic:browser:owner-attested-rules');
     await journal.getByLabel('Complete original experiment rules', { exact: true }).fill('SYNTHETIC test-only rules. Scope NBA/NBL/ATP/WTA; Sportsbet context only; lifetime AUD 500 funding cap; generally AUD 5 experimental stakes; Track A High Probability, B Potential Value, C Alternative Markets. Separate cash, bonus, funding and paper. No bookmaker login or wager execution.');
     for (const checkbox of await journal.getByRole('checkbox').all()) await checkbox.check();
     await journal.getByRole('button', { name: 'Review context journal', exact: true }).click();
-    await journal.getByRole('checkbox', { name: /^I reviewed this source and explicitly confirm/ }).check();
     await journal.getByRole('button', { name: 'Confirm context journal', exact: true }).click();
     await journal.getByRole('button', { name: 'Review context journal', exact: true }).waitFor();
     const saved = await history(); assert.equal(saved.records.length, 3);
@@ -205,27 +218,45 @@ try {
     const before = await history(); await reviewResponse('{broken');
     await reviewRegion().getByRole('alert').filter({ hasText: 'Malformed research JSON' }).waitFor();
     const llm = structuredClone(response); llm.id = 'SYNTHETIC-invalid-llm-response'; llm.candidates[0].probability.origin = 'llm';
-    await reviewResponse(llm); await reviewRegion().getByText(/LLM-generated numerical betting probabilities cannot be registered/).waitFor();
+    await reviewResponse(llm); await reviewRegion().getByText(/Blocked: LLM-generated numerical betting probabilities cannot be registered/).waitFor();
     assert(await reviewRegion().getByRole('checkbox', { name: 'Approve research row 1', exact: true }).isDisabled());
     same(await history(), before, 'Invalid research must not create a registered prediction.'); await backToResponse();
   });
   await test('missing bookmaker prices remain null and require explicit review rather than invented odds', async () => {
     const missing = structuredClone(response); missing.id = 'SYNTHETIC-missing-price-response'; missing.candidates[0].originalOdds = null; missing.candidates[0].estimatedEv = null;
-    await reviewResponse(missing); await reviewRegion().locator('article').first().getByText('Price unavailable', { exact: false }).waitFor();
+    await reviewResponse(missing); await reviewRegion().locator('article').first().getByText('Original odds: Unknown', { exact: false }).waitFor();
+    await reviewRegion().locator('article').first().getByText(/blocking reasons.*review notices/).click();
     await reviewRegion().getByText(/originalOdds: Missing source information remains null/).waitFor();
     assert(!(await reviewRegion().getByRole('checkbox', { name: 'Approve research row 1', exact: true }).isDisabled()));
     assert(await reviewRegion().getByRole('button', { name: 'Approve selected research', exact: true }).isDisabled());
     assert.equal((await history()).records.length, 3); await backToResponse();
   });
+  await test('batch selection and approval cancellation leave research, paper and financial state unchanged', async () => {
+    const before = await history(); await reviewResponse(response);
+    await reviewRegion().getByRole('button', {name:'Select eligible paper candidates',exact:true}).click();
+    await reviewRegion().getByRole('checkbox', {name:'Approve selected research and warnings',exact:true}).check();
+    assert(!(await reviewRegion().getByRole('button', {name:'Approve selected research',exact:true}).isDisabled()));
+    await reviewRegion().getByRole('button', {name:'Deselect all',exact:true}).click();
+    assert(await reviewRegion().getByRole('button', {name:'Approve selected research',exact:true}).isDisabled());
+    await backToResponse(); same(await history(),before,'Cancelling research selection cannot register paper positions.');
+    same(await financial(),registeredFinancial,'Cancelling research approval cannot write financial records.');
+  });
   await test('approved structured research atomically registers paper, pass history and an in-app alert', async () => {
     const before = await history(); await reviewResponse(response);
-    for (const checkbox of await reviewRegion().getByRole('checkbox', { name: /^Approve research row/ }).all()) await checkbox.check();
-    for (const checkbox of await reviewRegion().getByRole('checkbox', { name: /^I reviewed missing data, source claims/ }).all()) await checkbox.check();
+    for (const title of ['Paper candidates','Watchlist candidates','Passed / rejected candidates']) await reviewRegion().getByRole('region', {name:title,exact:true}).waitFor();
+    await reviewRegion().getByRole('button', {name:'Select eligible paper candidates',exact:true}).click();
+    assert(await reviewRegion().getByRole('checkbox', {name:'Approve research row 1',exact:true}).isChecked());
+    assert(!(await reviewRegion().getByRole('checkbox', {name:'Approve research row 2',exact:true}).isChecked()));
+    await reviewRegion().getByRole('button', {name:'Select eligible watch / passes',exact:true}).click();
     await reviewRegion().getByRole('checkbox', { name: /^I explicitly confirm Research Day 6 is complete/ }).check();
-    await reviewRegion().getByRole('checkbox', { name: /^I reviewed the selected source records and approve immutable paper registration/ }).check();
+    await reviewRegion().getByRole('checkbox', { name: 'Approve selected research and warnings', exact:true }).check();
     await reviewRegion().getByRole('button', { name: 'Approve selected research', exact: true }).click();
-    await reviewRegion().getByRole('button', { name: 'Validate research response', exact: true }).waitFor();
-    const saved = await history(); assert.equal(saved.revision, before.revision + 1); assert.equal(saved.records.length, 5);
+    await reviewRegion().getByRole('status', {name:'Research approval success',exact:true}).waitFor();
+    const saved = await history(); assert.equal(saved.revision, before.revision + 1); assert.equal(saved.records.length, 6);
+    assert.equal(saved.paperResults.length, 1);
+    assert.equal(await reviewRegion().getByText('Owner-attested',{exact:true}).count(), 0);
+    assert(!/independently verified by EdgeLab/i.test(await reviewRegion().innerText()));
+    await reviewRegion().getByRole('button', {name:'Review another response',exact:true}).click();
     const record = saved.records.find(item => item.raw?.id === 'SYNTHETIC-browser-candidate-1'); assert(record);
     paperId = record.id; originalPaperSnapshot = structuredClone(record.snapshot);
     assert.equal(record.snapshot.kind, 'paper'); assert.equal(record.raw.proposedStatus, 'actual_requires_manual_confirmation');
@@ -236,6 +267,7 @@ try {
   });
   await test('duplicate research responses are rejected without duplicate predictions or alerts', async () => {
     const before = await history(); await reviewResponse(response);
+    await reviewRegion().locator('article').first().getByText(/blocking reasons.*review notices/).click();
     await reviewRegion().getByText(/EXACT duplicate:/).first().waitFor();
     assert(await reviewRegion().getByRole('checkbox', { name: 'Approve research row 1', exact: true }).isDisabled());
     same(await history(), before, 'Duplicate review must not change source history or alert count.'); await backToResponse();

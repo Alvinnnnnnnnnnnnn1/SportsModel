@@ -1,0 +1,72 @@
+{
+  "scope": "Approval UX refactor; local synthetic tests only, no hosted or personal-data writes",
+  "createdAt": "2026-11-05T03:33:42.919251+00:00",
+  "tests": {
+    "passed": 502,
+    "failed": 0,
+    "skipped": 0,
+    "embeddedPostgresTests": 3,
+    "newPureRegressionTests": 33,
+    "command": "EDGELAB_POSTGRES_RUNTIME=/private/tmp/edgelab-db-validation npm test"
+  },
+  "browsers": {
+    "checksPassed": 70,
+    "checksFailed": 0,
+    "reports": [
+      {
+        "report": "approval-import-browser.json",
+        "passed": 12,
+        "failed": 0
+      },
+      {
+        "report": "approval-wager-browser.json",
+        "passed": 12,
+        "failed": 0
+      },
+      {
+        "report": "approval-handoff-browser.json",
+        "passed": 17,
+        "failed": 0
+      },
+      {
+        "report": "approval-ledger-browser.json",
+        "passed": 22,
+        "failed": 0
+      },
+      {
+        "report": "approval-context-browser.json",
+        "passed": 7,
+        "failed": 0
+      }
+    ],
+    "productionRerunPassed": 22,
+    "productionReport": "approval-production-browser.json",
+    "hostedVerification": false
+  },
+  "typecheck": "passed",
+  "lint": "passed",
+  "productionBuild": "passed",
+  "diffCheck": "passed",
+  "databaseChanges": false,
+  "migrationsApplied": 0,
+  "newDependencies": false,
+  "hostedWrites": 0,
+  "preserved": [
+    "approved methodology content",
+    "existing source archives including owner-reported eight saved claims",
+    "original paper forecasts",
+    "existing financial totals and funding",
+    "Supabase Auth/RLS and transactional repositories"
+  ],
+  "manualBoundaries": [
+    "Archive confirmation",
+    "Selected research approval",
+    "Paper tracking/result approval",
+    "Actual financial registration/update",
+    "Context attestation save"
+  ],
+  "unverified": [
+    "Fresh hosted writes of the revised UI; no such writes were authorized or performed",
+    "Independent verification of owner-reported sports results, odds or supporting sources"
+  ]
+}

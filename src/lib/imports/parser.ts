@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { historicalIdentity, sha256, detectHistoricalDuplicates } from './duplicates';
 import type { HistoricalLeg, HistoricalRecord, HistoricalSnapshot, ImportIssue, ImportPreview, ImportPreviewRow, ImportTransformation, VerificationStatus } from './types';
 import { historicalSnapshotSchema } from './validation';
+import { WAGER_CLAIMS_FORMAT, wagerClaimSnapshotIssues } from './wager-claim-provenance';
 import { multiplyMoney } from '@/lib/domain/calculations';
 export const IMPORT_MAX_BYTES = 1048576;
 export const IMPORT_MAX_ROWS = 500;
@@ -266,7 +267,9 @@ export function normalizeHistoricalRow(raw: Record<string, unknown>, verificatio
             const parsed = normalizeLeg(original, index, issue, transformations);
             return parsed;
         });
-    if (!snapshot.legs.length && ['event', 'participant', 'market', 'selection'].some(field => snapshot[field as keyof HistoricalSnapshot] !== null)) {
+    const claimDocument = raw.sourceDocument;
+    const explicitClaimLegs = claimDocument && typeof claimDocument === 'object' && !Array.isArray(claimDocument) && (claimDocument as Record<string, unknown>).format === WAGER_CLAIMS_FORMAT;
+    if (!snapshot.legs.length && !explicitClaimLegs && ['event', 'participant', 'market', 'selection'].some(field => snapshot[field as keyof HistoricalSnapshot] !== null)) {
         snapshot.legs = [{ id: crypto.randomUUID(), sport: snapshot.sport, eventId: snapshot.eventId, event: snapshot.event, participant: snapshot.participant, marketId: snapshot.marketId, market: snapshot.market, selection: snapshot.selection, line: snapshot.line, odds: snapshot.odds, outcome: snapshot.outcome, statistic: null }];
         transformed('legs', null, snapshot.legs, 'single_selection_to_leg_without_inventing_values');
     }
@@ -314,6 +317,7 @@ export function normalizeHistoricalRow(raw: Record<string, unknown>, verificatio
     }
     if (!['event', 'participant', 'selection', 'sourceReference', 'externalId'].some(field => snapshot[field as keyof HistoricalSnapshot] !== null))
         issue('record', 'error', 'empty_record', 'Record has no identifiable research or source information.');
+    issues.push(...wagerClaimSnapshotIssues(raw, snapshot));
     const checked = historicalSnapshotSchema.safeParse(snapshot);
     if (!checked.success)
         for (const problem of checked.error.issues)
@@ -400,7 +404,7 @@ export async function parseHistoricalSource(input: {
             throw new Error('Raw ChatGPT conversation exports require manual mapping to the historical research template; nothing was imported.');
         const normalized = normalizeHistoricalRow(raw as Record<string, unknown>, input.verification);
         const fingerprint = await sha256(historicalIdentity(normalized.snapshot));
-        const row: ImportPreviewRow = { rowNumber: index + 1, raw, snapshot: normalized.snapshot, fingerprint, issues: normalized.issues, transformations: normalized.transformations, duplicates: detectHistoricalDuplicates(normalized.snapshot, fingerprint, input.existingRecords ?? [], rows) };
+        const row: ImportPreviewRow = { rowNumber: index + 1, raw, snapshot: normalized.snapshot, fingerprint, issues: normalized.issues, transformations: normalized.transformations, duplicates: detectHistoricalDuplicates(normalized.snapshot, fingerprint, input.existingRecords ?? [], rows, raw) };
         rows.push(row);
     }
     return { sourceName: input.sourceName.trim(), format: input.format, rawSource: input.text, sourceHash: await sha256(input.text), rows };
@@ -417,7 +421,7 @@ export async function reviseImportRow(preview: ImportPreview, rowNumber: number,
     const rows = preview.rows.map(row => row.rowNumber === rowNumber ? { ...nextRow, rowNumber, raw: original.raw, transformations: [...original.transformations, correction, ...nextRow.transformations] } : { ...row });
     const previous: ImportPreviewRow[] = [];
     for (const row of rows) {
-        row.duplicates = detectHistoricalDuplicates(row.snapshot, row.fingerprint, existingRecords, previous);
+        row.duplicates = detectHistoricalDuplicates(row.snapshot, row.fingerprint, existingRecords, previous, row.raw);
         previous.push(row);
     }
     return { ...preview, rows };

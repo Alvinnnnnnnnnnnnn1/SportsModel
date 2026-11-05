@@ -28,6 +28,7 @@ import { SPORTS, STRATEGIES } from "@/lib/domain/types";
 import { expectedValue, impliedProbability } from "@/lib/domain/calculations";
 import { cn, dateTime, freshness, percent } from "@/lib/utils";
 import { ResearchHandoff } from './handoff/research-handoff';
+import { paperApprovalBlocker } from '@/lib/approval/paper';
 export function ResearchDetail({
   candidate,
   onClose,
@@ -43,6 +44,7 @@ export function ResearchDetail({
   const tracked = data.paperPredictions.some(
     (p) => p.candidate.id === candidate.id,
   );
+  const paperBlocker = paperApprovalBlocker(candidate, data);
   const track = async () => {
     setSaving(true);
     try {
@@ -180,7 +182,7 @@ export function ResearchDetail({
           <div className="mt-6 flex flex-wrap justify-end gap-2">
             <Button
               variant="outline"
-              disabled={tracked || saving}
+              disabled={!!paperBlocker || saving}
               onClick={() => void track()}
             >
               <Plus />
@@ -194,6 +196,7 @@ export function ResearchDetail({
               Record actual bet <ArrowRight />
             </Button>
           </div>
+          {paperBlocker && <p className="mt-3 text-xs text-amber-200">Paper approval unavailable: {paperBlocker}</p>}
           <p className="mt-3 text-right text-[9px] text-muted-foreground">
             Actual bets require your explicit manual confirmation. No wager is
             submitted.

@@ -1,4 +1,5 @@
 import { isHistoricalReviewRecord } from './review-status';
+import { wagerClaimProvenanceIssues } from './wager-claim-provenance';
 import { betSchema } from '@/lib/domain/validation';
 import { multiplyMoney } from '@/lib/domain/calculations';
 import type { Bet, BetLeg, Outcome } from '@/lib/domain/types';
@@ -25,7 +26,7 @@ function resultAmounts(stakeCents: number, odds: number, type: 'cash' | 'bonus',
 }
 export function financialReview(record: HistoricalRecord): HistoricalFinancialReview {
     const s = record.snapshot;
-    const issues: ImportIssue[] = [];
+    const issues: ImportIssue[] = wagerClaimProvenanceIssues(record);
     const error = (field: string, message: string) => issues.push({ field, severity: 'error', code: 'financial_confirmation_blocked', message });
     if (s.kind !== 'actual')
         error('kind', 'Only a source explicitly classified actual can be confirmed in the actual ledger.');

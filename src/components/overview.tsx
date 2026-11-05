@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useApp } from "./app-provider";
 import { useHistory } from "./history-provider";
+import { HistoricalWagerClaimsSummary } from "./imports/wager-claims-review";
 import { Button } from "./ui/button";
 import { BetForm } from "./bet-form";
 import {
@@ -94,7 +95,7 @@ export function Overview() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Current bankroll"
+          title="Recorded cash position"
           value={money(metrics.bankrollCents)}
           detail={`${money(metrics.pendingStakeCents)} reserved in pending cash bets`}
           icon={<Wallet className="size-4" />}
@@ -126,6 +127,8 @@ export function Overview() {
           icon={<Banknote className="size-4" />}
         />
       </div>
+      <p className="text-[11px] leading-relaxed text-muted-foreground">These totals use registered actual wagers and recorded funding only. The funding cap is a reference limit; this cash position is not a verified bookmaker balance.</p>
+      <HistoricalWagerClaimsSummary />
       <div className="grid gap-5 xl:grid-cols-[minmax(0,2.35fr)_minmax(260px,1fr)]">
         <section className="panel overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5">

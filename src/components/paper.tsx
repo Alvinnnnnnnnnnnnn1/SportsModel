@@ -36,6 +36,7 @@ import {
 } from "./shared";
 import { ResearchDetail } from "./research";
 import { ImportedPaperTracking } from "./imports/imported-paper";
+import { ApprovalStatusBadges } from './approval-status';
 function SettlePaper({
   prediction,
   onClose,
@@ -63,7 +64,7 @@ function SettlePaper({
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open && !busy) onClose();
       }}
     >
       <DialogContent>
@@ -105,7 +106,7 @@ function SettlePaper({
           Hypothetical results have no effect on actual bankroll.
         </p>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Cancel
           </Button>
           <Button disabled={busy} onClick={() => void save()}>
@@ -233,6 +234,7 @@ export function PaperTracking() {
                           <p className="mt-1 text-[9px] text-muted-foreground">
                             Registered {dateTime(p.registeredAt)}
                           </p>
+                          <div className="mt-2"><ApprovalStatusBadges facts={{mode,paperRegistered:true,outcome:p.outcome,paperSettlementEligible:!!p.settledAt&&Date.parse(p.registeredAt)<Date.parse(p.settledAt)&&Date.parse(p.registeredAt)<Date.parse(p.candidate.startsAt)}} compact /></div>
                           {p.statistic && (
                             <p className="mt-1 max-w-xs truncate text-[9px] text-primary/70">
                               Result: {p.statistic}

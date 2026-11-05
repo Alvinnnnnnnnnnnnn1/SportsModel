@@ -1,0 +1,43 @@
+{
+  "scope": "Local historical-wager-claims implementation verification; no hosted writes or financial registration",
+  "createdAt": "2026-11-05T02:13:08.380617+00:00",
+  "unitAndEmbeddedPostgres": {
+    "passed": 469,
+    "failed": 0,
+    "skipped": 0,
+    "embeddedPostgresTests": 3,
+    "command": "EDGELAB_POSTGRES_RUNTIME=/private/tmp/edgelab-db-validation npm test"
+  },
+  "browser": {
+    "passed": 12,
+    "failed": 0,
+    "transport": "intercepted Auth/RPCs with fake accounts",
+    "hostedVerification": false,
+    "report": "wager-claims-browser.json"
+  },
+  "typecheck": "passed",
+  "lint": "passed",
+  "productionBuild": "passed",
+  "diffCheck": "passed",
+  "privateSourcePreview": {
+    "rows": 8,
+    "archiveEligible": 8,
+    "financiallyEligible": 0,
+    "comparison": "Retained export only; current user-scoped records rechecked by the signed-in UI"
+  },
+  "hostedWrites": 0,
+  "migrationsApplied": 0,
+  "actualRegistrations": 0,
+  "fundingCreated": 0,
+  "unchanged": [
+    "existing methodology files",
+    "all three migration files",
+    "existing hosted records and account"
+  ],
+  "unverified": [
+    "Fresh hosted read of the current personal workspace from this agent session",
+    "Owner-approved hosted save/read-back of the new eight-claim batch",
+    "Accepted execution odds and original timestamps",
+    "Independent settlement/leg evidence and current results of source-pending claims"
+  ]
+}

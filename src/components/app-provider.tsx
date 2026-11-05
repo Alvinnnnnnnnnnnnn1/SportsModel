@@ -37,6 +37,7 @@ import {
 } from "@/lib/persistence";
 import type { HistoricalRecord, HistoricalPaperResult } from '@/lib/imports/types';
 import { addPaperResultReminder } from '@/lib/notifications/paper-reminders';
+import { paperApprovalBlocker } from '@/lib/approval/paper';
 interface AppContextValue {
   data: AppData;
   mode: Mode;
@@ -273,12 +274,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   const addPaper = (candidate: Candidate) =>
     mutate((value) => {
-      if (
-        value.paperPredictions.some(
-          (item) => item.candidate.id === candidate.id,
-        )
-      )
-        throw new Error("This prediction is already in paper tracking.");
+      const blocker = paperApprovalBlocker(candidate, value);
+      if (blocker) throw new Error(blocker);
       const now = new Date().toISOString();
       return {
         ...value,

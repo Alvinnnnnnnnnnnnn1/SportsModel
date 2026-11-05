@@ -1,0 +1,98 @@
+{
+  "scope": "Fresh synthetic Demo browser only; external requests blocked; no hosted data or personal session",
+  "results": [
+    {
+      "name": "overview desktop",
+      "passed": true
+    },
+    {
+      "name": "route /ledger",
+      "passed": true
+    },
+    {
+      "name": "route /research",
+      "passed": true
+    },
+    {
+      "name": "route /paper",
+      "passed": true
+    },
+    {
+      "name": "route /analytics",
+      "passed": true
+    },
+    {
+      "name": "route /notifications",
+      "passed": true
+    },
+    {
+      "name": "route /settings",
+      "passed": true
+    },
+    {
+      "name": "cancelled manual drafts make no financial writes and execution facts are not prefilled",
+      "passed": true
+    },
+    {
+      "name": "manual bet confirmation and audited settlement",
+      "passed": true
+    },
+    {
+      "name": "parlay individual leg settlement",
+      "passed": true
+    },
+    {
+      "name": "bonus payout reconciliation and cancelling a final financial review preserve actual totals",
+      "passed": true
+    },
+    {
+      "name": "demo reload persistence",
+      "passed": true
+    },
+    {
+      "name": "settings funding record and audit",
+      "passed": true
+    },
+    {
+      "name": "run simulated daily research",
+      "passed": true
+    },
+    {
+      "name": "research detail and immutable paper registration",
+      "passed": true
+    },
+    {
+      "name": "paper settlement preserves forecast and actual finance",
+      "passed": true
+    },
+    {
+      "name": "notification test read dismiss and history",
+      "passed": true
+    },
+    {
+      "name": "research actual record needs manual confirmation",
+      "passed": true
+    },
+    {
+      "name": "open-tab browser permission feature",
+      "passed": true
+    },
+    {
+      "name": "all mobile routes have no document overflow",
+      "passed": true
+    },
+    {
+      "name": "mobile layout",
+      "passed": true
+    },
+    {
+      "name": "no browser runtime exceptions or external requests",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "hostedVerification": false,
+  "checksPassed": 22,
+  "checksFailed": 0
+}

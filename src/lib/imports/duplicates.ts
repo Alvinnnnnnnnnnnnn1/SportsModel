@@ -1,4 +1,5 @@
 import type { HistoricalRecord, HistoricalSnapshot, ImportDuplicate, ImportPreviewRow } from './types';
+import { wagerClaimSourceReferences } from './wager-claim-provenance';
 const normalized = (value: string | null) => value?.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase() ?? null;
 export function historicalIdentity(snapshot: HistoricalSnapshot): string {
     return JSON.stringify({ externalId: snapshot.externalId, kind: snapshot.kind, sport: snapshot.sport, eventId: snapshot.eventId, event: normalized(snapshot.event), participant: normalized(snapshot.participant), marketId: snapshot.marketId, market: normalized(snapshot.market), selection: normalized(snapshot.selection), line: normalized(snapshot.line), bookmaker: normalized(snapshot.bookmaker), odds: snapshot.odds, predictionAt: snapshot.predictionAt, placedAt: snapshot.placedAt, legs: snapshot.legs.map(leg => JSON.stringify({ sport: leg.sport, eventId: leg.eventId, event: normalized(leg.event), participant: normalized(leg.participant), marketId: leg.marketId, market: normalized(leg.market), selection: normalized(leg.selection), line: normalized(leg.line), odds: leg.odds })).sort() });
@@ -24,15 +25,22 @@ function compare(a: HistoricalSnapshot, fingerprint: string, b: HistoricalSnapsh
         return { recordId, level: 'probable', reason: 'Event, type, market and selection overlap; price, line or timestamp differs or is missing. No automatic merge.' };
     return null;
 }
-export function detectHistoricalDuplicates(snapshot: HistoricalSnapshot, fingerprint: string, existing: HistoricalRecord[], previous: ImportPreviewRow[] = []): ImportDuplicate[] {
+export function detectHistoricalDuplicates(snapshot: HistoricalSnapshot, fingerprint: string, existing: HistoricalRecord[], previous: ImportPreviewRow[] = [], raw?: unknown): ImportDuplicate[] {
     const result: ImportDuplicate[] = [];
+    const sourceOverlap = (other: HistoricalSnapshot, otherRaw: unknown, recordId: string): ImportDuplicate | null => {
+        if (snapshot.kind !== 'actual' || other.kind !== 'actual') return null;
+        const incoming = wagerClaimSourceReferences(raw), retained = wagerClaimSourceReferences(otherRaw);
+        if ((other.sourceReference && incoming.includes(other.sourceReference)) || (snapshot.sourceReference && retained.includes(snapshot.sourceReference)))
+            return { recordId, level: 'probable', reason: 'The wager claim cites the same original archived record across source namespaces. Review its identity and evidence; no automatic merge or second financial registration.' };
+        return null;
+    };
     for (const record of existing) {
-        const match = compare(snapshot, fingerprint, record.snapshot, record.fingerprint, record.id);
+        const match = compare(snapshot, fingerprint, record.snapshot, record.fingerprint, record.id) ?? sourceOverlap(record.snapshot, record.raw, record.id);
         if (match)
             result.push(match);
     }
     for (const row of previous) {
-        const match = compare(snapshot, fingerprint, row.snapshot, row.fingerprint, `row:${row.rowNumber}`);
+        const match = compare(snapshot, fingerprint, row.snapshot, row.fingerprint, `row:${row.rowNumber}`) ?? sourceOverlap(row.snapshot, row.raw, `row:${row.rowNumber}`);
         if (match)
             result.push(match);
     }

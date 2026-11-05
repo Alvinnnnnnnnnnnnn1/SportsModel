@@ -6,7 +6,11 @@ A private, zero-cost sports research and record-keeping MVP built with Next.js A
 
 ## Use your existing experiment workspace
 
+Approval workflows now use automatic file validation, compact eligibility summaries, batch selection, one clear final archive/research approval and explicit financial review. Existing saved history stays in place; repeat uploads show already-saved records. See [the three approval walkthroughs](docs/approval-workflows.md) for historical import, ChatGPT paper research, and manual actual-wager registration/settlement.
+
 Your existing personal account can be used directly; no account recreation or credentials in chat are needed. See [the operating guide](docs/operating-edgelab.md) for the read-only personal access check, recovery review, proposed hosted persistence pilot and daily copy/paste research workflow. Historical source review and imports remain separate from actual financial registration. The A$500 cap is never assumed to be a deposit.
+
+Historical Import also accepts a reviewed owner-wager-claims envelope. Overview and Betting Ledger show its labelled provisional history separately from registered financial totals; original reported prices never substitute for missing accepted execution odds. Files remain local until explicit archive approval, and financial registration requires its own separate confirmation. See [historical wager claims](docs/historical-wager-claims.md).
 
 ## Versioned research memory
 

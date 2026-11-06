@@ -16,6 +16,7 @@ import { WagerClaimsIntake } from './wager-claims-review';
 import { Button } from '../ui/button';
 import { dateTime, money } from '@/lib/utils';
 import { IMPORT_CSV_TEMPLATE, IMPORT_JSON_TEMPLATE } from '@/lib/imports/fixtures';
+import { ReconciliationPreview } from './reconciliation-preview';
 
 function download(name: string, contents: string, type: string) {
   const url = URL.createObjectURL(new Blob([contents], { type }));
@@ -31,6 +32,7 @@ function Workspace() {
   const records = history.records.filter(record => (kind === 'all' || (record.snapshot.kind ?? 'unknown') === kind) && `${record.snapshot.event ?? ''} ${record.snapshot.participant ?? ''} ${record.snapshot.selection ?? ''} ${record.snapshot.sourceReference ?? ''}`.toLowerCase().includes(query.toLowerCase()));
   return <>
     <HistoryStatus />
+    <ReconciliationPreview />
     <div id="source-import-review"><ImportWizard key={importVersion} seedSource={mappedSource} onCommitted={recordId=>{setQuery('');setKind('all');if(recordId)setSelected(recordId);}} /></div>
     <section id="historical-archive" className="panel scroll-mt-6 overflow-hidden" aria-label="Historical archive">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border p-5"><div><h2 className="text-sm font-medium">Immutable research archive</h2><p className="mt-1 text-[11px] text-muted-foreground">{history.records.length} records · {history.batches.length} approved imports · archive approval has no financial effect</p></div><div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-3 size-3.5 text-muted-foreground" /><input className="input pl-9" aria-label="Search imported records" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search historical records…" /></div><select className="input w-auto" aria-label="Filter imported type" value={kind} onChange={e => setKind(e.target.value)}>{['all','paper','actual','unknown'].map(value => <option key={value} value={value}>{value === 'all' ? 'All types' : value}</option>)}</select></div></div>

@@ -9,7 +9,6 @@ import {
   Plus,
   Search,
   ShieldCheck,
-  CirclePlay,
 } from "lucide-react";
 import { useApp } from "./app-provider";
 import { BetForm } from "./bet-form";
@@ -214,7 +213,7 @@ export function ResearchDetail({
   );
 }
 export function Research() {
-  const { data, mode, running, runResearch, notify } = useApp();
+  const { data, mode } = useApp();
   const [query, setQuery] = useState("");
   const [sport, setSport] = useState("all");
   const [strategy, setStrategy] = useState("all");
@@ -232,21 +231,14 @@ export function Research() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="section-kicker mb-2">
-            A structured research pipeline
+            Daily workflow
           </div>
-          <h1 className="page-heading">Research opportunities</h1>
+          <h1 className="page-heading">Daily Research Inbox</h1>
           <p className="mt-2 text-xs text-muted-foreground">
-            Explore exact selections with transparent sources and registered
-            estimates.
+            Import one daily response, decide every candidate, and track what
+            was placed, paper-approved, watched or passed.
           </p>
         </div>
-        <Button
-          disabled={running || mode !== "demo"}
-          onClick={() => void runResearch().catch((e) => notify(e.message))}
-        >
-          <CirclePlay className={cn(running && "animate-spin")} />
-          {running ? "Running simulation…" : "Run Simulated Research"}
-        </Button>
       </div>
       <ResearchHandoff />
       <div className="grid gap-3 md:grid-cols-3">

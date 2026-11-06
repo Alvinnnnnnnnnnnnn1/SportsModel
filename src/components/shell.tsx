@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/ledger", label: "Betting Ledger", icon: BookOpen },
-  { href: "/research", label: "Research Opportunities", icon: Radar },
+  { href: "/research", label: "Research Inbox", icon: Radar },
   { href: "/paper", label: "Paper Tracking", icon: ListChecks },
   { href: "/analytics", label: "Analytics", icon: ChartNoAxesCombined },
   { href: "/notifications", label: "Notifications", icon: Bell },

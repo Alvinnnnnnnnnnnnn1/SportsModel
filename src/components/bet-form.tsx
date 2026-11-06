@@ -114,7 +114,10 @@ function BetFormDraft({
     initial ? String(initial.odds) : "",
   );
   const [placedAt, setPlacedAt] = useState(
-    initial ? melbourneInput(initial.placedAt) : "",
+    initial?.placedAt ? melbourneInput(initial.placedAt) : "",
+  );
+  const [placementMode, setPlacementMode] = useState<"now" | "earlier">(
+    initial ? "earlier" : "now",
   );
   const [strategy, setStrategy] = useState<Strategy | "">(
     initial?.strategy ?? candidate?.strategy ?? research?.strategy ?? (research ? "" : "A"),
@@ -151,7 +154,6 @@ function BetFormDraft({
   const requirements = [
     ...(!bookmaker.trim() ? ["Enter the bookmaker."] : []),
     ...(!strategy ? ["Choose the actual wager research track; unknown source classifications are not inferred."] : []),
-    ...(!placedAt ? ["Enter the actual placement date and time."] : []),
     ...(!odds || !Number.isFinite(Number(odds)) || Number(odds) <= 1 ? ["Enter the accepted execution odds; a research quote is not an accepted price."] : []),
     ...(outcome !== "pending" && !settledAt ? ["Enter the original settlement date and time."] : []),
     ...legs.flatMap((leg, index) => {
@@ -166,7 +168,9 @@ function BetFormDraft({
     if (mode === "supabase" && candidate?.oddsProvenance.simulated) { setError("Synthetic research stays in Demo; it cannot enter the private ledger."); return; }
     try {
       const cents = enteredMoneyCents(stake, "a stake");
-      const placement = originalOrEnteredTimestamp(placedAt, initial?.placedAt);
+      const placement = placementMode === "now" && !initial
+        ? new Date().toISOString()
+        : placedAt ? originalOrEnteredTimestamp(placedAt, initial?.placedAt ?? undefined) : null;
       const unchangedSettlement = !!initial && initial.outcome === outcome && initial.odds === Number(odds) && initial.stakeCents === cents && initial.stakeType === stakeType;
       const recordedPayout = outcome === "pending" || !payout.trim() ? null : enteredMoneyCents(payout, "the cash payout", true);
       const value = {
@@ -178,7 +182,10 @@ function BetFormDraft({
         confirmedAt: initial?.confirmedAt ?? new Date().toISOString(),
         ...(initial?.probability !== undefined ? { probability: initial.probability } : candidate?.probability !== undefined ? { probability: candidate.probability } : {}),
         ...(initial?.candidateId ? { candidateId: initial.candidateId } : candidate ? { candidateId: candidate.id } : {}),
-        oddsProvenance: initial?.oddsProvenance ?? { source: mode === "demo" ? "Synthetic manual bookmaker record" : "Manual bookmaker record", timestamp: placement, method: "Owner-entered accepted price; no live verification", modelVersion: "manual-entry-v1", simulated: mode === "demo" },
+        recordedAt: new Date().toISOString(),
+        placementStatus: placement ? "known_owner_attested" : "unknown_owner_reported",
+        lifecycle: placement ? "valid" : "provisional",
+        oddsProvenance: initial?.oddsProvenance ?? { source: mode === "demo" ? "Synthetic manual bookmaker record" : "Manual bookmaker record", timestamp: new Date().toISOString(), method: "Owner-entered accepted price; no live verification", modelVersion: "manual-entry-v1", simulated: mode === "demo" },
         ...(initial?.probabilityProvenance ? { probabilityProvenance: initial.probabilityProvenance } : candidate?.probabilityProvenance ? { probabilityProvenance: candidate.probabilityProvenance } : {}),
       };
       // A non-financial edit preserves an existing settled return without pretending
@@ -208,7 +215,7 @@ function BetFormDraft({
     <ApprovalStatusBadges facts={{ mode, financialRegistered: !!initial, ownerAttested: !!initial, outcome: initial?.outcome }} />
     <dl className="grid grid-cols-2 gap-4 rounded-xl border border-border p-4 text-xs">
       <div><dt className="text-muted-foreground">Accepted / final settlement odds</dt><dd className="mt-1">{reviewBet.odds}</dd></div><div><dt className="text-muted-foreground">Stake</dt><dd className="mt-1">{money(reviewBet.stakeCents)} · {reviewBet.stakeType}</dd></div>
-      <div><dt className="text-muted-foreground">Placed at · Melbourne</dt><dd className="mt-1">{dateTime(reviewBet.placedAt)}</dd></div><div><dt className="text-muted-foreground">Outcome</dt><dd className="mt-1 capitalize">{reviewBet.outcome}</dd></div>
+      <div><dt className="text-muted-foreground">Placed at · Melbourne</dt><dd className="mt-1">{reviewBet.placedAt ? dateTime(reviewBet.placedAt) : "Unknown historical placement time"}</dd></div><div><dt className="text-muted-foreground">Outcome</dt><dd className="mt-1 capitalize">{reviewBet.outcome}</dd></div>
       {reviewBet.settledAt && <div><dt className="text-muted-foreground">Settled at · Melbourne</dt><dd className="mt-1">{dateTime(reviewBet.settledAt)}</dd></div>}
       {reviewBet.outcome !== "pending" && <div><dt className="text-muted-foreground">Calculated cash return</dt><dd className="mt-1">{money(betReturn(reviewBet))}</dd><p className="mt-1 text-[10px] text-muted-foreground">{payout.trim() ? "Matches the entered payout." : "Existing registered return retained; no new external payout evidence supplied."}</p></div>}
       <div><dt className="text-muted-foreground">Bookmaker / ticket</dt><dd className="mt-1">{reviewBet.bookmaker} · {ticketReference || "Ticket reference not supplied"}</dd></div><div><dt className="text-muted-foreground">Research strategy</dt><dd className="mt-1">Track {reviewBet.strategy}</dd></div>
@@ -252,17 +259,14 @@ function BetFormDraft({
               required
             />
           </label>
-          <label className="space-y-2 text-sm">
-            <span className="label">Placed at · Melbourne</span>
-            <Input
-              type="datetime-local"
-              aria-label="Placed at · Melbourne"
-              value={placedAt}
-              onChange={(event) => setPlacedAt(event.target.value)}
-              required
-            />
-            <Button type="button" variant="ghost" size="sm" onClick={() => setPlacedAt(melbourneInput(new Date().toISOString()))}>Use current placement time</Button>
-          </label>
+          <div className="space-y-2 text-sm">
+            <span className="label">When did you place it?</span>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" variant={placementMode === "now" ? "secondary" : "outline"} onClick={() => { setPlacementMode("now"); setPlacedAt(""); }}>Placed just now</Button>
+              <Button type="button" size="sm" variant={placementMode === "earlier" ? "secondary" : "outline"} onClick={() => setPlacementMode("earlier")}>Placed earlier</Button>
+            </div>
+            {placementMode === "now" ? <p className="text-[10px] text-muted-foreground">The final confirmation time will be recorded as owner-attested placement time and displayed in Melbourne.</p> : <Input type="datetime-local" aria-label="Placed at · Melbourne" value={placedAt} onChange={(event) => setPlacedAt(event.target.value)} placeholder="Leave blank if unknown" />}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-2 text-sm">
               <span className="label">Stake · AUD</span>

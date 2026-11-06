@@ -9,7 +9,6 @@ import {
   ChartNoAxesCombined,
   ChevronRight,
   CircleDollarSign,
-  CirclePlay,
   Plus,
   Target,
   Wallet,
@@ -35,7 +34,7 @@ import {
   StrategyBadge,
 } from "./shared";
 export function Overview() {
-  const { data, mode, running, runResearch, notify } = useApp();
+  const { data, mode } = useApp();
   const { history } = useHistory();
   const importedPaperCount = history.paperResults.length;
   const [now] = useState(() => Date.now());
@@ -54,7 +53,7 @@ export function Overview() {
   const bySport = groupPerformance(data.bets, "sport");
   const byStrategy = groupPerformance(data.bets, "strategy");
   const recent = [...data.bets]
-    .sort((a, b) => b.placedAt.localeCompare(a.placedAt))
+    .sort((a, b) => (b.placedAt ?? b.recordedAt ?? "").localeCompare(a.placedAt ?? a.recordedAt ?? ""))
     .slice(0, 5);
   const alerts = data.notifications.filter((n) => !n.dismissedAt).slice(0, 3);
   const fundingPercent = Math.min(
@@ -77,16 +76,6 @@ export function Overview() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            disabled={running || mode !== "demo"}
-            onClick={() =>
-              void runResearch().catch((reason) => notify(reason.message))
-            }
-          >
-            <CirclePlay className={cn(running && "animate-spin")} />
-            {running ? "Running simulation…" : "Run Simulated Research"}
-          </Button>
           <Button variant="outline" asChild><Link href="/research">Daily Research Handoff</Link></Button>
           <Button onClick={() => setAddOpen(true)}>
             <Plus /> Record bet
@@ -310,7 +299,7 @@ export function Overview() {
                                 : `${bet.legs[0].participant} · ${bet.legs[0].selection}`}
                             </div>
                             <div className="mt-1 text-[9px] text-muted-foreground">
-                              {shortDate(bet.placedAt)} · {bet.bookmaker}
+                              {bet.placedAt ? shortDate(bet.placedAt) : "Placement time unknown"} · {bet.bookmaker}
                             </div>
                           </div>
                         </div>

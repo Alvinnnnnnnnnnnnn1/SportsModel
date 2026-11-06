@@ -121,12 +121,14 @@ export function PaperTracking() {
   const { data, mode } = useApp();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
+  const [view, setView] = useState<"pending" | "completed" | "history">("pending");
   const [settling, setSettling] = useState<PaperPrediction>();
   const [detail, setDetail] = useState<PaperPrediction>();
   const bets = paperAsBets(data.paperPredictions);
   const m = calculateMetrics(bets, []);
   const entries = data.paperPredictions.filter(
     (p) =>
+      (view === "pending" ? p.outcome === "pending" : view === "completed" ? p.outcome !== "pending" : true) &&
       (status === "all" || p.outcome === status) &&
       `${p.candidate.event} ${p.candidate.participant} ${p.candidate.selection}`
         .toLowerCase()
@@ -145,7 +147,7 @@ export function PaperTracking() {
         </div>
         <Button asChild variant="outline">
           <Link href="/research">
-            Explore research <ArrowUpRight />
+            Open results review <ArrowUpRight />
           </Link>
         </Button>
       </div>
@@ -187,17 +189,15 @@ export function PaperTracking() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <select
-            className="input w-auto"
-            aria-label="Filter paper outcome"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            {["all", "pending", "won", "lost", "void"].map((o) => (
-              <option key={o} value={o}>
-                {o === "all" ? "All outcomes" : o[0].toUpperCase() + o.slice(1)}
-              </option>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Paper views">
+            {(["pending", "completed", "history"] as const).map((value) => (
+              <Button key={value} size="sm" variant={view === value ? "secondary" : "ghost"} onClick={() => { setView(value); setStatus("all"); }}>
+                {value[0].toUpperCase() + value.slice(1)}
+              </Button>
             ))}
+          </div>
+          <select className="input w-auto" aria-label="Filter paper outcome" value={status} onChange={(e) => setStatus(e.target.value)}>
+            {["all", "pending", "won", "lost", "void"].map((o) => <option key={o} value={o}>{o === "all" ? "All outcomes" : o[0].toUpperCase() + o.slice(1)}</option>)}
           </select>
         </div>
         {entries.length ? (

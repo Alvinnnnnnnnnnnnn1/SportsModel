@@ -2,6 +2,8 @@ export type Sport = "NBA" | "NBL" | "ATP" | "WTA";
 export type Strategy = "A" | "B" | "C";
 export type Outcome = "pending" | "won" | "lost" | "void";
 export type Mode = "demo" | "supabase";
+export type RecordLifecycle = "valid" | "provisional" | "entered_in_error" | "superseded";
+export type PlacementStatus = "known_owner_attested" | "unknown_owner_reported" | "source_verified";
 export interface BetLeg {
   id: string;
   sport: Sport;
@@ -16,7 +18,14 @@ export interface BetLeg {
 }
 export interface Bet {
   id: string;
-  placedAt: string;
+  placedAt: string | null;
+  recordedAt?: string;
+  placementStatus?: PlacementStatus;
+  lifecycle?: RecordLifecycle;
+  lifecycleReason?: string;
+  lifecycleChangedAt?: string;
+  supersededBy?: string;
+  accountingExcluded?: boolean;
   settledAt?: string;
   bookmaker: string;
   stakeCents: number;
@@ -62,6 +71,11 @@ export interface PaperPrediction {
   id: string;
   candidate: Candidate;
   registeredAt: string;
+  lifecycle?: RecordLifecycle;
+  lifecycleReason?: string;
+  lifecycleChangedAt?: string;
+  supersededBy?: string;
+  accountingExcluded?: boolean;
   hypotheticalStakeCents: number;
   outcome: Outcome;
   settledAt?: string;
@@ -105,6 +119,7 @@ export interface AuditEntry {
   entityId: string;
   action: string;
   timestamp: string;
+  actor?: string;
   before: unknown;
   after: unknown;
 }

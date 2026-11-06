@@ -73,15 +73,16 @@ export function expectedValue(
 }
 
 export function calculateMetrics(bets: Bet[], transactions: Transaction[]) {
+  const activeBets = bets.filter((bet) => !bet.accountingExcluded && bet.lifecycle !== "provisional" && bet.lifecycle !== "entered_in_error" && bet.lifecycle !== "superseded");
   const decisive = bets.filter(
-    (b) => b.outcome === "won" || b.outcome === "lost",
+    (b) => activeBets.includes(b) && (b.outcome === "won" || b.outcome === "lost"),
   );
   const cashSettled = decisive.filter((b) => b.stakeType === "cash");
   const stakedCents = cashSettled.reduce((n, b) => n + b.stakeCents, 0);
-  const profitCents = bets.reduce((n, b) => n + betProfit(b), 0);
+  const profitCents = activeBets.reduce((n, b) => n + betProfit(b), 0);
   const cashProfitCents = cashSettled.reduce((n, b) => n + betProfit(b), 0);
   const bonusProfitCents = bets
-    .filter((b) => b.stakeType === "bonus")
+    .filter((b) => activeBets.includes(b) && b.stakeType === "bonus")
     .reduce((n, b) => n + betProfit(b), 0);
   const totalDepositsCents = transactions
     .filter((t) => t.kind === "deposit")
@@ -90,7 +91,7 @@ export function calculateMetrics(bets: Bet[], transactions: Transaction[]) {
     .filter((t) => t.kind === "withdrawal")
     .reduce((n, t) => n + t.amountCents, 0);
   const pendingStakeCents = bets
-    .filter((b) => b.outcome === "pending" && b.stakeType === "cash")
+    .filter((b) => activeBets.includes(b) && b.outcome === "pending" && b.stakeType === "cash")
     .reduce((n, b) => n + b.stakeCents, 0);
   const forecasts = decisive.filter(
     (b): b is Bet & { probability: number } =>
@@ -108,17 +109,17 @@ export function calculateMetrics(bets: Bet[], transactions: Transaction[]) {
     pendingStakeCents,
     stakedCents,
     roi: stakedCents > 0 ? (cashProfitCents / stakedCents) * 100 : null,
-    totalBets: bets.length,
-    won: bets.filter((b) => b.outcome === "won").length,
-    lost: bets.filter((b) => b.outcome === "lost").length,
-    pending: bets.filter((b) => b.outcome === "pending").length,
-    void: bets.filter((b) => b.outcome === "void").length,
+    totalBets: activeBets.length,
+    won: activeBets.filter((b) => b.outcome === "won").length,
+    lost: activeBets.filter((b) => b.outcome === "lost").length,
+    pending: activeBets.filter((b) => b.outcome === "pending").length,
+    void: activeBets.filter((b) => b.outcome === "void").length,
     hitRate: decisive.length
       ? (decisive.filter((b) => b.outcome === "won").length / decisive.length) *
         100
       : null,
-    averageOdds: bets.length
-      ? bets.reduce((n, b) => n + b.odds, 0) / bets.length
+    averageOdds: activeBets.length
+      ? activeBets.reduce((n, b) => n + b.odds, 0) / activeBets.length
       : null,
     brierScore: forecasts.length
       ? forecasts.reduce(
@@ -155,16 +156,16 @@ export function performanceSeries(
       cash: (t.kind === "deposit" ? 1 : -1) * t.amountCents,
     }));
   for (const bet of bets) {
-    changes.push({
+    if (bet.placedAt) changes.push({
       at: bet.placedAt,
       profit: 0,
       cash: bet.stakeType === "cash" ? -bet.stakeCents : 0,
     });
     if (bet.outcome !== "pending")
       changes.push({
-        at: bet.settledAt ?? bet.placedAt,
+        at: bet.settledAt ?? bet.placedAt ?? bet.recordedAt ?? new Date(0).toISOString(),
         profit: betProfit(bet),
-        cash: betReturn(bet),
+        cash: bet.placedAt ? betReturn(bet) : betProfit(bet),
       });
   }
   changes.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
@@ -244,7 +245,7 @@ export function calibration(
 
 /** Explicit conversion for hypothetical analytics only. Never feed into actual cash metrics. */
 export function paperAsBets(predictions: PaperPrediction[]): Bet[] {
-  return predictions.map((p) => ({
+  return predictions.filter((p) => p.lifecycle !== "entered_in_error" && p.lifecycle !== "superseded" && !p.accountingExcluded).map((p) => ({
     id: p.id,
     placedAt: p.registeredAt,
     settledAt: p.settledAt,

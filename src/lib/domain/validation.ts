@@ -38,7 +38,14 @@ export const provenanceSchema = z.object({
 export const betSchema = z
   .object({
     id,
-    placedAt: timestamp,
+    placedAt: timestamp.nullable(),
+    recordedAt: timestamp.optional(),
+    placementStatus: z.enum(["known_owner_attested", "unknown_owner_reported", "source_verified"]).optional(),
+    lifecycle: z.enum(["valid", "provisional", "entered_in_error", "superseded"]).optional(),
+    lifecycleReason: z.string().trim().min(1).max(2000).optional(),
+    lifecycleChangedAt: timestamp.optional(),
+    supersededBy: id.optional(),
+    accountingExcluded: z.boolean().optional(),
     settledAt: timestamp.optional(),
     bookmaker: text,
     stakeCents: money.min(1),
@@ -105,7 +112,7 @@ export const betSchema = z
         message: "A pending bet cannot have a settlement timestamp",
         path: ["settledAt"],
       });
-    if (bet.settledAt && Date.parse(bet.settledAt) < Date.parse(bet.placedAt))
+    if (bet.settledAt && bet.placedAt && Date.parse(bet.settledAt) < Date.parse(bet.placedAt))
       context.addIssue({
         code: "custom",
         message: "Settlement cannot be before placement",
@@ -133,6 +140,11 @@ export const candidateSchema = z
     uncertainty: z.enum(["illustrative", "high", "medium"]),
     startsAt: timestamp,
     registeredAt: timestamp,
+    lifecycle: z.enum(["valid", "provisional", "entered_in_error", "superseded"]).optional(),
+    lifecycleReason: z.string().trim().min(1).max(2000).optional(),
+    lifecycleChangedAt: timestamp.optional(),
+    supersededBy: id.optional(),
+    accountingExcluded: z.boolean().optional(),
     oddsProvenance: provenanceSchema,
     probabilityProvenance: provenanceSchema.optional(),
   })
@@ -214,6 +226,7 @@ export const auditSchema = z.object({
   entityId: text,
   action: text,
   timestamp,
+  actor: text.optional(),
   before: z.unknown(),
   after: z.unknown(),
 });

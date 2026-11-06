@@ -91,7 +91,7 @@ export function Ledger() {
               .includes(query)
           );
         })
-        .sort((a, b) => b.placedAt.localeCompare(a.placedAt)),
+        .sort((a, b) => (b.placedAt ?? b.recordedAt ?? "").localeCompare(a.placedAt ?? a.recordedAt ?? "")),
     [data.bets, tab, sport, search],
   );
 
@@ -379,7 +379,7 @@ function LedgerRows({
                 {first?.event}
               </span>
               <span className="mt-1 block text-[10px] text-slate-600">
-                {bet.bookmaker} · {dateTime(bet.placedAt)}
+                {bet.bookmaker} · {bet.placedAt ? dateTime(bet.placedAt) : "Placement time unknown"}
               </span>
             </span>
           </button>

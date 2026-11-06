@@ -16,6 +16,7 @@ import type {
   ExperimentSettings,
   Mode,
   Outcome,
+  PaperPrediction,
   Transaction,
 } from "@/lib/domain/types";
 import { createDemoData, createEmptyData } from "@/lib/domain/fixtures";
@@ -56,6 +57,8 @@ interface AppContextValue {
   notify: (message: string) => void;
   addBet: (bet: Bet) => Promise<void>;
   updateBet: (bet: Bet) => Promise<void>;
+  markBetEnteredInError: (id: string, reason: string, evidenceReference: string, acknowledgeFinancialExclusion: boolean) => Promise<void>;
+  replaceBet: (id: string, replacement: Bet, reason: string, evidenceReference: string) => Promise<void>;
   applyResultBatch: (response: SettlementResponse, selectedKeys: string[], history: HistoricalWorkspace) => Promise<ResultBatchSummary>;
   addPaper: (candidate: Candidate) => Promise<void>;
   settlePaper: (
@@ -63,6 +66,8 @@ interface AppContextValue {
     outcome: Outcome,
     statistic?: string,
   ) => Promise<void>;
+  markPaperEnteredInError: (id: string, reason: string, evidenceReference: string) => Promise<void>;
+  replacePaper: (id: string, replacement: PaperPrediction, reason: string, evidenceReference: string) => Promise<void>;
   markRead: (id?: string) => Promise<void>;
   dismiss: (id: string) => Promise<void>;
   runResearch: () => Promise<void>;
@@ -302,6 +307,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ],
       };
     });
+  const markBetEnteredInError = (id: string, reason: string, evidenceReference: string, acknowledgeFinancialExclusion: boolean) =>
+    mutate((value) => {
+      if (mode !== "demo") throw new Error("Local reconciliation is disabled for hosted records until an approved migration and correction RPC are deployed.");
+      const before = value.bets.find(item => item.id === id);
+      if (!before) throw new Error("This wager no longer exists.");
+      if (before.lifecycle === "entered_in_error") return value;
+      if (reason.trim().length < 10) throw new Error("Explain why this wager was entered in error.");
+      if (before.outcome !== "pending" && (!evidenceReference.trim() || !acknowledgeFinancialExclusion)) throw new Error("A settled wager needs evidence and explicit financial-exclusion acknowledgement; a genuine settled loss cannot be silently erased.");
+      const now = new Date().toISOString();
+      const after = { ...before, lifecycle: "entered_in_error" as const, lifecycleReason: reason.trim(), lifecycleChangedAt: now, accountingExcluded: acknowledgeFinancialExclusion };
+      return { ...value, bets: value.bets.map(item => item.id === id ? after : item), audit: [...value.audit, { id: crypto.randomUUID(), entityType: "bet" as const, entityId: id, action: "entered_in_error", timestamp: now, actor: "demo-owner", before, after: { ...after, evidenceReference: evidenceReference.trim() || null } }] };
+    });
   const addPaper = (candidate: Candidate) =>
     mutate((value) => {
       const blocker = paperApprovalBlocker(candidate, value);
@@ -318,6 +335,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
             outcome: "pending",
           },
           ...value.paperPredictions,
+        ],
+      };
+    });
+  const replaceBet = (id: string, replacement: Bet, reason: string, evidenceReference: string) =>
+    mutate((value) => {
+      if (mode !== "demo") throw new Error("Local reconciliation is disabled for hosted records until an approved migration and correction RPC are deployed.");
+      const before = value.bets.find(item => item.id === id);
+      if (!before) throw new Error("This wager no longer exists.");
+      if (before.lifecycle === "entered_in_error") throw new Error("An entered-in-error record cannot be replaced; create a separately audited correction from the preserved original.");
+      if (before.lifecycle === "superseded") {
+        if (before.supersededBy === replacement.id) return value;
+        throw new Error("This wager has already been superseded.");
+      }
+      if (reason.trim().length < 10 || !evidenceReference.trim()) throw new Error("A replacement needs a reason and evidence reference.");
+      if (replacement.id === id || value.bets.some(item => item.id === replacement.id)) throw new Error("The replacement must have a new unique ID.");
+      const sameIdentity = before.legs.length === replacement.legs.length && before.legs.every((leg, index) => {
+        const next = replacement.legs[index];
+        return next && leg.sport === next.sport && leg.event === next.event && leg.market === next.market && leg.selection === next.selection && leg.line === next.line;
+      });
+      if (!sameIdentity) throw new Error("Replacement must preserve the original event, market and selection identity.");
+      const now = new Date().toISOString();
+      const corrected = { ...replacement, supersededBy: undefined, lifecycle: "valid" as const, lifecycleReason: reason.trim(), lifecycleChangedAt: now, notes: `${replacement.notes}\n[Supersedes ${before.id}]` };
+      const superseded = { ...before, lifecycle: "superseded" as const, supersededBy: corrected.id, lifecycleReason: reason.trim(), lifecycleChangedAt: now, accountingExcluded: true };
+      return {
+        ...value,
+        bets: [corrected, ...value.bets.map(item => item.id === id ? superseded : item)],
+        audit: [
+          ...value.audit,
+          { id: crypto.randomUUID(), entityType: "bet" as const, entityId: id, action: "superseded_by_replacement", timestamp: now, actor: "demo-owner", before, after: { ...superseded, replacementId: corrected.id, evidenceReference: evidenceReference.trim() } },
+          { id: crypto.randomUUID(), entityType: "bet" as const, entityId: corrected.id, action: "created_replacement", timestamp: now, actor: "demo-owner", before: null, after: { ...corrected, supersedesId: id, evidenceReference: evidenceReference.trim() } },
         ],
       };
     });
@@ -347,6 +394,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
             before,
             after,
           },
+        ],
+      };
+    });
+  const markPaperEnteredInError = (id: string, reason: string, evidenceReference: string) =>
+    mutate((value) => {
+      if (mode !== "demo") throw new Error("Local reconciliation is disabled for hosted records until an approved migration and correction RPC are deployed.");
+      const before = value.paperPredictions.find(item => item.id === id);
+      if (!before) throw new Error("This paper prediction no longer exists.");
+      if (reason.trim().length < 10) throw new Error("Explain why this paper registration was entered in error.");
+      const now = new Date().toISOString();
+      const after = { ...before, lifecycle: "entered_in_error" as const, lifecycleReason: reason.trim(), lifecycleChangedAt: now, accountingExcluded: true };
+      return { ...value, paperPredictions: value.paperPredictions.map(item => item.id === id ? after : item), audit: [...value.audit, { id: crypto.randomUUID(), entityType: "paper" as const, entityId: id, action: "entered_in_error", timestamp: now, actor: "demo-owner", before, after: { ...after, evidenceReference: evidenceReference.trim() || null } }] };
+    });
+  const replacePaper = (id: string, replacement: PaperPrediction, reason: string, evidenceReference: string) =>
+    mutate((value) => {
+      if (mode !== "demo") throw new Error("Local reconciliation is disabled for hosted records until an approved migration and correction RPC are deployed.");
+      const before = value.paperPredictions.find(item => item.id === id);
+      if (!before) throw new Error("This paper prediction no longer exists.");
+      if (before.lifecycle === "entered_in_error") throw new Error("An entered-in-error paper prediction cannot be replaced; preserve the administrative correction.");
+      if (before.lifecycle === "superseded") {
+        if (before.supersededBy === replacement.id) return value;
+        throw new Error("This paper prediction has already been superseded.");
+      }
+      if (reason.trim().length < 10 || !evidenceReference.trim()) throw new Error("A replacement needs a reason and evidence reference.");
+      if (replacement.id === id || value.paperPredictions.some(item => item.id === replacement.id)) throw new Error("The replacement must have a new unique ID.");
+      if (before.candidate.id !== replacement.candidate.id) throw new Error("Paper replacement must preserve the original immutable research candidate.");
+      const now = new Date().toISOString();
+      const corrected = { ...replacement, lifecycle: "valid" as const, lifecycleReason: reason.trim(), lifecycleChangedAt: now };
+      const superseded = { ...before, lifecycle: "superseded" as const, supersededBy: corrected.id, lifecycleReason: reason.trim(), lifecycleChangedAt: now, accountingExcluded: true };
+      return {
+        ...value,
+        paperPredictions: [corrected, ...value.paperPredictions.map(item => item.id === id ? superseded : item)],
+        audit: [
+          ...value.audit,
+          { id: crypto.randomUUID(), entityType: "paper" as const, entityId: id, action: "superseded_by_replacement", timestamp: now, actor: "demo-owner", before, after: { ...superseded, replacementId: corrected.id, evidenceReference: evidenceReference.trim() } },
+          { id: crypto.randomUUID(), entityType: "paper" as const, entityId: corrected.id, action: "created_replacement", timestamp: now, actor: "demo-owner", before: null, after: { ...corrected, supersedesId: id, evidenceReference: evidenceReference.trim() } },
         ],
       };
     });
@@ -500,6 +583,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refresh,
         addBet,
         updateBet,
+        markBetEnteredInError,
+        replaceBet,
         applyResultBatch: async (response, selectedKeys, history) => {
           let summary: ResultBatchSummary = { applied: [], alreadyApplied: [] };
           await mutate(async value => {
@@ -511,6 +596,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
         addPaper,
         settlePaper,
+        markPaperEnteredInError,
+        replacePaper,
         runResearch,
         testNotification,
         updateSettings,

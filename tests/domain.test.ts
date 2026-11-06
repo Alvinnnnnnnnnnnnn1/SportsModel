@@ -335,6 +335,15 @@ describe("provenance and demo isolation", () => {
     expect(calculateMetrics(data.bets, data.transactions)).toEqual(original);
     expect(data.paperPredictions[0].hypotheticalStakeCents).toBe(500);
   });
+  it("preserves reconciliation history while excluding explicitly invalid records", () => {
+    const active = bet({ id: "active", outcome: "lost" });
+    const incorrect = bet({ id: "incorrect", outcome: "won", lifecycle: "entered_in_error", accountingExcluded: true });
+    const metrics = calculateMetrics([active, incorrect], []);
+    expect(metrics.settledCount).toBe(1);
+    expect(metrics.profitCents).toBe(-500);
+    expect(betSchema.safeParse(bet({ id: "9d1c8b3a-3bd0-4b9f-91c3-4f4f0a6b0d1e", placedAt: null, recordedAt: "2026-10-02T00:00:00.000Z", placementStatus: "unknown_owner_reported", lifecycle: "provisional" })).success).toBe(true);
+    expect(calculateMetrics([bet({ lifecycle: "provisional", placedAt: null })], []).totalBets).toBe(0);
+  });
   it("rejects invalid financial inputs and probabilities without provenance", () => {
     expect(betSchema.safeParse(bet({ stakeCents: 1.2 })).success).toBe(false);
     expect(betSchema.safeParse(bet({ odds: 1 })).success).toBe(false);

@@ -12,6 +12,8 @@ V6 now has an isolated paper domain, exact source matcher, experimental numerica
 
 The later [real-data continuation](docs/v6-prospective-pilot.md) used one further free odds credit (five cumulative), collected 52 genuine historical player rows and screened ten real Sportsbet outcomes. Current NBA access is denied by the configured free plan, player identity joins remain unresolved and the experimental baseline underperformed its benchmark. **No eligible registration or genuine prospective lifecycle passed.** Current probability/EV stay null. Deployment/activation remain disabled; [SQL diff and rollback/worker readiness](docs/v6-deployment-readiness.md) are documented.
 
+The [free-source follow-up](docs/v6-free-nba-audit.md) also verifies API-Basketball's correct NBA season and its actual Free-plan denial. The incremental historical dataset now contains 191 player-games across three seasons for one player; its challenger still loses to the benchmark. A separate immutable observation archive preserves screened markets without paper P/L. ESPN/NBA direct collection remains blocked by source-use permissions. No new odds credit, hosted change or prospective registration occurred. Reproduce the retained-data audit without network requests with `node scripts/analyse-v6-coverage.mjs`.
+
 ## Use your existing experiment workspace
 
 Approval workflows now use automatic file validation, compact eligibility summaries, batch selection, one clear final archive/research approval and explicit financial review. Existing saved history stays in place; repeat uploads show already-saved records. See [the three approval walkthroughs](docs/approval-workflows.md) for historical import, ChatGPT paper research, and manual actual-wager registration/settlement.

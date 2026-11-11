@@ -2,7 +2,27 @@
 
 Branch: `feature/v6-autonomous-paper`. Overall autonomy status: **LOCAL_TEST_ONLY**; the latest genuine-source screening is **REAL_DATA_SHADOW_BLOCKED**. No prospective position/lifecycle, deployment, hosted migration, V5 change or external messaging is claimed.
 
-## Latest continuation — real-data pilot
+## Latest continuation — free-source scope, training expansion and observations
+
+Implementation commit: `6bad6d0` on `feature/v6-autonomous-paper`. No push or deployment.
+
+Current source audit: [free NBA audit and exact exclusion report](v6-free-nba-audit.md). **No permitted current-season source passed.** ESPN/hoopR and NBA CDN were not queried for statistics because source-use rights failed review; wrapper/dataset licences are not upstream permission. API-Basketball was independently verified as Free, discovered NBA league12 and the exact returned `2026-2027` season, then retained an explicit season-denial response. No alternate filter evaded the restriction. API-NBA's prior 2026 denial remains unchanged.
+
+Four permitted historical reads added 77 season-2022 and 62 season-2024 player rows to the prior 52: **191 exact player-games, one player, three seasons; 179 regular-season participating finals**. New source-qualified incremental storage retains team/opponent, minutes/points, nullable starter, observed availability and immutable correction chains. Re-ingestion creates no duplicate labels. All original publication times and starter flags remain null; current features cannot be inferred from these old rows.
+
+Unchanged challenger evaluation: **157 held-out player-games /785 dependent threshold scores**, challenger Brier `0.1333596631`, log loss `0.4351235595`; simple benchmark Brier `0.1295681240`, log loss `0.4081881439`. The challenger still underperforms; no model activation or edge claim. This is chronological retrospective research, not a historical publication-time backtest.
+
+Identity verification now additionally requires exact fixture date/teams/league/season and season-qualified roster membership, with specific immutable fetch receipts so identical raw bytes cannot masquerade as another query scope. Ten existing mappings remain blocked; **zero verified bridges**. The per-selection report preserves attributable original prices, supported numeric lines, missing approved settlement terms, stale quotes and null probabilities/EV. No observation is upgraded retrospectively.
+
+New independent observational archive retains every supported screened NBA points outcome through the explicit collector, including exclusions and nullable identities/model snapshots. The retained genuine source produces ten excluded local observations, separate from positions/financial accounting. Replay leaves its original snapshot unchanged; existing dry-run worker returns `already_processed`, zero positions/grades. Exact statistical outcome/revision collection is implemented and positively tested with synthetic local fixtures only; **no genuine prospective candidate, registration or automatic settlement passed**.
+
+Quota evidence, 11 November UTC: NBA final status **7/100 used,93 remaining**; Basketball **1/100 used,99 remaining**. This continuation made six NBA and four Basketball provider requests, including status and denied scope; local reservations conservatively retain9 and2 respectively. **Zero new odds credits; five cumulative,495 remaining.** No polling, paid services or new accounts. One initial sandbox connection failure and one cooldown refusal are recorded separately, not as provider responses.
+
+Latest verification: **631/631 tests,49 files/no skips;147 local SQL checks;10 mocked browser groups;TypeScript/lint/production build passed**. Browser checks first found localhost stopped, then passed after starting the dev server. These tests did not access the personal session or hosted database. All deployed migrations, V6 SQL proposal, V5 finances and A$5,000/A$50 uncapped V6 policy remain unchanged. Implementation files and exact source/report hashes are listed in the audit; all raw evidence remains ignored locally.
+
+**Next executable task:** establish a documented permission route to a current-season NBA player-game source, then acquire multiple actual completed current games plus source-qualified fixture/roster/player bridges. The existing configured Free products have now both failed the direct current-season test; do not repeat those calls or download restricted data through mirrors. Continue with a new future snapshot only after current features, exact identities, frozen rules and model validation exist. Hosted migration, scoped worker identity and standing production activation require separate approval. Do not ask for per-position approvals or introduce volume caps. No source prices, forecasts or results may be invented to finish the pilot.
+
+## Previous continuation — real-data pilot
 
 Code commit `f161368` adds immutable source blobs/fetch receipts, shared free-source quota/transport, append-only identifier registry, exact NBA game/player log parsing, shrunk minutes/Gamma–Poisson points distribution, chronological benchmark evaluation, source-only shadow screening, exact final grading with nullable publication clocks/raw hashes, supported DNP-void/push handling, operational stop latch and local health/missed-run diagnostics. No paid dependency was installed. Full methods/evidence: [prospective pilot](v6-prospective-pilot.md); SQL diff/rollback/scheduler/permissions: [deployment readiness](v6-deployment-readiness.md).
 

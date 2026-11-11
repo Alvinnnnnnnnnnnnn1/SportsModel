@@ -1,5 +1,7 @@
 # V6 free NBA coverage and observation archive — 11 November 2026
 
+Later team-market milestone: [BALLDONTLIE current games and genuine moneyline shadow](v6-team-moneyline-pilot.md). It resolves current game-level inputs; the player-stat coverage/rights restrictions in this earlier audit are preserved. Current odds usage is eight cumulative credits, not the five at this checkpoint.
+
 Status: **REAL_DATA_SHADOW_BLOCKED / LOCAL_TEST_ONLY**. No new position, settlement, policy activation, hosted write or migration. No historical account import was repeated. The A$5,000/A$50 uncapped paper policy, V5 finances and saved methodology are unchanged.
 
 Implementation commit: `6bad6d0`, branch `feature/v6-autonomous-paper`; local only.

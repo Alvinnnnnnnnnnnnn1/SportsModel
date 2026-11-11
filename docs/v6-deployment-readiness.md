@@ -1,12 +1,18 @@
 # V6 deployment and rollback readiness
 
-Status: **not deployed, not enabled**. The real-data pilot has hard source/identity/model blockers; [pilot evidence](v6-prospective-pilot.md) must be read before requesting activation. No existing migration, account or legacy financial record was changed. No new cloud service, paid plan, scheduler, public UI or external messaging was enabled.
+Status: **not deployed, not enabled**. The [team-moneyline pilot](v6-team-moneyline-pilot.md) now has genuine pre-event forecasts/quotes and current game data, but no qualifying activated model or completed prospective position settlement. Player-prop blockers remain in [earlier evidence](v6-prospective-pilot.md). No existing migration, account or legacy financial record was changed. No new cloud service, paid plan, scheduler, public UI or external messaging was enabled.
 
 ## SQL diff for review
 
 Proposed file: `supabase/proposals/202611110001_v6_paper.sql`, outside `migrations/`. Latest SHA-256:
 
-`19316b6afaf61a1354aced38996fb061c223fdaa71c39e07da9c7c98889164c0`
+`3d6353aadfea1d0ef9fdd026ab6aa44b963e667732c3156aa6beb980f56c54f5`
+
+Previous local hash `19316b6afaf61a1354aced38996fb061c223fdaa71c39e07da9c7c98889164c0` is superseded, never deployed. Team continuation adds `nba_team_elo` to the model registry, database reproduction of its frozen formula/two-pass/original-price/earliest-start gates, and HTTPS query support that rejects secret or encoded parameter names. No new table/role or wider V5 permission was added. Synthetic embedded tests prove team registration and late-failure rollback; they do not activate a real model. Diff from the previous review:
+
+```sh
+git diff 8bc99fd -- supabase/proposals/202611110001_v6_paper.sql
+```
 
 The previous local proposal hash `8e718d755c70fa049f70981e3d7db0bfbdbbd3a5b2166e8c5d69501c077649da` is superseded, not a deployed migration. Changes since that proposal preserve null source-issued result timestamps, require actual observation time/raw-hash evidence in that case, bound raw evidence, retain original published times when available and support narrowly frozen DNP-void terms. Source timestamps are not invented from completion/retrieval. Tests exercise rejected bad hashes and subsequent valid revisions. Full local diff:
 
@@ -43,6 +49,8 @@ The example is `disabled`, kill switch true, no inbox/model/grader/activation. I
 Emergency stop is `killSwitch: true` and/or `mode: disabled` in the private worker config. An armed prospective worker must have a commit latch; CLI rereads mode, owner, activation and kill switch after source/model reads **inside the commit lock**. A changed latch aborts before position/grade/run persistence. No automatic policy activation occurs. Provider evidence collected before a stop remains local immutable source evidence, not a registered position.
 
 ## Health, missed runs and UI deployment
+
+The team one-shot collector/worker runs in local observational `dry_run` only. `scripts/check-v6-team-results.mjs` has a no-request future-event gate, then narrow source/result verification and an append-only observation journal; it cannot settle financial positions. No command installs a schedule. After actual prospective model/rules review, the armed worker must enforce the same frozen two-pass checks and **earliest** attributed fixture clock, with the existing commit latch. Research labels and later results never upgrade the excluded pilot into qualifying positions. Source-key quota coordination remains single-host; the explicit team audit shares earlier odds reservations under a 12-cumulative-credit ceiling, not a position cap. See the pilot guide before any further read.
 
 CLI operational attempts go to ignored `.local/v6/worker-health/`. `v6WorkerHealth` distinguishes stopped/disabled, never-run, failure, invalid clock, missed run (default >26 hours, accounting for Melbourne DST) and a fresh run with no usable source data/all candidates blocked. A recent successful transaction is not proof of healthy coverage. The function/receipts are implemented; no running monitoring daemon, alert delivery or hosted health dashboard is claimed. Failure receipts do not invent successful screened counts.
 

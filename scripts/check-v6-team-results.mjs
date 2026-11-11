@@ -30,7 +30,8 @@ try{
     // Derive missing secondary labels solely from their frozen registry; no remap.
     const label=teamId=>Object.values(frozen.record.registry.mappings).find(t=>t.canonicalId===teamId)?.name;
     const supported={...proof,statsHomeName:proof.statsHomeName??label(proof.homeId),statsAwayName:proof.statsAwayName??label(proof.awayId)};
-    results.push({eventId:proof.eventId,...await verifyObservedTeamScore(supported,scores,box,new Date().toISOString())});
+    const checked={eventId:proof.eventId,identityProof:supported,...await verifyObservedTeamScore(supported,scores,box,new Date().toISOString())};results.push(checked);
+    console.log(JSON.stringify({eventId:proof.eventId,status:checked.status,reason:checked.reason,financialSettlement:false}));
    }catch(e){results.push({eventId:proof.eventId,status:'unresolved',reason:e.message});}
    if(due.length>1)await new Promise(r=>setTimeout(r,12600));
   }

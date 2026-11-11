@@ -1,5 +1,7 @@
 # V6 isolated paper engine and worker
 
+The [team-moneyline milestone](v6-team-moneyline-pilot.md) adds a reproducible `nba_team_elo` method, exact current-team/fixture bridge, earlier-of-source-start gate, two-pass research checks and an independent-result grader. Twenty genuine future observations are frozen in a separate shadow store; all remain excluded. The core A$5,000/A$50 uncapped accounting, owner/cohort isolation, append-only registration and commit latch are unchanged. No production model/policy or hosted SQL is activated.
+
 Implementation checkpoint: **LOCAL_TEST_ONLY**, default disabled. This is a distinct prospective cohort, separate from Demo and legacy V5 financial/paper history. No standing policy/model has been activated and no V6 prospective position has been registered. Historical activation is complete; do not repeat it.
 
 The later [genuine-source pilot](v6-prospective-pilot.md) adds persistent blocked identifier mappings, retained raw/fetch/quota evidence, an experimental shrunk NBA points distribution/chronological benchmark, exact final-grading adapter, worker preflight exclusions and emergency-stop latch/health receipts. It found **no eligible position**: free current NBA statistics are denied, odds-player IDs are missing and the historical model underperformed its benchmark. The pilot never promoted an old quote or retrospective calculation into a prospective registration.

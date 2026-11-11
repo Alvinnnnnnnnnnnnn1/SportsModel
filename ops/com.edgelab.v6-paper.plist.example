@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.edgelab.v6-paper</string>
+  <key>ProgramArguments</key><array><string>REPLACE_WITH_ABSOLUTE_NODE_PATH</string><string>scripts/run-v6-worker.mjs</string><string>--config</string><string>.local/v6/worker.json</string><string>--once</string></array>
+  <key>WorkingDirectory</key><string>REPLACE_WITH_ABSOLUTE_PROJECT_PATH</string>
+  <key>EnvironmentVariables</key><dict><key>TZ</key><string>Australia/Melbourne</string></dict>
+  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>19</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>REPLACE_WITH_PRIVATE_LOG_PATH</string>
+  <key>StandardErrorPath</key><string>REPLACE_WITH_PRIVATE_ERROR_LOG_PATH</string>
+</dict></plist>

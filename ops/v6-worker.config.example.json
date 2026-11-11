@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "ownerId": "REPLACE-WITH-V6-OWNER-ID",
+  "mode": "disabled",
+  "killSwitch": true,
+  "inbox": null,
+  "activation": null
+}

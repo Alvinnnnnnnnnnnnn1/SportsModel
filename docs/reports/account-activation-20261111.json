@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-11",
+  "scope": "canonical owner-selected reconciliation / private archive activation",
+  "evidence": "Owner completed existing authenticated archive UI, reported refresh, and supplied complete Supabase-mode before/after exports. No direct privileged hosted access.",
+  "sourceItems": {
+    "actualClaims": 12,
+    "paperSources": 34
+  },
+  "before": {
+    "coreActual": 1,
+    "corePaper": 0,
+    "transactions": 0,
+    "archive": 12,
+    "archiveTrackedPaper": 3,
+    "batches": 5,
+    "historyAudit": 30
+  },
+  "after": {
+    "coreActual": 1,
+    "corePaper": 0,
+    "transactions": 0,
+    "archive": 46,
+    "archiveTrackedPaper": 3,
+    "batches": 6,
+    "historyAudit": 34
+  },
+  "newArchive": {
+    "actualClaims": 3,
+    "paperSources": 31
+  },
+  "linkedExisting": {
+    "actualClaims": 9,
+    "paperSources": 3
+  },
+  "unchangedCoreWorkspace": true,
+  "oldImmutableHistoryPreserved": true,
+  "newFinancialRegistrations": 0,
+  "newPaperRegistrations": 0,
+  "sourceReplay": "46/46 excluded against fresh exported workspace; no duplicate hosted write attempted",
+  "interveningNotificationProgress": "One existing notification was read with audits on 7 November; immutable notification content retained.",
+  "localTests": {
+    "vitest": 595,
+    "coreSql": 70,
+    "historicalSql": 77,
+    "mockBrowserGroups": 6
+  },
+  "remaining": "Private Daily Cycle application remains blocked; local-only checkpoint/feedback and newer correction fields are not claimed deployed. No new migration or external provider request.",
+  "reportedSettledSourceSubtotal": {
+    "cashStakeCents": 3000,
+    "cashReturnCents": 2500,
+    "bonusCashWinningsCents": 430,
+    "profitCents": -70,
+    "scope": "Six owner-reported historical settlements; later unknown payouts excluded; not a verified balance"
+  },
+  "manualFormCompatibility": "Known private placements use deployed core fields; unknown times remain blocked. Embedded SQL validates compatible shape; no real new financial write performed."
+}

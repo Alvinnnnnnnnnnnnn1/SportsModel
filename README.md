@@ -12,6 +12,8 @@ Your existing personal account can be used directly; no account recreation or cr
 
 Historical Import also accepts a reviewed owner-wager-claims envelope. Overview and Betting Ledger show its labelled provisional history separately from registered financial totals; original reported prices never substitute for missing accepted execution odds. Files remain local until explicit archive approval, and financial registration requires its own separate confirmation. See [historical wager claims](docs/historical-wager-claims.md).
 
+The owner-selected reconciliation Markdown can now be wrapped in a durable `edgelab.reconciliation-source` v1 JSON file and reviewed through the same Historical Import wizard. Exact existing UUID/candidate links are excluded, unknown execution facts stay null, and proposals remain outside qualifying forecasting metrics. See [private-account activation](docs/account-activation.md) for preparation, approval, resume and read-back verification. Preparing a file is not a hosted import.
+
 ## Versioned research memory
 
 The handoff now separates approved methodology, owner reports, source-confirmed days, provisional placement claims, local historical evidence and unregistered proposals. It generates a compact brief using the existing strict response contract. See [research memory and Day 6 review](docs/research-memory.md) and the [proposed methodology](docs/experiment-methodology.proposed.md). Both the reconstructed methodology and latest checkpoint remain subject to explicit approval; no new hosted history or funding was added.

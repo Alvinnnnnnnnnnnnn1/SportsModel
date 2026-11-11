@@ -9,6 +9,7 @@ import { commitHistoricalImport, prepareImportCommit, registerHistoricalPaper, s
 import { commitApprovedResearch, prepareResearchCommit, type ResearchPreview, type PriorResearchSelection } from '@/lib/handoff';
 import { findHistoricalLedgerMatches } from '@/lib/imports/wager-claims';
 import { readArchivedWagerClaim } from '@/lib/imports/wager-claim-provenance';
+import { assertReconciliationSelection } from '@/lib/reconciliation/source';
 import { latestDailyDecision, prepareDailyDecisionPreview, researchPaperBlockers, sourceResearchCandidate } from '@/lib/daily/research';
 import { applyHistoricalResultBatch, type ResultBatchSummary } from '@/lib/daily/result-batch';
 import type { SettlementResponse } from '@/lib/results';
@@ -137,5 +138,9 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     }
     return registerHistoricalPaper(value, recordId);
   });
-  return <Context.Provider value={{ readCurrentHistory: () => structuredClone(current.current), history: displayed, loading: appLoading || state.identity !== identity || state.loading, error: state.identity === identity ? state.error : null, needsMigration: state.identity === identity && state.needsMigration, reload: () => setReloadVersion(value => value + 1), refresh, archiveResearch, decideResearch, registerResearchPaper, applyResultBatch, commitPreview: (preview, decisions, verification) => mutate(identity, value => commitHistoricalImport(value, prepareImportCommit(preview, decisions, verification, value.records))), registerPaper, recordPaperResult: (id, result) => mutate(identity, value => settleHistoricalPaper(value, id, result)), approveResearch: (preview, decisions, verification, confirmDayCompletion, previousProposals) => mutate(identity, value => commitApprovedResearch(value, preview, decisions, verification, { confirmDayCompletion, previousProposals })), createNotification: id => mutate(identity, value => createHistoricalNotification(value, id)), markRead: id => mutate(identity, value => markHistoricalNotificationRead(value, id)), dismiss: id => mutate(identity, value => dismissHistoricalNotification(value, id)), confirmActual }}>{children}</Context.Provider>;
+  const commitPreview = (preview: ImportPreview, decisions: ImportDecision[], verification: VerificationStatus) => mutate(identity, value => {
+    assertReconciliationSelection(preview, decisions, readCurrentData(), value);
+    return commitHistoricalImport(value, prepareImportCommit(preview, decisions, verification, value.records));
+  });
+  return <Context.Provider value={{ readCurrentHistory: () => structuredClone(current.current), history: displayed, loading: appLoading || state.identity !== identity || state.loading, error: state.identity === identity ? state.error : null, needsMigration: state.identity === identity && state.needsMigration, reload: () => setReloadVersion(value => value + 1), refresh, archiveResearch, decideResearch, registerResearchPaper, applyResultBatch, commitPreview, registerPaper, recordPaperResult: (id, result) => mutate(identity, value => settleHistoricalPaper(value, id, result)), approveResearch: (preview, decisions, verification, confirmDayCompletion, previousProposals) => mutate(identity, value => commitApprovedResearch(value, preview, decisions, verification, { confirmDayCompletion, previousProposals })), createNotification: id => mutate(identity, value => createHistoricalNotification(value, id)), markRead: id => mutate(identity, value => markHistoricalNotificationRead(value, id)), dismiss: id => mutate(identity, value => dismissHistoricalNotification(value, id)), confirmActual }}>{children}</Context.Provider>;
 }

@@ -1,5 +1,6 @@
 import type { AppData } from "@/lib/domain/types";
 import type { HistoricalWorkspace } from "@/lib/imports/types";
+import { sourceItemMatches } from './source';
 
 export type ReconciliationCategory = "actual" | "paper" | "proposal";
 export type ReconciliationAction =
@@ -71,7 +72,7 @@ export const actualReconciliationRows: ReconciliationSourceRow[] = ([
   ["A06", "NBA", "LA Clippers vs Golden State Warriors", "De'Anthony Melton 2+ made threes", 1.86, 500, "bonus", "won", "owner_reported", "9da934dc-aa53-4372-a306-4525b2655f8c"],
   ["A07", "ATP", "Matteo Berrettini vs Ugo Humbert", "Matteo Berrettini match winner", 2.04, 500, "cash", "won", "unverified", "2f3bbf25-729d-452c-8aa2-8ca0b5c2c273"],
   ["A08", "WTA", "Magda Linette vs Moyuka Uchijima", "Magda Linette match winner", 1.72, 500, "cash", "won", "unverified", "081e96fa-0f49-4165-95a5-7b557a29e837"],
-  ["A09", "ATP", "Rinky Hijikata vs Tomas Martin Etcheverry", "Rinky Hijikata match winner", 2.07, 500, "cash", "won", "unverified", "d20b7cba-8c2d-4f4a-a55c-89eefc4757aa"],
+  ["A09", "ATP", "Rinky Hijikata vs Tomas Martin Etcheverry", "Rinky Hijikata match winner", 2.11, 500, "cash", "won", "unverified", "d20b7cba-8c2d-4f4a-a55c-89eefc4757aa"],
   ["A10", "ATP", "Rinky Hijikata vs Luca Van Assche", "Rinky Hijikata match winner", 2.44, 500, "cash", "unresolved", "unverified", "d8-atp-hijikata-vanassche-ml"],
   ["A11", "NBL", "Brisbane Bullets at Melbourne United", "Brisbane Bullets match winner", 5.1, 500, "cash", "unresolved", "unverified", "d8-nbl-brisbane-melbourne-ml"],
   ["A12", "NBA", "Philadelphia 76ers at Cleveland Cavaliers", "Cleveland Cavaliers match winner", 2.19, 500, "cash", "unresolved", "unverified", "d8-nba-cleveland-philadelphia-ml"],
@@ -96,7 +97,7 @@ export const paperReconciliationRows: ReconciliationSourceRow[] = [
   paper("H12", "WTA", "Leylah Fernandez ML vs Sofia Kenin", 1.33, "unresolved", null, false, "paper"),
   paper("H13", "WTA", "Claire Liu ML vs Katie Boulter", 2.34, "unresolved", null, false, "paper"),
   paper("H14", "NBL", "Brisbane Bullets +3.5 vs Perth", 1.92, "unresolved", null, false, "paper"),
-  paper("H15", "NBA", "Dylan Windler 15+ points vs Perth", 1.53, "unresolved", null, false, "paper"),
+  paper("H15", "NBL", "Dylan Windler 15+ points vs Perth", 1.53, "unresolved", null, false, "paper"),
   paper("P17", "NBA", "New Orleans Pelicans ML vs Utah Jazz", 1.49, null, null, false),
   paper("P18", "NBA", "Tyrese Maxey 25+ points vs Detroit Pistons", 2.16, null, null, false),
   paper("P19", "NBL", "Illawarra Hawks +3.5 vs Cairns Taipans", 1.93, null, null, false),
@@ -131,10 +132,11 @@ export const historicalAccountingCheckpoint = {
 } as const;
 
 function findExisting(row: ReconciliationSourceRow, data: AppData, history: HistoricalWorkspace) {
-  const actual = data.bets.find((bet) => row.sourceReference === bet.id || row.sourceReference === bet.candidateId || bet.notes.includes(row.sourceReference ?? "__none__"));
-  const paper = data.paperPredictions.find((item) => row.sourceReference === item.id || item.candidate.id === row.sourceReference);
-  const archive = history.records.find((record) => record.id === row.sourceReference || record.snapshot.externalId === row.sourceReference || record.snapshot.sourceReference === row.sourceReference);
-  return actual ? { id: actual.id, status: "registered" as const, exact: actual.id === row.sourceReference } : paper ? { id: paper.id, status: "registered" as const, exact: paper.id === row.sourceReference } : archive ? { id: archive.id, status: "archived" as const, exact: archive.id === row.sourceReference } : null;
+  const matches = sourceItemMatches({ id: row.sourceId, originalReference: row.sourceReference,
+    category: row.category === 'actual' ? 'actual' : row.category === 'paper' ? 'historical_paper' : 'proposal' }, data, history);
+  const match = matches[0];
+  return match ? { id: match.id, status: match.storage === 'archive' ? 'archived' as const : 'registered' as const,
+    exact: match.id === row.sourceReference } : null;
 }
 
 export function buildReconciliationPreview(data: AppData, history: HistoricalWorkspace): ReconciliationMatch[] {

@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { Bet } from '@/lib/domain/types';
-import { enteredMoneyCents, financialRequirementChecklist, originalOrEnteredTimestamp, readLedgerEvidence, reviewLedgerEntry, utcFromMelbourne, writeLedgerEvidence } from '@/lib/domain/ledger-review';
+import { enteredMoneyCents, financialRequirementChecklist, manualPlacementFields, originalOrEnteredTimestamp, readLedgerEvidence, reviewLedgerEntry, utcFromMelbourne, writeLedgerEvidence } from '@/lib/domain/ledger-review';
 
 function wager(overrides: Partial<Bet> = {}): Bet {
   return { id: '70000000-0000-4000-8000-000000000001', placedAt: '2026-01-01T00:00:37.125Z', settledAt: '2026-01-02T00:00:47.000Z', confirmedAt: '2026-01-01T00:01:00Z', bookmaker: 'SYNTHETIC Book', stakeCents: 500, stakeType: 'cash', odds: 2.1, outcome: 'won', strategy: 'C', notes: 'SYNTHETIC original note', legs: [{ id: '70000000-0000-4000-8000-000000000002', sport: 'NBA', event: 'SYNTHETIC A vs B', participant: 'SYNTHETIC Player', market: 'points', selection: 'Over 20.5', line: '20.5', odds: 2.1, outcome: 'won' }], ...overrides };
 }
 describe('manual financial review and evidence notes', () => {
+  it('keeps known private placements compatible with deployed SQL without promoting incomplete historical placements', () => {
+    const source = wager();
+    expect(manualPlacementFields('supabase', source.placedAt, source.confirmedAt)).toEqual({});
+    expect(() => manualPlacementFields('supabase', null, source.confirmedAt)).toThrow(/actual placement time/);
+    expect(manualPlacementFields('demo', null, source.confirmedAt)).toEqual({ recordedAt: source.confirmedAt, placementStatus: 'unknown_owner_reported', lifecycle: 'provisional' });
+    expect(source.placedAt).toBe('2026-01-01T00:00:37.125Z');
+  });
   it('keeps ticket and payout evidence in existing notes without overwriting unrelated research', () => {
     const text = writeLedgerEvidence('SYNTHETIC original note\nsecond source line', 'SYNTHETIC-ticket-1', 1050);
     expect(readLedgerEvidence(text)).toEqual({ notes: 'SYNTHETIC original note\nsecond source line', ticketReference: 'SYNTHETIC-ticket-1', payoutCents: 1050 });

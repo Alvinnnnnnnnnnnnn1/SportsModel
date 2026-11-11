@@ -1,9 +1,19 @@
 import { betReturn } from './calculations';
-import type { Bet } from './types';
+import type { Bet, Mode } from './types';
 import { betSchema } from './validation';
 
 const TICKET_PREFIX = '[EdgeLab ticket reference] ';
 const PAYOUT_PREFIX = '[EdgeLab recorded cash payout cents] ';
+
+/** Core hosted schema retains registration time in confirmedAt and the save audit.
+ * Optional local lifecycle fields are not a deployed financial schema extension. */
+export function manualPlacementFields(mode: Mode, placedAt: string | null, recordedAt: string): Pick<Bet, 'recordedAt' | 'placementStatus' | 'lifecycle'> {
+  if (mode === 'supabase') {
+    if (!placedAt) throw new Error('Private financial registration requires the actual placement time. Keep incomplete historical claims in Historical Import; do not substitute the import time.');
+    return {};
+  }
+  return { recordedAt, placementStatus: placedAt ? 'known_owner_attested' : 'unknown_owner_reported', lifecycle: placedAt ? 'valid' : 'provisional' };
+}
 
 export function readLedgerEvidence(notes: string): { notes: string; ticketReference: string; payoutCents: number | null } {
   let ticketReference = '', payoutCents: number | null = null;

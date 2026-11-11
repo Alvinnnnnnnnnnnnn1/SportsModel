@@ -6,17 +6,22 @@ import type { HistoricalWagerClaim } from '@/lib/imports/wager-claim-provenance'
 import { money, signedMoney } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { useWagerClaims } from './use-wager-claims';
+import { summarizeWagerClaims } from '@/lib/imports/wager-claims';
 
 const amount = (value: number | null) => value === null ? 'Incomplete evidence' : money(value);
 const price = (value: number | null) => value === null ? 'Unknown' : new Intl.NumberFormat('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 4, useGrouping: false }).format(value);
 
-function ClaimSummary({ state }: { state: ReturnType<typeof useWagerClaims> }) {
-  const { review, archived, mode } = state;
+function ClaimSummary({ state, preferSaved = false }: { state: ReturnType<typeof useWagerClaims>; preferSaved?: boolean }) {
+  const { review: attachedReview, archived, mode } = state;
+  const review = preferSaved && archived.rows.length ? undefined : attachedReview;
   // Choose one source set. Never add browser attachments to archive or ledger totals.
   const summary = review?.summary ?? archived.summary;
   const present = !!review || archived.rows.length > 0;
   if (!present) return <p className="text-xs leading-relaxed text-muted-foreground">No historical wager claim source is attached or saved in this workspace. Review a source file in Historical Import to show its provisional history here. The registered actual ledger remains separate.</p>;
   const source = review ? 'Browser attachment · source preview' : 'Saved historical archive';
+  const knownSettled = (review?.envelope.records ?? archived.rows.map(row => row.claim)).filter(claim =>
+    claim.reportedOutcome !== null && claim.reportedOutcome !== 'pending' && claim.reportedStakeCents !== null && claim.reportedCashPayoutCents !== null && claim.stakeType !== null);
+  const settledSubtotal = !summary.duplicateUncertainty && knownSettled.length ? summarizeWagerClaims(knownSettled).reportedRealisedProfitCents : null;
   return <div className="space-y-3">
     <p className="text-[11px] text-amber-200">{mode === 'demo' ? 'SYNTHETIC claim fixture' : 'Owner-reported historical claims'} · {source} · {summary.claimCount} claims</p>
     {summary.duplicateUncertainty && <p className="text-xs text-amber-200">Possible duplicate claims require identity review. Financial rollups remain unknown; the source records have not been merged or deleted.</p>}
@@ -27,6 +32,7 @@ function ClaimSummary({ state }: { state: ReturnType<typeof useWagerClaims> }) {
       <div><dt className="text-[10px] text-muted-foreground">Reported settled cash stakes / returns</dt><dd className="mt-1 text-lg tabular-nums">{amount(summary.settledCashStakeCents)} / {amount(summary.settledCashReturnCents)}</dd><p className="mt-1 text-[10px] text-muted-foreground">Excludes promotional face value and paper activity</p></div>
       <div><dt className="text-[10px] text-muted-foreground">Reported promotional cash winnings</dt><dd className="mt-1 text-lg tabular-nums">{amount(summary.bonusCashWinningsCents)}</dd><p className="mt-1 text-[10px] text-muted-foreground">Promotional stake is not cash staked or returned</p></div>
     </dl>
+    {summary.unknownFinancialRows > 0 && <p className="text-[11px] leading-relaxed text-amber-200">{summary.unknownFinancialRows} claims have incomplete financial evidence; their stakes or returns are not inferred. {settledSubtotal !== null ? `Known settled-source subset: ${signedMoney(settledSubtotal)} across ${knownSettled.length} reported settlements. This is a subtotal, not the complete experiment P/L or a verified balance.` : 'No complete settled-source subtotal is available.'}</p>}
     <p className="text-[11px] leading-relaxed text-muted-foreground">This provisional source summary is separate from registered actual-ledger totals, bankroll and ROI. {review ? 'An attached source may include claims already archived or registered; matches are shown in its review and these totals are never added to existing totals. ' : ''}No deposit, available sportsbook balance or new settlement is inferred.</p>
   </div>;
 }
@@ -35,7 +41,7 @@ export function HistoricalWagerClaimsSummary() {
   const state = useWagerClaims();
   return <section className="panel space-y-4 p-5" aria-label="Historical wager claims summary">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="flex items-center gap-2 text-sm font-medium"><Archive className="size-4 text-amber-200" />Historical wager claims</h2><p className="mt-1 text-[11px] text-muted-foreground">Reported history awaiting evidence and separate financial approval.</p></div><Button size="sm" variant="outline" asChild><Link href="/imports#historical-wager-claims">Review historical wagers <ArrowRight /></Link></Button></div>
-    {state.loading ? <p className="text-xs text-muted-foreground">Loading this workspace’s historical claim context…</p> : state.workspaceError ? <p role="alert" className="text-xs text-red-300">Private workspace reconciliation is unavailable: {state.workspaceError}</p> : !state.ready ? <p className="text-xs text-muted-foreground">Open your authenticated private workspace to review its historical claims.</p> : <ClaimSummary state={state} />}
+    {state.loading ? <p className="text-xs text-muted-foreground">Loading this workspace’s historical claim context…</p> : state.workspaceError ? <p role="alert" className="text-xs text-red-300">Private workspace reconciliation is unavailable: {state.workspaceError}</p> : !state.ready ? <p className="text-xs text-muted-foreground">Open your authenticated private workspace to review its historical claims.</p> : <ClaimSummary state={state} preferSaved />}
     {state.error && <p role="alert" className="text-xs text-amber-200">{state.error}</p>}
   </section>;
 }

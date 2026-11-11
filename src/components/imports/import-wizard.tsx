@@ -17,6 +17,7 @@ import { isOwnerCheckpointEnvelope, restoreOwnerCheckpointReview, type OwnerChec
 import { ReviewWarnings } from './review-warnings';
 import { combineRecoveryAndSupplement, isCombinedRecovery, loadCombinedRecovery, mapPaperSupplement } from '@/lib/imports/paper-supplement';
 import { isWagerClaimsSource, prepareWagerClaimsReview } from '@/lib/imports/wager-claims';
+import { isReconciliationSource, prepareReconciliationImport } from '@/lib/reconciliation/source';
 import { ApprovalStatusBadges } from '../approval-status';
 import { acknowledgeSelectedArchiveRows, archiveRowEligibility, archiveSelectionBlockers, selectArchiveRows, summarizeArchiveReview } from '@/lib/imports/approval-review';
 const SYNTHETIC_EXAMPLE = [{kind:'paper',sport:'NBA',event:'SYNTHETIC Hawks vs SYNTHETIC Comets',participant:'SYNTHETIC Example Player',market:'Player points',selection:'Over 18.5 points',line:'18.5',bookmaker:'SYNTHETIC Example Book',odds:1.9,predictionAt:'2026-01-01T00:00:00Z',placedAt:null,settledAt:null,probability:null,strategy:'C',sourceReference:'edgelab:synthetic-import-example',stakeCents:500,stakeType:'cash',payoutCents:null,outcome:'pending',verification:'synthetic',notes:'SYNTHETIC example only. No real event or wager.'}];
@@ -42,7 +43,8 @@ interface ImportSuccess {
 
 export function ImportWizard({onCommitted,seedSource}:{onCommitted:(recordId?:string)=>void;seedSource?:{text:string;sourceName:string}}) {
   const {mode,user,notify,data}=useApp();
-  const {history,loading,error:storageError,commitPreview}=useHistory();
+  const {history,loading:historyLoading,error:storageError,commitPreview}=useHistory();
+  const loading=historyLoading||(mode==='supabase'&&!user);
   const fileReadVersion=useRef(0), analysisVersion=useRef(0), seeded=useRef(false);
   const [originalRecovery,setOriginalRecovery]=useState<RecoveryPreview>();
   const [recovery,setRecovery]=useState<RecoveryPreview>();
@@ -64,11 +66,15 @@ export function ImportWizard({onCommitted,seedSource}:{onCommitted:(recordId?:st
     const epoch=++analysisVersion.current;
     setBusy(true);setError('');setTechnicalError('');setConfirmOpen(false);setSuccess(undefined);
     try {
+      if(mode==='supabase'&&(!user||loading||storageError))throw new Error('Wait for your signed-in private workspace and archive to load before validating a source.');
       let parsed:ImportPreview, nextRecovery:RecoveryPreview|undefined, nextOriginal:RecoveryPreview|undefined, nextOwner:OwnerCheckpointReview|undefined;
       let classification=verification;
       let decoded:unknown;
       if(type!=='csv'){try{decoded=JSON.parse(value.replace(/^\uFEFF/,''));}catch{decoded=undefined;}}
-      if(isWagerClaimsSource(decoded)){
+      if(isReconciliationSource(decoded)){
+        const review=await prepareReconciliationImport({text:value,sourceName:name,data,history,mode});
+        classification='unverified';parsed=review.preview;
+      } else if(isWagerClaimsSource(decoded)){
         const review=await prepareWagerClaimsReview({text:value,sourceName:name,existingRecords:history.records,bets:data.bets,mode});
         classification=review.envelope.sourceClass==='synthetic'?'synthetic':'unverified';parsed=review.preview;
       } else if(isOwnerCheckpointEnvelope(decoded)){
@@ -86,7 +92,7 @@ export function ImportWizard({onCommitted,seedSource}:{onCommitted:(recordId?:st
       setDecisions(parsed.rows.map(row=>({rowNumber:row.rowNumber,include:false,allowProbableDuplicate:false,acknowledgeIncomplete:false})));
     } catch(reason){if(epoch===analysisVersion.current){setPreview(undefined);problem(reason);}}
     finally{if(epoch===analysisVersion.current)setBusy(false);}
-  },[verification,history.records,data.bets,mode,user,loading,storageError,problem]);
+  },[verification,history,data,mode,user,loading,storageError,problem]);
 
   useEffect(()=>{
     if(!seedSource||seeded.current||loading||storageError)return;

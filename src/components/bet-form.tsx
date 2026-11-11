@@ -26,6 +26,7 @@ import {
 import { ApprovalStatusBadges } from "@/components/approval-status";
 import { money, dateTime } from "@/lib/utils";
 import { betReturn } from "@/lib/domain/calculations";
+import { manualPlacementFields } from "@/lib/domain/ledger-review";
 import { readResearchRecordLink, withResearchRecordLink, type ResearchPlacement } from "@/lib/daily/placement";
 import { enteredMoneyCents, melbourneInput, originalOrEnteredTimestamp, readLedgerEvidence, reviewLedgerEntry, writeLedgerEvidence } from "@/lib/domain/ledger-review";
 
@@ -182,9 +183,7 @@ function BetFormDraft({
         confirmedAt: initial?.confirmedAt ?? new Date().toISOString(),
         ...(initial?.probability !== undefined ? { probability: initial.probability } : candidate?.probability !== undefined ? { probability: candidate.probability } : {}),
         ...(initial?.candidateId ? { candidateId: initial.candidateId } : candidate ? { candidateId: candidate.id } : {}),
-        recordedAt: new Date().toISOString(),
-        placementStatus: placement ? "known_owner_attested" : "unknown_owner_reported",
-        lifecycle: placement ? "valid" : "provisional",
+        ...manualPlacementFields(mode, placement, new Date().toISOString()),
         oddsProvenance: initial?.oddsProvenance ?? { source: mode === "demo" ? "Synthetic manual bookmaker record" : "Manual bookmaker record", timestamp: new Date().toISOString(), method: "Owner-entered accepted price; no live verification", modelVersion: "manual-entry-v1", simulated: mode === "demo" },
         ...(initial?.probabilityProvenance ? { probabilityProvenance: initial.probabilityProvenance } : candidate?.probabilityProvenance ? { probabilityProvenance: candidate.probabilityProvenance } : {}),
       };

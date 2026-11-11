@@ -2,6 +2,9 @@ import type { AppData, Candidate } from "@/lib/domain/types";
 import type { HistoricalWorkspace } from "@/lib/imports/types";
 import { dailyCycleSchema, type DailyCycle } from "./contract";
 import { buildSettlementTargets, type SettlementResponse } from "@/lib/results";
+import { reconciliationRecordInfo } from '@/lib/reconciliation/source';
+import { readArchivedWagerClaim } from '@/lib/imports/wager-claim-provenance';
+import type { ResearchHandoffContext } from '@/lib/handoff/context';
 
 export * from "./contract";
 export * from "./preparation";
@@ -22,6 +25,7 @@ export interface DailyCyclePosition {
   stakeCents: number | null;
   registeredAt: string;
   sourceReference: string | null;
+  storage?: 'core' | 'historical';
 }
 
 export interface DailyCycleImportReview {
@@ -102,7 +106,7 @@ function sameIdentity(
     .every((value, index) => value === [identity.sport, identity.event, identity.participant, identity.market, identity.selection, identity.line][index]);
 }
 
-export function collectDailyCyclePositions(data: AppData): DailyCyclePosition[] {
+export function collectDailyCyclePositions(data: AppData, history?: HistoricalWorkspace): DailyCyclePosition[] {
   const actual = data.bets
     .filter((bet) => bet.lifecycle !== "entered_in_error" && bet.lifecycle !== "superseded")
     .map((bet): DailyCyclePosition => ({
@@ -139,7 +143,36 @@ export function collectDailyCyclePositions(data: AppData): DailyCyclePosition[] 
       registeredAt: record.registeredAt,
       sourceReference: record.candidate.id,
     }));
-  return [...actual, ...paper];
+  const historical = (history?.paperResults ?? []).flatMap<DailyCyclePosition>(result => {
+    const record = history?.records.find(item => item.id === result.recordId);
+    if (!record || record.snapshot.kind === 'actual' || paper.some(item => item.positionId === record.id)) return [];
+    const s = record.snapshot;
+    return [{ positionId: record.id, kind: 'paper', storage: 'historical', candidateId: null,
+      sport: s.sport, event: s.event, participant: s.participant, market: s.market, selection: s.selection,
+      line: s.line, outcome: result.outcome, odds: s.odds, stakeCents: s.stakeCents,
+      registeredAt: history!.audit.find(a => a.recordId === record.id && a.action === 'paper_registered')?.timestamp ?? record.importedAt,
+      sourceReference: s.sourceReference }];
+  });
+  return [...actual, ...paper, ...historical];
+}
+
+export function dailyCycleHistoricalMemory(data: AppData, history: HistoricalWorkspace) {
+  return history.records.filter(record => record.snapshot.kind !== null).map(record => {
+    const s = record.snapshot, metadata = reconciliationRecordInfo(record.raw);
+    const claim = readArchivedWagerClaim(record)?.claim;
+    const actual = data.bets.find(bet => bet.id === record.id);
+    const paper = history.paperResults.find(result => result.recordId === record.id);
+    return { archiveId: record.id, originalSourceId: metadata?.sourceId ?? s.externalId,
+      classification: actual ? 'linked_actual_ledger' : s.kind === 'actual' ? 'historical_actual_claim_not_financially_registered'
+        : paper ? 'archived_paper_tracking_preregistration_requires_separate_evidence'
+        : metadata?.category === 'proposal' ? 'unregistered_paper_proposal' : 'historical_paper_claim_not_registered',
+      verification: s.verification, sport: s.sport, event: s.event, selection: s.selection, line: s.line,
+      originalPaperPrice: s.kind === 'paper' ? s.odds : null, acceptedExecutionPrice: claim?.acceptedOdds ?? null,
+      reportedPrice: claim?.reportedOdds ?? null, originalPredictionAt: s.predictionAt,
+      sourceOutcome: s.outcome, currentRecordedOutcome: actual?.outcome ?? paper?.outcome ?? null,
+      reportedStakeCents: s.stakeCents, reportedPayoutCents: s.payoutCents, stakeType: s.stakeType,
+      sourceReference: s.sourceReference, legs: s.legs };
+  });
 }
 
 export function buildDailyCyclePrompt(input: {
@@ -151,8 +184,9 @@ export function buildDailyCyclePrompt(input: {
   providerPreparation?: string;
   feedbackSummary?: string;
   previousCycleSummary?: string;
+  researchContext?: ResearchHandoffContext;
 }): string {
-  const positions = collectDailyCyclePositions(input.data);
+  const positions = collectDailyCyclePositions(input.data, input.history);
   const positionLines = positions.length
     ? positions.map((position) => JSON.stringify(position)).join("\n")
     : "[]";
@@ -173,6 +207,13 @@ export function buildDailyCyclePrompt(input: {
     "Return human-readable sections for Previous results summary, BET recommendations, PAPER recommendations, model feedback and uncertainty, followed by one standalone JSON code block.",
     "The JSON must use format edgelab.daily-cycle and version 1. Use null for unknown values. Do not include Markdown inside the JSON body.",
     `Historical workspace records available for context: ${input.history.records.length}`,
+    'SAVED HISTORICAL MEMORY — claims/proposals are not financial ledger entries or qualifying forecasts. Never turn source-reported wins into cash payouts or backdate proposal registration. Research unknowns but leave unsupported results unresolved.',
+    JSON.stringify(dailyCycleHistoricalMemory(input.data, input.history)),
+    'Tracked historical paper positions retain historical eligibility restrictions; archive-only proposals are context, not result-update targets. Funding cap is not a deposit. Cash, bonus and paper accounting remain separate.',
+    'APPROVED METHODOLOGY / OWNER PROGRESS — read-only context; source completion and owner-reported progress differ:',
+    input.researchContext ? JSON.stringify({ methodology: input.researchContext.methodology,
+      knownRules: input.researchContext.knownRules, latestSourceConfirmedCompletedDay: input.researchContext.latestSourceConfirmedCompletedDay,
+      latestOwnerReportedDay: input.researchContext.latestOwnerReportedDay, proposedResearchDay: input.researchContext.proposedResearchDay }) : 'Not supplied; do not assume or change experiment policy.',
     "",
     "Provider observations and availability:",
     input.providerPreparation ?? "No provider preparation was supplied; preserve missing statistics explicitly.",
@@ -192,7 +233,7 @@ export function reviewDailyCycle(input: {
   previousCycleKeys: string[];
 }): DailyCycleImportReview {
   const cycle = dailyCycleSchema.parse(input.raw);
-  const positions = collectDailyCyclePositions(input.data);
+  const positions = collectDailyCyclePositions(input.data, input.history);
   const known = new Map(positions.map((position) => [position.positionId, position]));
   const warnings: string[] = [];
   let matchedResults = 0;
@@ -234,9 +275,15 @@ export async function prepareDailyCycleSettlements(
   const observations: SettlementResponse["observations"] = [];
   const skipped: string[] = [];
   for (const result of review.cycle.resultUpdates) {
-    const kind = data.bets.some((bet) => bet.id === result.positionId)
-      ? "actual"
-      : "paper";
+    const kind = data.bets.some((bet) => bet.id === result.positionId) ? 'actual'
+      : data.paperPredictions.some(paper => paper.id === result.positionId) ? 'paper' : 'historical_paper';
+    // The cycle application service currently saves the core workspace only.
+    // Historical results must use the existing separately approved Results Review
+    // transaction rather than mixing repository scopes in one implicit save.
+    if (kind === 'historical_paper') {
+      skipped.push(`${kind}:${result.positionId}`);
+      continue;
+    }
     const target = byKey.get(`${kind}:${result.positionId}`);
     const position = review.positions.find((item) => item.positionId === result.positionId);
     const source = result.sources.find((item) => item.url && item.observedAt && item.note);

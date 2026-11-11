@@ -1,5 +1,7 @@
 # V6 provider coverage — observed 11 November 2026
 
+**Later continuation:** one additional NBA points credit was used, bringing actual cumulative odds usage to **5/500**, 495 remaining. The refreshed response still lacks player IDs, while API-NBA Free explicitly denies current season 2026. Persistent blocked mappings, a historical experimental baseline and actual source-only worker screening are now implemented; no eligible position/lifecycle passed. See [full later evidence](v6-prospective-pilot.md). The four-credit figures below describe the earlier pilot, not the current total.
+
 Status: **permitted-provider read pilot only**, not prospective paper autonomy. Actual cost: **A$0**, four free credits used, 496 remaining according to provider headers. No paid account upgrade, direct bookmaker request, Supabase write or paper registration occurred. Observations describe these samples, not guaranteed ongoing coverage or available execution prices.
 
 ## Permission and endpoint audit

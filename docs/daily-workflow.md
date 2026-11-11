@@ -2,6 +2,14 @@
 
 This extends the existing application. Approved Methodology Revision 1, existing historical sources, owner claims, settings and financial/RLS rules remain unchanged. There were no hosted writes or migrations during development.
 
+## Private Daily Cycle source save — updated 11 November
+
+In your existing signed-in private tab, open Research → **2 · Import GPT Results**, paste a genuine source-backed Daily Cycle, then **Validate Daily Cycle** → **Review & Apply Daily Update**. Review the **Save private Daily Cycle** dialog and use **Confirm research-only save**. Success says **Private cycle saved and read back** and links its archived source. Reloading restores the receipt and disables replay. If a save errors, the draft stays available; revalidate/reload current history before retrying. Do not repeat the completed historical reconciliation.
+
+This operation archives the cycle, source candidates, checkpoint and feedback only. Quoted prices/times remain original source claims; unsupported probability values remain raw and normalize to null. It neither registers an actual/paper position nor applies `resultUpdates`. Use the existing separate paper/financial and Results Review workflows for those actions. The new source save was tested in local PostgreSQL and intercepted private-browser transport; a new genuine hosted cycle through your personal session remains unverified. No additional migration is needed.
+
+V6 autonomous paper implementation is separate from this legacy manual workflow. It is currently **LOCAL_TEST_ONLY** and disabled; see [current status](v6-implementation-status.md).
+
 ## Using the workflow
 
 1. Run `npm run dev`, retain the existing private sign-in, and open **Research → Daily workspace**. Demo remains a separate synthetic browser workspace.

@@ -4,6 +4,12 @@ A private, zero-cost sports research and record-keeping MVP built with Next.js A
 
 **All initial sports, teams, players, markets, odds, forecasts, alerts and results are synthetic.** They demonstrate the product and are not real opportunities or evidence of a betting advantage. EdgeLab never places wagers, connects bookmaker accounts, accesses bookmaker credentials, scrapes bookmakers or transfers money.
 
+## Current V6 implementation checkpoint
+
+The completed personal-account reconciliation is preserved. Private **Review & Apply Daily Update** now supports a research-only save through the existing authenticated historical archive, followed by read-back. It preserves original source claims and creates no financial or paper position implicitly. Results still use their separate review workflow. See [Daily Cycle instructions](docs/daily-workflow.md).
+
+V6 now has an isolated paper domain, exact source matcher, experimental numerical baselines, deterministic uncapped accounting and a disabled headless worker with restart/replay protection. Its A$5,000 reference and A$50 hypothetical entries are separate from legacy finances. A bounded permitted-provider pilot observed Sportsbet prices using four free credits. **Status: LOCAL_TEST_ONLY**, with no activated model, scheduled operation, prospective registration or automatic live grading. The separate SQL proposal has not been deployed. See [implementation evidence and next task](docs/v6-implementation-status.md), [source coverage](docs/v6-provider-coverage.md) and [paper engine](docs/v6-paper-engine.md).
+
 ## Use your existing experiment workspace
 
 Approval workflows now use automatic file validation, compact eligibility summaries, batch selection, one clear final archive/research approval and explicit financial review. Existing saved history stays in place; repeat uploads show already-saved records. See [the three approval walkthroughs](docs/approval-workflows.md) for historical import, ChatGPT paper research, and manual actual-wager registration/settlement.
@@ -16,7 +22,7 @@ The owner-selected reconciliation Markdown can now be wrapped in a durable `edge
 
 ## Versioned research memory
 
-The handoff now separates approved methodology, owner reports, source-confirmed days, provisional placement claims, local historical evidence and unregistered proposals. It generates a compact brief using the existing strict response contract. See [research memory and Day 6 review](docs/research-memory.md) and the [proposed methodology](docs/experiment-methodology.proposed.md). Both the reconstructed methodology and latest checkpoint remain subject to explicit approval; no new hosted history or funding was added.
+The handoff now separates approved methodology, owner reports, source-confirmed days, provisional placement claims, local historical evidence and unregistered proposals. It generates a compact brief using the existing strict response contract. See [research memory and Day 6 review](docs/research-memory.md). The existing approved Methodology Revision 1 is preserved; a [local methodology proposal](docs/experiment-methodology.proposed.md) never replaces saved approval. Owner/source checkpoints remain separately labelled rather than upgraded into verified forecasts or funding.
 
 ## Run locally
 
@@ -49,7 +55,7 @@ On **Research → Run Daily Research**, generate a structured prompt from saved 
 
 The reported Day 5 reconciliation is displayed only as an unverified reference. Two structured recovery sources are staged locally for review; the original full export remains unavailable. No records, funding or bookmaker balance are invented from the checkpoint totals. Historical Import now supports selecting a relevant conversation from a user-provided extracted official JSON export and manually mapping its messages. Unknown facts remain null. Experiment rules/day attestations are retained in an append-only context journal. **Export complete experiment** downloads the ledger and historical archive together for a private local backup; restoration remains a separate future reviewed workflow.
 
-Read the [complete continuity guide](docs/research-continuity.md), [conversation intake instructions](docs/conversation-intake.md), [research response JSON Schema](docs/research-response.schema.json), and [verification limits](docs/verification.md). The optional [The Odds API readiness adapter](docs/odds-provider.md) stays disabled and is not called by the handoff. There are no live odds or OpenAI API requests, paid dependencies or new billing requirements.
+Read the [complete continuity guide](docs/research-continuity.md), [conversation intake instructions](docs/conversation-intake.md), [research response JSON Schema](docs/research-response.schema.json), and [verification limits](docs/verification.md). The optional [The Odds API readiness adapter](docs/odds-provider.md) stays disabled and is not called by the handoff. The manual handoff makes no odds or OpenAI API requests. The separately invoked V6 odds diagnostic is documented above; it adds no paid dependency or billing requirement.
 
 Source-extraction recovery staging files can also be reviewed through Historical Import with category separation, known-amount reconciliation and complete warning exports. This path is locked to preview-only until a separately approved import; [review policy](docs/recovery-review.md).
 

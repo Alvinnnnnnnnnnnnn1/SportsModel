@@ -66,6 +66,10 @@ describe.skipIf(!runtime)('V6 isolated SQL proposal',()=>{
    await append(g);await append(g);expect((await summary()).profitCents).toBe(4500);
    const correction={...g,id:crypto.randomUUID(),revision:2,previousGradeId:g.id,outcome:'lost' as const,observedValue:10};await append(correction);expect((await summary()).profitCents).toBe(-5000);
    await expect(append({...correction,id:crypto.randomUUID()})).rejects.toThrow(/revision/);
+   const rawEvidence='LOCAL SYNTHETIC FINAL RESULT; no source-issued publication timestamp';
+   const observed={...g,id:crypto.randomUUID(),revision:3,previousGradeId:correction.id,publishedAt:null,observedAt:new Date().toISOString(),recordedAt:new Date().toISOString(),rawEvidence,sourceHash:await sha256(rawEvidence)};
+   await expect(append({...observed,sourceHash:'0'.repeat(64)})).rejects.toThrow(/evidence/);
+   expect((await summary()).profitCents).toBe(-5000);await append(observed);expect((await summary()).profitCents).toBe(4500);
   }finally{await db.close();}
  },30000);
 });

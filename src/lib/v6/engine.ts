@@ -66,8 +66,13 @@ export async function appendGrade(state:V6State,input:Grade):Promise<V6State> {
   if(!p||p.ownerId!==state.ownerId||p.cohort!==state.cohort)throw new Error('Position ownership/cohort mismatch');
   if(g.positionHash!==await positionHash(p)||!exactMarket(g.market,p.observation.market)||g.eventId!==p.observation.market.eventId||g.subjectId!==p.observation.market.subjectId||g.termsVersion!==p.observation.market.termsVersion)throw new Error('Grade identity mismatch');
   if((g.sourceClass==='synthetic')!==(state.cohort==='v6-synthetic'))throw new Error('Grade source/cohort mismatch');
-  if(Date.parse(g.publishedAt)<Date.parse(p.observation.eventStartsAt)||Date.parse(g.recordedAt)<Date.parse(g.publishedAt))throw new Error('Grade timestamps are invalid');
-  if(g.exception!=='none'&&g.outcome!=='unresolved')throw new Error('Exceptional settlement remains unresolved until supported rule handling exists');
+  const evidenceAt=g.publishedAt??g.observedAt!;
+  if(Date.parse(evidenceAt)<Date.parse(p.observation.eventStartsAt)||Date.parse(g.recordedAt)<Date.parse(evidenceAt)
+    ||g.observedAt!==undefined&&(Date.parse(g.observedAt)>Date.parse(g.recordedAt)||Date.parse(g.observedAt)<Date.parse(evidenceAt)))throw new Error('Grade timestamps are invalid');
+  if(g.rawEvidence!==undefined&&await sha256(g.rawEvidence)!==g.sourceHash)throw new Error('Grade raw evidence hash mismatch');
+  const supportedDnpVoid=g.exception==='dnp'&&g.outcome==='void'&&g.observedValue===null&&g.rawEvidence!==undefined
+    &&/^nba-points-ot-dnp-void-v1:[a-f0-9]{64}$/.test(p.observation.market.termsVersion);
+  if(g.exception!=='none'&&g.outcome!=='unresolved'&&!supportedDnpVoid)throw new Error('Exceptional settlement remains unresolved until supported rule handling exists');
   if(p.observation.market.operator==='win'&&['won','lost'].includes(g.outcome)&&(!g.winnerId||g.outcome!==(g.winnerId===p.observation.market.subjectId?'won':'lost')))throw new Error('Missing or inconsistent official winner identity');
   if(g.observedValue!==null&&p.observation.market.operator!=='win'&&['won','lost','push'].includes(g.outcome)&&g.outcome!==gradeCount(p.observation.market,g.observedValue))throw new Error('Observed statistic disagrees with grade');
   if(['won','lost','push'].includes(g.outcome)&&g.observedValue===null&&p.observation.market.operator!=='win')throw new Error('Missing statistic cannot establish a grade');

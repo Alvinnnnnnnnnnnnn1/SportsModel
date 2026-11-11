@@ -14,6 +14,7 @@ try{
   const {runV6Worker}=await loader.ssrLoadModule('/src/lib/v6/worker.ts');
   const {observationSchema}=await loader.ssrLoadModule('/src/lib/v6/types.ts');
   const {paperAccounting}=await loader.ssrLoadModule('/src/lib/v6/engine.ts');
+  const {atomicPrivateJson}=await loader.ssrLoadModule('/src/lib/v6/evidence.server.ts');
   const repo=localV6Repository(path.join(root,'state'),config.ownerId,'v6-prospective');
   const provider={collectionPermitted:false,collect:async()=>[],grade:async()=>null};
   if(config.inbox){
@@ -26,6 +27,11 @@ try{
   }
   // No activated/validated statistical model or live result adapter exists yet.
   // A missing model deliberately screens out positions rather than fabricating one.
-  const result=await runV6Worker(repo,provider,null,{runId:crypto.randomUUID(),now:new Date().toISOString(),mode:config.mode,killSwitch:config.killSwitch,activation:config.activation});
+  const runId=crypto.randomUUID();let result;
+  try{result=await runV6Worker(repo,provider,null,{runId,now:new Date().toISOString(),mode:config.mode,killSwitch:config.killSwitch,activation:config.activation,
+    canCommit:async()=>{const latest=configSchema.parse(JSON.parse(await fs.readFile(filename,'utf8')));return !latest.killSwitch&&latest.mode===config.mode&&latest.ownerId===config.ownerId&&JSON.stringify(latest.activation)===JSON.stringify(config.activation);}});
+  }catch(error){await atomicPrivateJson(path.join(root,'worker-health',runId+'.json'),{at:new Date().toISOString(),status:'failed',screened:0,registered:0,excluded:0});throw error;}
+  const last=result.state.runs.find(run=>run.id===runId);
+  await atomicPrivateJson(path.join(root,'worker-health',runId+'.json'),{at:new Date().toISOString(),status:result.status==='disabled'?'disabled':result.status==='source_permission_blocked'?'blocked':'completed',screened:last?.screened??0,registered:last?.registered??0,excluded:(last?.preflightExclusions?.length??0)+(last?.rejections.length??0)});
   console.log(JSON.stringify({status:result.status,mode:config.mode,metrics:paperAccounting(result.state),model:'not_activated',liveGrading:'not_connected',v5Access:false},null,2));
 }finally{await loader.close();}

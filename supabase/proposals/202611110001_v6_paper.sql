@@ -218,13 +218,21 @@ declare p public.v6_positions;previous public.v6_grade_revisions;market jsonb;ob
     or NEW.payload->>'termsVersion' is distinct from market->>'termsVersion' or NEW.payload->>'outcome' is distinct from NEW.outcome
     or NEW.payload->'final' is distinct from 'true'::jsonb
     or not public.v6_public_url(NEW.payload->>'sourceUrl') or coalesce(NEW.payload->>'sourceHash','') !~ '^[a-f0-9]{64}$'
-    or (NEW.payload->>'publishedAt')::timestamptz is null or (NEW.payload->>'publishedAt')::timestamptz<(p.payload#>>'{observation,eventStartsAt}')::timestamptz
-    or (NEW.payload->>'publishedAt')::timestamptz>clock_timestamp()
+    or coalesce(NEW.payload->>'publishedAt',NEW.payload->>'observedAt')::timestamptz is null
+    or coalesce(NEW.payload->>'publishedAt',NEW.payload->>'observedAt')::timestamptz<(p.payload#>>'{observation,eventStartsAt}')::timestamptz
+    or coalesce(NEW.payload->>'publishedAt',NEW.payload->>'observedAt')::timestamptz>clock_timestamp()
+    or (NEW.payload->>'publishedAt' is null and (NEW.payload->>'observedAt' is null or NEW.payload->>'rawEvidence' is null))
+    or (NEW.payload->>'rawEvidence' is not null and public.v6_sha256(NEW.payload->>'rawEvidence') is distinct from NEW.payload->>'sourceHash')
+    or (NEW.payload->>'rawEvidence' is not null and (jsonb_typeof(NEW.payload->'rawEvidence') is distinct from 'string' or octet_length(NEW.payload->>'rawEvidence')>8000000))
+    or (NEW.payload->>'observedAt')::timestamptz>clock_timestamp()
+    or (NEW.payload->>'observedAt')::timestamptz<(NEW.payload->>'publishedAt')::timestamptz
     or (NEW.payload->>'recordedAt')::timestamptz is null
-    or (NEW.payload->>'recordedAt')::timestamptz<(NEW.payload->>'publishedAt')::timestamptz
+    or (NEW.payload->>'recordedAt')::timestamptz<coalesce(NEW.payload->>'observedAt',NEW.payload->>'publishedAt')::timestamptz
     or (NEW.payload->>'recordedAt')::timestamptz>clock_timestamp()
     or (previous.id is not null and (NEW.payload->>'recordedAt')::timestamptz<(previous.payload->>'recordedAt')::timestamptz)
-    or (NEW.payload->>'exception' is distinct from 'none' and NEW.outcome<>'unresolved') then raise exception 'V6 grade identity/evidence/revision invalid';end if;
+    or (NEW.payload->>'exception' is distinct from 'none' and NEW.outcome<>'unresolved'
+      and not coalesce((NEW.payload->>'exception'='dnp' and NEW.outcome='void' and NEW.payload->'observedValue'='null'::jsonb
+        and NEW.payload->>'rawEvidence' is not null and market->>'termsVersion' ~ '^nba-points-ot-dnp-void-v1:[a-f0-9]{64}$'),false)) then raise exception 'V6 grade identity/evidence/revision invalid';end if;
   if NEW.outcome in ('won','lost','push') then
     if market->>'operator'='win' then
       if NEW.payload->>'winnerId' is null then raise exception 'Official winner identity required';end if;

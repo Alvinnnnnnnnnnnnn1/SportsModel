@@ -65,4 +65,14 @@ describe('V6 headless worker and isolated durable local repository',()=>{
       await expect(fs.stat(path.join(root,filename+'.lock'))).rejects.toThrow();
     }finally{await fs.rm(root,{recursive:true,force:true});}
   });
+  it('journals unmapped source exclusions without invented identities and honours a changed emergency-stop latch',async()=>{
+    const root=await fs.mkdtemp(path.join(os.tmpdir(),'edgelab-v6-'));
+    try{
+      const repo=localV6Repository(root,'LOCAL-ONLY','v6-synthetic');
+      const provider:V6ReadProvider={collectionPermitted:true,collect:async()=>[],grade:async()=>null,screeningExclusions:async()=>[{sourceHash:'a'.repeat(64),sourceIdentity:'LOCAL-source-row',reasons:['canonical_player_unknown']}]};
+      const run=await runV6Worker(repo,provider,null,{...await options(),mode:'dry_run'});expect(run.state.runs[0]).toMatchObject({screened:1,registered:0,observations:[]});expect(run.state.positions).toHaveLength(0);
+      const before=await repo.read();provider.collect=async()=>[observation()];
+      await expect(runV6Worker(repo,provider,model,{...await options(),canCommit:async()=>false})).rejects.toThrow(/stop/);expect(await repo.read()).toEqual(before);
+    }finally{await fs.rm(root,{recursive:true,force:true});}
+  });
 });

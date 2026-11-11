@@ -46,14 +46,14 @@ export const gradeSchema = z.object({
   outcome: z.enum(['won','lost','void','push','unresolved']), sourceClass: z.enum(['prospective','synthetic']),
   sourceUrl: url, sourceHash: hash, eventId: text, subjectId: text, termsVersion: text,
   market: marketSchema, winnerId: text.nullable(),
-  final: z.literal(true), publishedAt: stamp, observedValue: z.number().finite().nullable(),
+  final: z.literal(true), publishedAt: stamp.nullable(), observedAt:stamp.optional(), rawEvidence:z.string().max(8000000).optional(), observedValue: z.number().finite().nullable(),
   exception: z.enum(['none','dnp','retirement','postponed','ambiguous_terms']),
-}).strict();
+}).strict().refine(g=>g.publishedAt!==null||g.observedAt!==undefined&&g.rawEvidence!==undefined,'Missing source-issued time requires the actual final-observation time and retained raw evidence');
 export type Grade = z.infer<typeof gradeSchema>;
 export const v6StateSchema = z.object({
   version: z.literal(1), ownerId: text, cohort: z.enum(['v6-prospective','v6-synthetic']),
   revision: z.number().int().nonnegative(), positions: z.array(positionSchema), grades: z.array(gradeSchema),
-  runs: z.array(z.object({id:text,at:stamp,mode:z.enum(['disabled','dry_run','armed']), screened:z.number().int().nonnegative(),registered:z.number().int().nonnegative(),observations:z.array(observationSchema),rejections:z.array(z.object({observationId:text,reasons:z.array(text)}))}).strict()),
+  runs: z.array(z.object({id:text,at:stamp,mode:z.enum(['disabled','dry_run','armed']), screened:z.number().int().nonnegative(),registered:z.number().int().nonnegative(),observations:z.array(observationSchema),preflightExclusions:z.array(z.object({sourceHash:hash,sourceIdentity:text,reasons:z.array(text).min(1)}).strict()).optional(),rejections:z.array(z.object({observationId:text,reasons:z.array(text)}))}).strict()),
 }).strict().superRefine((s,c)=>{
   const fail=(message:string)=>c.addIssue({code:'custom',message});
   if(new Set(s.positions.map(p=>p.id)).size!==s.positions.length||new Set(s.positions.map(p=>p.key)).size!==s.positions.length)fail('Duplicate V6 position identity');

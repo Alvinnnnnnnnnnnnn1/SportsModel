@@ -1,0 +1,58 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { z } from 'zod';
+import { digest,exclusive,atomicPrivateJson,type RawEvidence } from './evidence.server';
+const stamp=z.string().datetime({offset:true}),hash=z.string().regex(/^[a-f0-9]{64}$/),id=z.string().min(1).max(300);
+export const identityRevisionSchema=z.object({
+  version:z.literal(1),id:z.string().uuid(),mappingKey:id,revision:z.number().int().positive(),previousHash:hash.nullable(),recordedAt:stamp,
+  league:z.literal('NBA'),season:z.number().int().nullable(),eventStartsAt:stamp,
+  internalFixtureId:id,oddsEventId:id,sportsbetEventId:id.nullable(),statsGameId:id.nullable(),
+  internalPlayerId:id.nullable(),oddsPlayerId:id.nullable(),statsPlayerId:id.nullable(),playerLabel:id,
+  market:z.literal('player_points'),side:z.enum(['Over','Under']),line:z.number().finite().min(0).max(100),period:z.literal('full_game'),overtime:z.literal('included'),
+  termsHash:hash.nullable(),sourceHashes:z.array(hash).min(1),
+  authority:z.object({namespace:z.enum(['nba_player_id','documented_provider_crosswalk']),oddsSourceHash:hash,statsSourceHash:hash,oddsPath:id,statsPath:id}).strict().nullable(),
+  status:z.enum(['blocked','verified']),reasons:z.array(id),
+}).strict();
+export type IdentityRevision=z.infer<typeof identityRevisionSchema>;
+function pointer(value:unknown,p:string):unknown {
+  if(!p.startsWith('/'))return undefined;
+  for(const key of p.slice(1).split('/').map(k=>k.replaceAll('~1','/').replaceAll('~0','~'))){if(!value||typeof value!=='object')return undefined;value=(value as Record<string,unknown>)[key];}
+  return value;
+}
+/** Non-name source authority is mandatory. A surname or fabricated hash cannot approve a map. */
+export function identityReasons(row:IdentityRevision,sources:RawEvidence[]) {
+  const reasons:string[]=[];
+  if(!row.statsGameId||row.season===null)reasons.push('exact_statistics_fixture_missing');
+  if(!row.statsPlayerId||!row.internalPlayerId)reasons.push('canonical_player_missing');
+  if(!row.termsHash)reasons.push('documented_settlement_terms_missing');
+  const available=new Map(sources.map(e=>[e.hash,e]));
+  if(sources.some(e=>digest(e.raw)!==e.hash)||row.sourceHashes.some(h=>!available.has(h)))reasons.push('immutable_source_missing_or_invalid');
+  if(sources.some(e=>Date.parse(e.retrievedAt)>Date.parse(row.recordedAt)))reasons.push('mapping_source_from_future');
+  const a=row.authority,odds=a?available.get(a.oddsSourceHash):null,stats=a?available.get(a.statsSourceHash):null;
+  if(!a||!odds||!stats||odds.provider!=='the-odds-api.com'||stats.provider!=='api-nba'||odds.hash===stats.hash)reasons.push('non_name_cross_provider_authority_missing');
+  else {const left=pointer(JSON.parse(odds.raw),a.oddsPath),right=pointer(JSON.parse(stats.raw),a.statsPath);
+    if(!/^\/bookmakers\/\d+\/markets\/\d+\/outcomes\/\d+\/participant_id$/.test(a.oddsPath)
+      ||!/^\/response\/\d+\/(?:player\/)?id$/.test(a.statsPath))reasons.push('unrecognised_authoritative_identifier_field');
+    if(left===null||left===undefined||!['string','number'].includes(typeof left)||String(left)!==String(right))reasons.push('shared_identifier_proof_mismatch');
+    if(a.namespace==='nba_player_id'&&(!row.oddsPlayerId||String(left)!==row.oddsPlayerId||String(right)!==row.statsPlayerId))reasons.push('player_identifier_mismatch');
+    if(a.namespace==='documented_provider_crosswalk')reasons.push('crosswalk_requires_explicit_registry_validation');
+  }
+  return reasons;
+}
+export async function appendIdentityRevision(root:string,proposal:IdentityRevision,sources:RawEvidence[]) {
+  const row=identityRevisionSchema.parse(proposal),reasons=identityReasons(row,sources);
+  if(row.status==='verified'&&reasons.length)throw new Error('Unverified identity authority: '+reasons.join(', '));
+  const normalized={...row,reasons:reasons.length?reasons:row.status==='blocked'?['mapping_not_activated']:[]};
+  const filename=path.join(root,'identity-registry',digest(row.mappingKey)+'.json');
+  return exclusive(filename+'.lock',async()=>{
+    let history:{hash:string;record:IdentityRevision}[]=[];
+    try{history=z.array(z.object({hash,record:identityRevisionSchema}).strict()).parse(JSON.parse(await fs.readFile(filename,'utf8')));}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
+    for(const item of history)if(digest(JSON.stringify(item.record))!==item.hash)throw new Error('Mapping history hash changed');
+    const replay=history.find(item=>item.record.id===row.id);
+    if(replay){if(JSON.stringify(replay.record)!==JSON.stringify(normalized))throw new Error('Mapping replay changed');return replay;}
+    const last=history.at(-1);
+    if(row.revision!==(last?.record.revision??0)+1||row.previousHash!==(last?.hash??null))throw new Error('Mapping revision conflict');
+    if(last&&Date.parse(row.recordedAt)<Date.parse(last.record.recordedAt))throw new Error('Mapping revision clock moved backwards');
+    const item={hash:digest(JSON.stringify(normalized)),record:normalized};await atomicPrivateJson(filename,[...history,item]);return item;
+  });
+}

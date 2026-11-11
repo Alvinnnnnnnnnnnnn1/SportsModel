@@ -28,9 +28,15 @@ export async function screenNbaShadow(evidence:RawEvidence,logs:NbaGameLog[],map
     // model-supported policy's out-of-sample validation requirement.
     if(modeled?.forecast)reasons.push('model_experimental_not_activated');
     const diagnostic=m?.status==='verified'&&modeled?.forecast?pointsThreshold(modeled.forecast.distribution,o.point,o.name):null;
+    const quoteFreshAt=(time:string)=>Boolean(market.last_update&&Date.parse(market.last_update)<=Date.parse(time)&&Date.parse(time)-Date.parse(market.last_update)<=300000);
     candidates.push({key,eventId:event.id,sportsbetEventId:book.sid??null,player:o.description,oddsPlayerId:o.participant_id??null,selection:o.name,threshold:o.point,market:'player_points',
       bookmaker:'sportsbet',originalOdds:o.price,sourceUpdatedAt:market.last_update??null,retrievedAt:evidence.retrievedAt,eventStartsAt:event.commence_time,rawHash:evidence.hash,
       mappingHash:m?await sha256(JSON.stringify(m)):null,probability:null,expectedValue:null,diagnosticProbability:diagnostic?.winProbability??null,
+      diagnosticForecast:diagnostic?modeled?.forecast??null:null,
+      eligibilityEvidence:{canonicalPlayerVerified:m?.status==='verified'&&Boolean(m.internalPlayerId&&m.statsPlayerId),
+        fixtureConfirmed:m?.status==='verified'&&Boolean(m.fixtureAuthority&&m.statsGameId)&&Date.parse(m.eventStartsAt)===Date.parse(event.commence_time),
+        exactThresholdSupported:true,settlementRulesVerified:m?.status==='verified'&&Boolean(m.termsHash),priceAttributable:true,
+        quoteFreshAtRetrieval:quoteFreshAt(evidence.retrievedAt),quoteFreshAtScreen:quoteFreshAt(at),genuineValidatedPreEventForecast:false},
       stakeCents:5000,decision:reasons.length?'blocked':'shadow_only',reasons,registrationProposal:null,
       correlationCluster:event.id,prospectiveRegistration:false});
   }

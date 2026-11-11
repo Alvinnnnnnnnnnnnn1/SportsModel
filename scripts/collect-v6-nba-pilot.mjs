@@ -12,13 +12,18 @@ const report={format:'edgelab.v6-real-source-pilot',version:1,at:new Date().toIS
 try{
  const {freeSources}=await loader.ssrLoadModule('/src/lib/v6/free-sources.server.ts');
  const {atomicPrivateJson}=await loader.ssrLoadModule('/src/lib/v6/evidence.server.ts');
+ const {preserveNbaScreen}=await loader.ssrLoadModule('/src/lib/v6/observations.server.ts');
  const source=freeSources({root,oddsKey:process.env.THE_ODDS_API_KEY,nbaKey:process.env.API_SPORTS_KEY});
  let nbaLast=0,oddsLast=0;
  const read=async(provider,endpoint,parameters={},cost=0)=>{
    const last=provider==='api-nba'?nbaLast:oddsLast,spacing=provider==='api-nba'?16100:1100;
    const delay=Math.max(0,last+spacing-Date.now());if(delay)await new Promise(r=>setTimeout(r,delay));
    const row={provider,endpoint,parameters};report.observations.push(row);
-   try{const e=await source.read(provider,endpoint,parameters,cost);row.hash=e.hash;row.retrievedAt=e.retrievedAt;const body=JSON.parse(e.raw);row.count=Array.isArray(body)?body.length:Array.isArray(body.response)?body.response.length:null;row.status='received';await atomicPrivateJson(path.join(directory,`source-${report.observations.length}.json`),e);console.log(JSON.stringify(row));return body;}
+   try{const e=await source.read(provider,endpoint,parameters,cost);row.hash=e.hash;row.retrievedAt=e.retrievedAt;const body=JSON.parse(e.raw);row.count=Array.isArray(body)?body.length:Array.isArray(body.response)?body.response.length:null;row.status='received';await atomicPrivateJson(path.join(directory,`source-${report.observations.length}.json`),e);
+    if(provider==='the-odds-api.com'&&parameters.markets==='player_points'){
+     const observation=await preserveNbaScreen(root,e,[],[],new Date().toISOString());row.observationalBatch=observation.record.id;
+    }
+    console.log(JSON.stringify(row));return body;}
    catch(error){row.status='blocked';row.error=error.message;console.log(JSON.stringify(row));return null;}
    finally{if(provider==='api-nba')nbaLast=Date.now();else oddsLast=Date.now();await atomicPrivateJson(path.join(directory,'report.json'),report);}
  };

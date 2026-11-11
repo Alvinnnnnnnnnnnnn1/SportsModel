@@ -33,13 +33,13 @@ export async function exclusive<T>(file:string,work:()=>Promise<T>):Promise<T> {
   if(!handle)throw new Error('V6 evidence writer busy; retry later');
   try{return await work();}finally{await handle.close();await fs.unlink(file);}
 }
-export interface RawEvidence {id:string;provider:'api-nba'|'the-odds-api.com';sourceUrl:string;retrievedAt:string;sourceUpdatedAt:string|null;raw:string;hash:string;}
+export interface RawEvidence {id:string;provider:'api-nba'|'api-basketball'|'the-odds-api.com';sourceUrl:string;retrievedAt:string;sourceUpdatedAt:string|null;raw:string;hash:string;}
 /** Content-addressed raw source is independent of model/position state. */
 export async function retainEvidence(root:string,evidence:RawEvidence) {
   if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(evidence.id)||!/^[a-f0-9]{64}$/.test(evidence.hash))throw new Error('Invalid evidence identifier');
   if(digest(evidence.raw)!==evidence.hash)throw new Error('Evidence SHA mismatch');
   const url=new URL(evidence.sourceUrl);
-  const expected=evidence.provider==='api-nba'?'https://v2.nba.api-sports.io':'https://api.the-odds-api.com';
+  const expected={'api-nba':'https://v2.nba.api-sports.io','api-basketball':'https://v1.basketball.api-sports.io','the-odds-api.com':'https://api.the-odds-api.com'}[evidence.provider];
   if(url.origin!==expected||url.username||url.password||[...url.searchParams.keys()].some(k=>/key|token|secret|password/i.test(k)))throw new Error('Invalid/credential-bearing evidence URL');
   const filename=path.join(root,'evidence',evidence.hash+'.json');
   return exclusive(filename+'.lock',async()=>{

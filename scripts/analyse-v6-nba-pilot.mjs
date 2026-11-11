@@ -12,6 +12,7 @@ try{
  const {evaluateNbaPoints}=await loader.ssrLoadModule('/src/lib/v6/nba-points.ts');
  const {appendIdentityRevision}=await loader.ssrLoadModule('/src/lib/v6/identity-registry.server.ts');
  const {screenNbaShadow}=await loader.ssrLoadModule('/src/lib/v6/shadow.ts');
+ const {preserveNbaScreen}=await loader.ssrLoadModule('/src/lib/v6/observations.server.ts');
  const {atomicPrivateJson,digest}=await loader.ssrLoadModule('/src/lib/v6/evidence.server.ts');
  const {localV6Repository}=await loader.ssrLoadModule('/src/lib/v6/repository.server.ts');
  const {runV6Worker}=await loader.ssrLoadModule('/src/lib/v6/worker.ts');
@@ -39,13 +40,14 @@ try{
    catch(error){if(error.code!=='ENOENT')throw error;const saved=await appendIdentityRevision(root,proposal,[odds,...(player&&profile?[profile]:[])]);mappings.push(saved.record);}
  }
  const shadow=await screenNbaShadow(odds,normalized.logs,mappings,at);
+ const observational=await preserveNbaScreen(root,odds,normalized.logs,mappings,at);
  const workerRepository=localV6Repository(path.join(root,'shadow-worker'),'local-source-audit-not-a-supabase-account');
  const worker=await runV6Worker(workerRepository,{collectionPermitted:true,collect:async()=>[],grade:async()=>null,
    screeningExclusions:async()=>shadow.candidates.map(c=>({sourceHash:c.rawHash,sourceIdentity:c.key,reasons:c.reasons}))},null,
    {runId:'nba-source-shadow:'+odds.hash,now:at,mode:'dry_run',killSwitch:false,activation:null});
  const report={format:'edgelab.v6-nba-pilot-analysis',version:1,at,scope:'private_local_evidence_only',sourceHashes:[games.hash,stats.hash,odds.hash],
    historicalLogs:normalized.logs.length,unmatchedGames:normalized.unmatchedGameIds,evaluation,verifiedCrossProviderMappings:mappings.filter(m=>m.status==='verified').length,
-   shadow,worker:{status:worker.status,journalledRuns:worker.state.runs.length,positions:worker.state.positions.length,grades:worker.state.grades.length,ownerContext:'local audit only, not authenticated Supabase'},hostedWrites:0,registrations:0,settlements:0};
+   shadow,observational:{id:observational.record.id,hash:observational.hash,status:observational.status},worker:{status:worker.status,journalledRuns:worker.state.runs.length,positions:worker.state.positions.length,grades:worker.state.grades.length,ownerContext:'local audit only, not authenticated Supabase'},hostedWrites:0,registrations:0,settlements:0};
  const out=path.join(root,'shadow-reports',digest(JSON.stringify(report))+'.json');await atomicPrivateJson(out,report);
  console.log(JSON.stringify({report:out,logs:report.historicalLogs,unmatched:report.unmatchedGames.length,backtest:evaluation.model,benchmark:evaluation.benchmark,heldOutGames:evaluation.uniquePlayerGames,screened:shadow.screened,verifiedMappings:report.verifiedCrossProviderMappings,registrations:0,settlements:0}));
 }finally{await loader.close();}

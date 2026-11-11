@@ -11,17 +11,18 @@ export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;
 export function freeSources(options:FreeSourceOptions) {
   const fetcher=options.fetcher??fetch,clock=options.clock??Date.now;
   return { async read(provider:RawEvidence['provider'],endpoint:string,parameters:Record<string,string>={},oddsCost=0):Promise<RawEvidence> {
+    if(!['api-nba','api-basketball','the-odds-api.com'].includes(provider))throw new Error('Unapproved source provider');
     if(Object.keys(parameters).some(k=>/key|token|secret|password/i.test(k)))throw new Error('Credentials are transport configuration only');
-    const odds=provider==='the-odds-api.com',secret=odds?options.oddsKey:options.nbaKey;
+    const odds=provider==='the-odds-api.com',basketball=provider==='api-basketball',secret=odds?options.oddsKey:options.nbaKey;
     if(!secret)throw new Error('Optional server-only source key is not configured');
     if(odds ? !/^\/v4\/sports(?:\/basketball_nba\/(?:events(?:\/[a-zA-Z0-9_-]+\/odds)?|odds|participants))?$/.test(endpoint)
-      : !['/status','/games','/players','/players/statistics','/teams'].includes(endpoint))throw new Error('Unapproved read endpoint');
+      : !(basketball?['/status','/leagues','/seasons','/games','/games/statistics/players','/players','/teams']:['/status','/games','/players','/players/statistics','/teams']).includes(endpoint))throw new Error('Unapproved read endpoint');
     const expectedCost=odds&&endpoint.endsWith('/odds')?1:0;
     if(oddsCost!==expectedCost)throw new Error('Unexpected credit cost; only one-market NBA reads are supported');
     if(odds&&expectedCost&&(parameters.markets!=='player_points'&&parameters.markets!=='h2h'||parameters.bookmakers!=='sportsbet'))throw new Error('Only one Sportsbet market per request is permitted');
-    const url=new URL(endpoint,odds?'https://api.the-odds-api.com':'https://v2.nba.api-sports.io');
+    const url=new URL(endpoint,odds?'https://api.the-odds-api.com':basketball?'https://v1.basketball.api-sports.io':'https://v2.nba.api-sports.io');
     for(const [key,value]of Object.entries(parameters))url.searchParams.set(key,value);
-    const sourceUrl=url.toString(),file=path.join(options.root,odds?'odds-shared-budget.json':'nba-pilot-budget.json');
+    const sourceUrl=url.toString(),file=path.join(options.root,odds?'odds-shared-budget.json':basketball?'basketball-pilot-budget.json':'nba-pilot-budget.json');
     return exclusive(file+'.lock',async()=>{
       const now=clock(),period=new Date(now).toISOString().slice(0,odds?7:10);
       let budget={period,reserved:0,remaining:null as number|null,used:null as number|null,lastRequest:0,uncertain:false,freeConfirmed:false};
@@ -62,7 +63,7 @@ export function freeSources(options:FreeSourceOptions) {
       await atomicPrivateJson(path.join(options.root,'source-quota-receipts',crypto.randomUUID()+'.json'),{
         provider,sourceUrl,status:response.status,observedAt:new Date(clock()).toISOString(),requestedCost:cost,remaining,used,
         lastCost:numberHeader('x-requests-last'),quotaKnown});
-      budget.uncertain=!quotaKnown;if(odds)budget.freeConfirmed=quotaKnown;await atomicPrivateJson(file,budget);
+      budget.uncertain=!quotaKnown;if(odds)budget.freeConfirmed=quotaKnown;else if(endpoint==='/status')budget.freeConfirmed=false;await atomicPrivateJson(file,budget);
       if(!odds&&endpoint==='/status') {
         if(!response.ok||!quotaKnown)throw new Error('Free status/quota could not be established');
         const safe=z.object({response:z.object({subscription:z.object({active:z.boolean(),plan:z.string()}),requests:z.object({limit_day:z.number(),current:z.number().int().nonnegative().optional()})})}).parse(value);
@@ -75,7 +76,7 @@ export function freeSources(options:FreeSourceOptions) {
       const evidence:RawEvidence={id:crypto.randomUUID(),provider,sourceUrl,retrievedAt:new Date(clock()).toISOString(),sourceUpdatedAt:null,raw,hash:digest(raw)};
       await retainEvidence(options.root,evidence);
       if(!response.ok)throw new Error(`Source HTTP ${response.status}; retained evidence ${evidence.hash}; no retry or upgrade`);
-      if(!odds&&value.errors&&Object.keys(value.errors).length)throw new Error(`NBA scope rejected; retained evidence ${evidence.hash}`);
+      if(!odds&&value.errors&&Object.keys(value.errors).length)throw new Error(`${basketball?'Basketball':'NBA'} scope rejected; retained evidence ${evidence.hash}`);
       if(!quotaKnown)throw new Error(`Free quota could not be established; retained evidence ${evidence.hash}`);
       return evidence;
     });

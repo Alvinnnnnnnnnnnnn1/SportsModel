@@ -14,11 +14,17 @@ language sql immutable strict set search_path='' as $$
   select encode(sha256(convert_to(value,'UTF8')),'hex')
 $$;
 -- Evidence addresses are stored, never fetched by SQL. This deliberately
--- accepts only credential-free HTTPS addresses without queries/fragments.
+-- accepts credential-free HTTPS addresses and plain, non-secret query names.
 create function public.v6_public_url(value text) returns boolean
-language sql immutable set search_path='' as $$
-  select coalesce(value ~ '^https://[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]+)?(/[^[:space:]?#@]*)?$',false)
-$$;
+language plpgsql immutable set search_path='' as $$
+declare part text;query text;begin
+  if value is null or value !~ '^https://[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]+)?(/[^[:space:]?#@]*)?(\?[^[:space:]#@]*)?$' then return false;end if;
+  query:=split_part(value,'?',2);
+  if query<>'' then foreach part in array string_to_array(query,'&') loop
+    if part !~ '^[A-Za-z_][A-Za-z0-9_\[\]]*=[^[:space:]#@&]*$' or split_part(part,'=',1) ~* '(key|token|password|secret)' then return false;end if;
+  end loop;end if;
+  return true;
+end$$;
 
 create table public.v6_policies (
   user_id uuid not null references auth.users(id), id text not null,
@@ -35,7 +41,7 @@ create table public.v6_controls (
 );
 create table public.v6_models (
   user_id uuid not null references auth.users(id), id text not null, version text not null,
-  method text not null check(method in ('poisson_minutes_rate','surface_elo')),
+  method text not null check(method in ('poisson_minutes_rate','surface_elo','nba_team_elo')),
   manifest_hash text not null check(manifest_hash ~ '^[a-f0-9]{64}$'),
   validation text not null check(validation in ('experimental','out_of_sample_validated')),
   approved_at timestamptz, payload jsonb not null,
@@ -146,7 +152,7 @@ do $$declare name text;begin
 end$$;
 
 create function public.v6_check_position() returns trigger language plpgsql security invoker set search_path='' as $$
-declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;clock timestamptz:=clock_timestamp();quote_time timestamptz;start_time timestamptz;begin
+declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;t jsonb;field text;home_prob numeric;calculated numeric;market_base numeric;elo_base numeric;clock timestamptz:=clock_timestamp();quote_time timestamptz;start_time timestamptz;begin
   if NEW.user_id is distinct from auth.uid() then raise exception 'V6 owner mismatch';end if;
   select * into p from public.v6_policies where user_id=NEW.user_id and id=NEW.policy_id;
   if p.activated_at is null or p.activated_at>clock or not exists(select 1 from public.v6_controls where user_id=NEW.user_id and policy_id=NEW.policy_id and enabled and not kill_switch) then raise exception 'V6 standing policy inactive';end if;
@@ -183,6 +189,40 @@ declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;clock timestampt
     or (f->>'inputCutoff')::timestamptz>(f->>'generatedAt')::timestamptz or (f->>'generatedAt')::timestamptz>clock
     or (f#>>'{inputs,sourceObservedAt}')::timestamptz is null or (f#>>'{inputs,sourceObservedAt}')::timestamptz>(f->>'inputCutoff')::timestamptz
     or (f->>'probability')::numeric*NEW.original_odds+(f->>'pushProbability')::numeric-1<0.02 then raise exception 'V6 pre-event/source/model quality gate failed';end if;
+  if m.method='nba_team_elo' then
+    t:=f#>'{inputs,team}';
+    if jsonb_typeof(t) is distinct from 'object' or m.id<>'nba-team-elo-form-rest' or m.version<>'experimental-1'
+      or NEW.canonical_market->>'sport' is distinct from 'NBA' or NEW.canonical_market->>'statistic' is distinct from 'moneyline'
+      or NEW.canonical_market->>'operator' is distinct from 'win' or NEW.canonical_market->>'period' is distinct from 'full_game'
+      or NEW.canonical_market->>'overtime' is distinct from 'included' or (f->>'pushProbability')::numeric<>0
+      or nullif(t->>'homeId','') is null or nullif(t->>'awayId','') is null or t->>'homeId'=t->>'awayId'
+      or NEW.canonical_market->>'subjectId' not in (t->>'homeId',t->>'awayId')
+      or coalesce(t->>'historyHash','') !~ '^[a-f0-9]{64}$' or coalesce(t->>'registryHash','') !~ '^[a-f0-9]{64}$'
+      then raise exception 'V6 exact NBA team model identity invalid';end if;
+    foreach field in array array['homeRating','awayRating','homeCourt','formAdjustment','restAdjustment','shrinkage'] loop
+      if jsonb_typeof(t->field) is distinct from 'number' then raise exception 'V6 team numerical input missing';end if;
+    end loop;
+    if (t->>'homeRating')::numeric not between 0 and 5000 or (t->>'awayRating')::numeric not between 0 and 5000
+      or (t->>'homeCourt')::numeric<>60 or (t->>'formAdjustment')::numeric not between -160 and 160
+      or (t->>'restAdjustment')::numeric not between -20 and 20 or (t->>'shrinkage')::numeric<>0.05
+      or nullif(t->>'safeEventStartsAt','') is null or (t->>'safeEventStartsAt')::timestamptz>start_time
+      or (t->>'safeEventStartsAt')::timestamptz<=clock or (f->>'inputCutoff')::timestamptz>=(t->>'safeEventStartsAt')::timestamptz
+      then raise exception 'V6 team input/start gate failed';end if;
+    home_prob:=0.95/(1+power(10::numeric,-((t->>'homeRating')::numeric-(t->>'awayRating')::numeric+60+(t->>'formAdjustment')::numeric+(t->>'restAdjustment')::numeric)/400))+0.025;
+    calculated:=case when NEW.canonical_market->>'subjectId'=t->>'homeId' then home_prob else 1-home_prob end;
+    if abs(calculated-(f->>'probability')::numeric)>0.0000000001 then raise exception 'V6 team probability is not reproducible';end if;
+    if t->>'researchPolicyId' is distinct from 'nba-moneyline-two-pass-1' or jsonb_typeof(t->'homeOdds') is distinct from 'number' or jsonb_typeof(t->'awayOdds') is distinct from 'number'
+      then raise exception 'V6 team research policy evidence missing';end if;
+    if (t->>'homeOdds')::numeric not between 1.0001 and 10000 or (t->>'awayOdds')::numeric not between 1.0001 and 10000
+      or (t->>'homeOdds')::numeric<>round((t->>'homeOdds')::numeric,4) or (t->>'awayOdds')::numeric<>round((t->>'awayOdds')::numeric,4)
+      or NEW.original_odds<>(case when NEW.canonical_market->>'subjectId'=t->>'homeId' then (t->>'homeOdds')::numeric else (t->>'awayOdds')::numeric end)
+      then raise exception 'V6 team original price mismatch';end if;
+    market_base:=(1/(t->>'homeOdds')::numeric)/(1/(t->>'homeOdds')::numeric+1/(t->>'awayOdds')::numeric);
+    elo_base:=1/(1+power(10::numeric,-((t->>'homeRating')::numeric-(t->>'awayRating')::numeric+60)/400));
+    if NEW.canonical_market->>'subjectId'<>t->>'homeId' then market_base:=1-market_base;elo_base:=1-elo_base;end if;
+    if calculated<0.55 or abs(calculated-market_base)>0.15 or abs(calculated-elo_base)>0.08 or (0.5+(calculated-0.5)*0.8)*NEW.original_odds-1<0.02
+      then raise exception 'V6 two-pass team research quality gate failed';end if;
+  end if;
   NEW.registered_at:=clock;
   NEW.payload:=jsonb_set(NEW.payload,'{registeredAt}',to_jsonb(clock));
   return NEW;

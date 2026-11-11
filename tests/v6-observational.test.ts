@@ -10,7 +10,7 @@ import { preserveNbaScreen,observeNbaOutcome } from '@/lib/v6/observations.serve
 import { appendIdentityRevision,type IdentityRevision } from '@/lib/v6/identity-registry.server';
 const at='2026-11-11T04:00:00.000Z',start='2026-11-12T00:00:00.000Z',after='2026-11-12T04:00:00.000Z';
 const evidence=(endpoint:string,body:unknown,provider:RawEvidence['provider']='api-nba',time=at):RawEvidence=>{
- const origin={'api-nba':'https://v2.nba.api-sports.io','api-basketball':'https://v1.basketball.api-sports.io','the-odds-api.com':'https://api.the-odds-api.com'}[provider],raw=JSON.stringify(body);
+ const origin={'api-nba':'https://v2.nba.api-sports.io','api-basketball':'https://v1.basketball.api-sports.io','the-odds-api.com':'https://api.the-odds-api.com',balldontlie:'https://api.balldontlie.io',thesportsdb:'https://www.thesportsdb.com'}[provider],raw=JSON.stringify(body);
  return {id:crypto.randomUUID(),provider,sourceUrl:origin+endpoint,retrievedAt:time,sourceUpdatedAt:null,raw,hash:digest(raw)};
 };
 const env=(response:unknown[])=>({errors:[],response});

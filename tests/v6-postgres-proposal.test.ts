@@ -8,6 +8,8 @@ import { registerPaper,positionHash } from '@/lib/v6/engine';
 import { emptyV6State,positionSchema,type PaperPosition } from '@/lib/v6/types';
 import { V6_POLICY } from '@/lib/v6/policy';
 import { observation,forecast,grade } from './fixtures/v6';
+import { teamEloProbability } from '@/lib/v6/models';
+import { type Forecast } from '@/lib/v6/types';
 interface DB{exec(s:string):Promise<unknown>;query<T extends Record<string,unknown>=Record<string,unknown>>(s:string,a?:unknown[]):Promise<{rows:T[]}>;close():Promise<void>;}
 const runtime=process.env.EDGELAB_POSTGRES_RUNTIME;
 describe.skipIf(!runtime)('V6 isolated SQL proposal',()=>{
@@ -38,6 +40,20 @@ describe.skipIf(!runtime)('V6 isolated SQL proposal',()=>{
    const malformed=structuredClone(p);malformed.id=crypto.randomUUID();malformed.observation.id=crypto.randomUUID();malformed.observation.market.threshold=23;malformed.forecast=await forecast(malformed.observation);malformed.forecast.probability=2;
    await insertObservation(malformed.observation);await expect(register(malformed)).rejects.toThrow(/forecast/);
    expect(positionSchema.parse(await register({...p,id:crypto.randomUUID()})).id).toBe(p.id);
+   expect((await db.query("select public.v6_public_url('https://api.the-odds-api.com/v4/sports/basketball_nba/odds?bookmakers=sportsbet&markets=h2h') ok")).rows[0].ok).toBe(true);
+   for(const query of ['apiKey=LOCAL','%61piKey=LOCAL','access_token=LOCAL','password=LOCAL'])expect((await db.query('select public.v6_public_url($1) ok',['https://example.invalid/?'+query])).rows[0].ok).toBe(false);
+   // Deliberate late error rolls back this synthetic team transaction, preserving old counts.
+   await db.exec('begin');
+   const teamO=structuredClone(o);teamO.id=crypto.randomUUID();teamO.eventStartsAt=new Date(Date.now()+3600000).toISOString();teamO.sourceUrl='https://api.the-odds-api.com/v4/sports/basketball_nba/odds?bookmakers=sportsbet&markets=h2h';
+   teamO.market={sport:'NBA',eventId:'LOCAL-team-event',subjectId:'LOCAL-home',statistic:'moneyline',operator:'win',threshold:null,period:'full_game',periodNumber:null,overtime:'included',termsVersion:'LOCAL-team-ot'};
+   const inputs={...f.inputs,minutes:null,ratePerMinute:null,team:{homeId:'LOCAL-home',awayId:'LOCAL-away',homeRating:1800,awayRating:1400,homeCourt:60 as const,formAdjustment:0,restAdjustment:0,shrinkage:.05 as const,historyHash:'a'.repeat(64),registryHash:'b'.repeat(64),safeEventStartsAt:teamO.eventStartsAt,researchPolicyId:'nba-moneyline-two-pass-1',homeOdds:teamO.odds,awayOdds:8}};
+   const teamF:Forecast={...f,market:teamO.market,modelId:'nba-team-elo-form-rest',version:'experimental-1',method:'nba_team_elo',probability:teamEloProbability(teamO.market,inputs.team),pushProbability:0,inputs,inputsHash:await sha256(JSON.stringify(inputs))};
+   await db.query('insert into public.v6_models values($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',[owner,teamF.modelId,teamF.version,teamF.method,'a'.repeat(64),'out_of_sample_validated',activated,'{}']);
+   await insertObservation(teamO);const teamP=(await registerPaper(emptyV6State(owner),teamO,teamF,'pre_event_once',at)).position!;
+   expect(positionSchema.parse(await register(teamP)).forecast?.method).toBe('nba_team_elo');
+   const badTeam=structuredClone(teamP);badTeam.id=crypto.randomUUID();badTeam.observation.id=crypto.randomUUID();badTeam.observation.market.eventId='LOCAL-other-team-event';badTeam.forecast!.market=badTeam.observation.market;badTeam.forecast!.probability=.99;await insertObservation(badTeam.observation);
+   await expect(register(badTeam)).rejects.toThrow(/reproducible/);await db.exec('rollback');
+   expect((await db.query("select count(*)::int n from public.v6_positions where model_id='nba-team-elo-form-rest'")).rows[0].n).toBe(0);
    await expect(db.query("update public.v6_positions set payload='{}'::jsonb where user_id=$1",[owner])).rejects.toThrow();
    await expect(db.query('delete from public.v6_positions where user_id=$1',[owner])).rejects.toThrow(/permission denied/);
    for(let i=0;i<101;i++){

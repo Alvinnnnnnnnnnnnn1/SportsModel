@@ -25,9 +25,10 @@ export const observationSchema = z.object({
 export type Observation = z.infer<typeof observationSchema>;
 export const forecastSchema = z.object({
   market: marketSchema, probability: z.number().min(0).max(1), pushProbability: z.number().min(0).max(1), modelId: text, version: text,
-  method: z.enum(['poisson_minutes_rate','surface_elo']), validation: z.enum(['experimental','out_of_sample_validated']),
+  method: z.enum(['poisson_minutes_rate','surface_elo','nba_team_elo']), validation: z.enum(['experimental','out_of_sample_validated']),
   generatedAt: stamp, inputCutoff: stamp, inputsHash: hash, evidenceUrls: z.array(url).min(1),
-  inputs: z.object({minutes:z.number().finite().nullable(),ratePerMinute:z.number().finite().nullable(),surface:z.enum(['hard','clay','grass']).nullable(),rating:z.number().finite().nullable(),opponentRating:z.number().finite().nullable(),sampleSize:z.number().int().positive(),sourceObservedAt:stamp,sourceUrl:url}).strict(),
+  inputs: z.object({minutes:z.number().finite().nullable(),ratePerMinute:z.number().finite().nullable(),surface:z.enum(['hard','clay','grass']).nullable(),rating:z.number().finite().nullable(),opponentRating:z.number().finite().nullable(),sampleSize:z.number().int().positive(),sourceObservedAt:stamp,sourceUrl:url,
+    team:z.object({homeId:text,awayId:text,homeRating:z.number().min(0).max(5000),awayRating:z.number().min(0).max(5000),homeCourt:z.literal(60),formAdjustment:z.number().min(-160).max(160),restAdjustment:z.number().min(-20).max(20),shrinkage:z.literal(.05),historyHash:hash,registryHash:hash,safeEventStartsAt:stamp,researchPolicyId:text.optional(),homeOdds:z.number().min(1.0001).max(10000).optional(),awayOdds:z.number().min(1.0001).max(10000).optional()}).strict().optional()}).strict(),
 }).strict().refine(f => f.probability + f.pushProbability <= 1 + 1e-12, 'Win and push probabilities exceed one');
 export type Forecast = z.infer<typeof forecastSchema>;
 export const positionSchema = z.object({

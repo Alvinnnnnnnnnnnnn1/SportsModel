@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { atomicPrivateJson,digest,exclusive,retainEvidence,type RawEvidence } from './evidence.server';
 
 const budgetSchema=z.object({period:z.string(),reserved:z.number().int().nonnegative(),remaining:z.number().int().nonnegative().nullable(),used:z.number().int().nonnegative().nullable(),lastRequest:z.number().nonnegative(),uncertain:z.boolean(),freeConfirmed:z.boolean().default(false)}).strict();
-export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number; }
+export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number;oddsPilot?:'team-moneyline-v1'; }
 /** Explicit read-only transport. Every V6 collector/worker shares this on-disk quota.
  * Uncertain reservations are never silently refunded after transport failure.
  */
@@ -15,11 +15,13 @@ export function freeSources(options:FreeSourceOptions) {
     if(Object.keys(parameters).some(k=>/key|token|secret|password/i.test(k)))throw new Error('Credentials are transport configuration only');
     const odds=provider==='the-odds-api.com',basketball=provider==='api-basketball',secret=odds?options.oddsKey:options.nbaKey;
     if(!secret)throw new Error('Optional server-only source key is not configured');
-    if(odds ? !/^\/v4\/sports(?:\/basketball_nba\/(?:events(?:\/[a-zA-Z0-9_-]+\/odds)?|odds|participants))?$/.test(endpoint)
+    if(odds ? !/^\/v4\/sports(?:\/basketball_nba\/(?:events(?:\/[a-zA-Z0-9_-]+\/odds)?|odds|participants|scores))?$/.test(endpoint)
       : !(basketball?['/status','/leagues','/seasons','/games','/games/statistics/players','/players','/teams']:['/status','/games','/players','/players/statistics','/teams']).includes(endpoint))throw new Error('Unapproved read endpoint');
-    const expectedCost=odds&&endpoint.endsWith('/odds')?1:0;
+    const scores=odds&&endpoint.endsWith('/scores');
+    if(scores&&(options.oddsPilot!=='team-moneyline-v1'||parameters.daysFrom!==undefined&&!['1','2','3'].includes(parameters.daysFrom)))throw new Error('Completed scores require the bounded team pilot and daysFrom 1–3');
+    const expectedCost=odds&&endpoint.endsWith('/odds')?1:scores?parameters.daysFrom?2:1:0;
     if(oddsCost!==expectedCost)throw new Error('Unexpected credit cost; only one-market NBA reads are supported');
-    if(odds&&expectedCost&&(parameters.markets!=='player_points'&&parameters.markets!=='h2h'||parameters.bookmakers!=='sportsbet'))throw new Error('Only one Sportsbet market per request is permitted');
+    if(odds&&expectedCost&&!scores&&(parameters.markets!=='player_points'&&parameters.markets!=='h2h'||parameters.bookmakers!=='sportsbet'))throw new Error('Only one Sportsbet market per request is permitted');
     const url=new URL(endpoint,odds?'https://api.the-odds-api.com':basketball?'https://v1.basketball.api-sports.io':'https://v2.nba.api-sports.io');
     for(const [key,value]of Object.entries(parameters))url.searchParams.set(key,value);
     const sourceUrl=url.toString(),file=path.join(options.root,odds?'odds-shared-budget.json':basketball?'basketball-pilot-budget.json':'nba-pilot-budget.json');
@@ -33,9 +35,10 @@ export function freeSources(options:FreeSourceOptions) {
         catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
       }
       const cost=odds?oddsCost:endpoint==='/status'?0:1;
-      // New task authorises a bounded two-credit extension to the previous four.
+      // Explicit team task adds a bounded slate/result audit, sharing all old
+      // reservations. Never reset counters; this is not a position-volume cap.
       // This is an acquisition budget, never a paper count/exposure limit.
-      const ceiling=odds?6:10;
+      const ceiling=odds?(options.oddsPilot==='team-moneyline-v1'?12:6):10;
       if(budget.uncertain&&cost)throw new Error('Source quota is uncertain; successful free status/catalogue read required');
       if(cost&&!budget.freeConfirmed)throw new Error('Verify the free plan through a status/catalogue read first');
       if(budget.reserved+cost>ceiling||budget.remaining!==null&&budget.remaining-cost<(odds?100:20))throw new Error('Free-source reserve/bounded pilot allowance reached');

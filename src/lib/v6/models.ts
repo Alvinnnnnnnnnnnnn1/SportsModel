@@ -13,6 +13,16 @@ export function surfaceEloProbability(rating:number,opponentRating:number):numbe
   if(!Number.isFinite(rating)||!Number.isFinite(opponentRating)||rating<0||opponentRating<0||rating>5000||opponentRating>5000)throw new Error('Invalid surface Elo inputs');
   return 1/(1+10**((opponentRating-rating)/400));
 }
+/** Frozen team model formula, distinct from tennis Elo. */
+export function teamEloProbability(market:CanonicalMarket,inputs:{homeId:string;awayId:string;homeRating:number;awayRating:number;homeCourt:number;formAdjustment:number;restAdjustment:number;shrinkage:number}):number {
+ const m=marketSchema.parse(market);
+ if(m.sport!=='NBA'||m.statistic!=='moneyline'||m.operator!=='win'||m.period!=='full_game'||m.overtime!=='included'||inputs.homeId===inputs.awayId||![inputs.homeId,inputs.awayId].includes(m.subjectId))throw new Error('Unsupported NBA team moneyline');
+ const values=[inputs.homeRating,inputs.awayRating,inputs.homeCourt,inputs.formAdjustment,inputs.restAdjustment,inputs.shrinkage];
+ if(values.some(v=>!Number.isFinite(v))||inputs.homeCourt!==60||inputs.shrinkage!==.05||Math.abs(inputs.formAdjustment)>160||Math.abs(inputs.restAdjustment)>20||inputs.homeRating<0||inputs.homeRating>5000||inputs.awayRating<0||inputs.awayRating>5000)throw new Error('Invalid frozen team model inputs');
+ const delta=inputs.homeRating-inputs.awayRating+inputs.homeCourt+inputs.formAdjustment+inputs.restAdjustment;
+ const home=(1-inputs.shrinkage)/(1+10**(-delta/400))+inputs.shrinkage*.5;
+ return m.subjectId===inputs.homeId?home:1-home;
+}
 /** Integer-line over/under can push; alternate >=/<= lines cannot. */
 export function poissonPushProbability(market:CanonicalMarket,minutes:number,ratePerMinute:number):number {
   if (!['gt','lt'].includes(market.operator) || !Number.isInteger(market.threshold)) return 0;

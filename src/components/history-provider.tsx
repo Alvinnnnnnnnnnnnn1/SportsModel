@@ -13,7 +13,9 @@ import { assertReconciliationSelection } from '@/lib/reconciliation/source';
 import { latestDailyDecision, prepareDailyDecisionPreview, researchPaperBlockers, sourceResearchCandidate } from '@/lib/daily/research';
 import { applyHistoricalResultBatch, type ResultBatchSummary } from '@/lib/daily/result-batch';
 import type { SettlementResponse } from '@/lib/results';
+import { archiveDailyCycle, savedDailyCycles, type DailyCycleReceipt } from '@/lib/daily-cycle/archive';
 interface HistoryContextValue {
+  saveDailyCycle: (text: string) => Promise<DailyCycleReceipt>;
   readCurrentHistory: () => HistoricalWorkspace;
   history: HistoricalWorkspace; loading: boolean; error: string | null; needsMigration: boolean;
   reload: () => void;
@@ -142,5 +144,15 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     assertReconciliationSelection(preview, decisions, readCurrentData(), value);
     return commitHistoricalImport(value, prepareImportCommit(preview, decisions, verification, value.records));
   });
-  return <Context.Provider value={{ readCurrentHistory: () => structuredClone(current.current), history: displayed, loading: appLoading || state.identity !== identity || state.loading, error: state.identity === identity ? state.error : null, needsMigration: state.identity === identity && state.needsMigration, reload: () => setReloadVersion(value => value + 1), refresh, archiveResearch, decideResearch, registerResearchPaper, applyResultBatch, commitPreview, registerPaper, recordPaperResult: (id, result) => mutate(identity, value => settleHistoricalPaper(value, id, result)), approveResearch: (preview, decisions, verification, confirmDayCompletion, previousProposals) => mutate(identity, value => commitApprovedResearch(value, preview, decisions, verification, { confirmDayCompletion, previousProposals })), createNotification: id => mutate(identity, value => createHistoricalNotification(value, id)), markRead: id => mutate(identity, value => markHistoricalNotificationRead(value, id)), dismiss: id => mutate(identity, value => dismissHistoricalNotification(value, id)), confirmActual }}>{children}</Context.Provider>;
+  const saveDailyCycle = async (text: string) => {
+    let receipt: DailyCycleReceipt | undefined;
+    await mutate(identity, async value => {
+      const next = await archiveDailyCycle(value, text, mode); receipt = next.receipt; return next.history;
+    });
+    await refresh();
+    const readBack = savedDailyCycles(current.current).find(item => item.recordId === receipt?.recordId);
+    if (!readBack) throw new Error('The cycle save could not be confirmed by read-back. Reload before retrying; do not assume it failed.');
+    return readBack;
+  };
+  return <Context.Provider value={{ saveDailyCycle, readCurrentHistory: () => structuredClone(current.current), history: displayed, loading: appLoading || state.identity !== identity || state.loading, error: state.identity === identity ? state.error : null, needsMigration: state.identity === identity && state.needsMigration, reload: () => setReloadVersion(value => value + 1), refresh, archiveResearch, decideResearch, registerResearchPaper, applyResultBatch, commitPreview, registerPaper, recordPaperResult: (id, result) => mutate(identity, value => settleHistoricalPaper(value, id, result)), approveResearch: (preview, decisions, verification, confirmDayCompletion, previousProposals) => mutate(identity, value => commitApprovedResearch(value, preview, decisions, verification, { confirmDayCompletion, previousProposals })), createNotification: id => mutate(identity, value => createHistoricalNotification(value, id)), markRead: id => mutate(identity, value => markHistoricalNotificationRead(value, id)), dismiss: id => mutate(identity, value => dismissHistoricalNotification(value, id)), confirmActual }}>{children}</Context.Provider>;
 }

@@ -18,6 +18,7 @@ import type { ContinuityEvidenceBundle } from '@/lib/handoff/continuity-evidence
 import type { PriorResearchSelection } from '@/lib/handoff/response';
 import { buildDailyCyclePrompt, calculateDailyFeedback, formatPreparationForPrompt, prepareDailyResearch } from '@/lib/daily-cycle';
 import { readDailyCycleCheckpoints, readDailyFeedback } from '@/lib/daily-cycle/storage';
+import { savedDailyCycles } from '@/lib/daily-cycle/archive';
 import { getSupabaseClient } from '@/lib/persistence';
 import type { SportsSnapshot } from '@/lib/sports/types';
 
@@ -35,8 +36,12 @@ function HandoffWorkspace() {
   const [stagedContinuity,setStagedContinuity]=useState<ContinuityEvidenceBundle|null>(null); const [continuityLoading,setContinuityLoading]=useState(true);
   const previousProposals=useMemo<PriorResearchSelection[]>(()=>stagedContinuity?.items.filter(item=>item.category.startsWith('day6_')||item.category==='owner_confirmed_pending_actual_review').map(item=>({...item.facts,id:item.evidenceId,ownerConfirmedPlaced:item.category==='owner_confirmed_pending_actual_review'||!!stagedContinuity?.ownerCheckpoint?.mapping.linkedResearchReferences.includes(item.facts.externalId??'')}))??[],[stagedContinuity]);
   const handoff = useMemo(()=>buildResearchHandoff({appData:data,history,mode,now:generatedAt,stagedContinuity}),[data,history,mode,generatedAt,stagedContinuity]);
-  const checkpoint = useMemo(() => readDailyCycleCheckpoints(user?.id ?? "demo").at(-1), [user?.id]);
-  const feedback = useMemo(() => readDailyFeedback(user?.id ?? "demo").at(-1)?.summary ?? checkpoint?.feedback ?? calculateDailyFeedback(data), [user?.id, checkpoint, data]);
+  const checkpoint = useMemo(() => {
+    if (mode === 'demo') return readDailyCycleCheckpoints('demo').at(-1);
+    const receipt = savedDailyCycles(history).at(-1);
+    return receipt ? { cycleKey: receipt.cycleKey, cycle: receipt.cycle, appliedAt: receipt.savedAt, settledKeys: [], skippedKeys: receipt.cycle.resultUpdates.map(item=>item.positionId), feedback: calculateDailyFeedback(data) } : undefined;
+  }, [mode, history, data]);
+  const feedback = useMemo(() => (mode === "demo" ? readDailyFeedback("demo").at(-1)?.summary : undefined) ?? checkpoint?.feedback ?? calculateDailyFeedback(data), [mode, checkpoint, data]);
   const dailyCyclePrompt = useMemo(() => buildDailyCyclePrompt({ data, history, researchContext: handoff.context, researchDate: handoff.context.researchDate, researchSessionId: handoff.context.sessionId, previousCheckpoint: checkpoint?.cycleKey ?? null, providerPreparation: preparation ? formatPreparationForPrompt(preparation) : undefined, feedbackSummary: JSON.stringify(feedback), previousCycleSummary: checkpoint ? JSON.stringify({ cycleKey: checkpoint.cycleKey, settledKeys: checkpoint.settledKeys, skippedKeys: checkpoint.skippedKeys, betRecommendations: checkpoint.cycle.betRecommendations, paperRecommendations: checkpoint.cycle.paperRecommendations }) : undefined }), [data, history, handoff.context, preparation, checkpoint, feedback]);
   const unavailable=loading||appLoading||continuityLoading||!!error||!!appError||(mode==='supabase'&&!user);
   const approved=history.records.filter(record=>getResearchRecordMetadata(record));

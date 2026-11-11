@@ -5,8 +5,9 @@ const uuid = z.string().uuid();
 const timestamp = z.string().datetime({ offset: true });
 const nullableText = z.string().trim().min(1).max(2000).nullable();
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const publicSourceUrl = z.string().url().refine(value=>{const u=new URL(value);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password&&![...u.searchParams.keys()].some(key=>/^(?:api_?key|password|access_?token|refresh_?token|token|secret|key)$/i.test(key));},'Use an attributable HTTP(S) source URL without credentials.');
 const source = z.object({
-  url: z.string().url().nullable(),
+  url: publicSourceUrl.nullable(),
   observedAt: timestamp.nullable(),
   note: nullableText,
 }).strict();
@@ -46,12 +47,17 @@ export const dailyCycleResultSchema = z.object({
 const recommendation = identity.extend({
   candidateId: id,
   startsAt: timestamp.nullable(),
-  originalOdds: z.number().min(1.0001).nullable(),
+  originalOdds: z.number().min(1.0001).max(10000).refine(value => Math.abs(value * 10000 - Math.round(value * 10000)) < .00001).nullable(),
   quoteSource: nullableText,
+  bookmaker: nullableText.optional(),
   quoteTimestamp: timestamp.nullable(),
   probability: z.number().min(0).max(1).nullable(),
   probabilityMethod: nullableText,
   modelVersion: nullableText,
+  probabilityProvenance: z.object({
+    origin: z.enum(['deterministic_model', 'external_forecast', 'llm', 'unknown']),
+    source: nullableText, method: nullableText, modelVersion: nullableText, timestamp: timestamp.nullable(),
+  }).strict().optional(),
   uncertainty: nullableText,
   evidenceCutoff: timestamp.nullable(),
   riskFactors: z.array(z.string().trim().min(1).max(500)).max(30),
@@ -64,6 +70,7 @@ const recommendation = identity.extend({
 export const dailyCycleSchema = z.object({
   format: z.literal("edgelab.daily-cycle"),
   version: z.literal(1),
+  sourceClass: z.enum(['owner_research', 'synthetic']).optional(),
   metadata: z.object({
     cycleId: id,
     researchSessionId: id,

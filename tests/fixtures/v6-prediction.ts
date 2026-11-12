@@ -1,0 +1,10 @@
+import path from 'node:path';
+import {digest,atomicPrivateJson} from '@/lib/v6/evidence.server';
+import {teamGames,type TeamGame} from '@/lib/v6/team-games';
+import {PREDICTION_PROTOCOL} from '@/lib/v6/prediction/evaluation';
+import {predictionArtifactSchema} from '@/lib/v6/prediction/forecast';
+import {reconciliationFixture,freeze} from './v6-reconciliation';
+export async function model2Fixture(root:string){const data=reconciliationFixture(),history:TeamGame[]=Array.from({length:60},(_,i)=>({provider:'balldontlie',sourceGameId:'SYNTHETIC-TRAIN-'+i,league:'NBA',season:2026,startsAt:new Date(Date.parse(freeze)-(61-i)*86400000).toISOString(),home:{id:'1',name:'LOCAL Home'},away:{id:'2',name:'LOCAL Away'},homeScore:i%3?120:100,awayScore:110,final:true,compatibleTraining:true,sourceUpdatedAt:null,retrievedAt:'2026-11-12T21:00:00Z',receiptId:crypto.randomUUID(),rawHash:'a'.repeat(64)}));
+ const artifact=predictionArtifactSchema.parse({format:'edgelab.v6-prediction-artifact',version:1,protocolHash:digest(JSON.stringify(PREDICTION_PROTOCOL)),sourceDatasetHash:'a'.repeat(64),baselineDefinitionHash:'b'.repeat(64),marginParameters:{k:20,homeCourt:40,seasonRetention:.75},featureNames:['intercept','marginEloDifference','opponentAdjustedLast5','opponentAdjustedLast10','shrunkSeasonStrength','shrunkVenueStrength','longerTerm60'],coefficients:[.1,1,.1,.1,.1,.1,.1],lambda:.1,calibrators:{eloOnly:[0,1],marginElo:[0,1],features:[0,1]},fitThrough:'2024-01-01T00:00:00Z',calibrationThrough:'2025-01-01T00:00:00Z',productionApproved:false});
+ const artifactHash=digest(JSON.stringify(artifact));await atomicPrivateJson(path.join(root,'model-development/artifacts',artifactHash+'.json'),artifact);await atomicPrivateJson(path.join(root,'model-development/shadow-config.json'),{version:1,ownerId:'synthetic-owner',enabled:true,artifactHash,reviewedAt:freeze,scope:'shadow_only_no_paper_positions'});
+ const rows=[...history,...await teamGames(data.originalFixtures)];return {data,history,rows,artifact,artifactHash};}

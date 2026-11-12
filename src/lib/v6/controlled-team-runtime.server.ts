@@ -15,6 +15,7 @@ import { activationReasons,collectionApprovalReasons,modelManifestSchema,type Co
 import type { ScheduledJob } from './controlled-scheduler.server';
 import type { V6Repository } from './repository.server';
 import type { Forecast } from './types';
+import { loadModel2ShadowConfig,freezeModel2Slate,pendingModel2Slates,recordModel2Results } from './prediction/shadow.server';
 /** Concrete read-only ports for the registered worker. Never loads a shadow as
  * a new candidate, modifies the preserved dataset, or imports a V5 repository.
  */
@@ -36,10 +37,18 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   if(delay)await new Promise(r=>setTimeout(r,delay));return api.read('the-odds-api.com',endpoint,params,cost);
  };
  const forecasts=new Map<string,Forecast>(),current=await repository.read();
+ const model2Config=await loadModel2ShadowConfig(root,config.ownerId,at);
+ const model2Pending=model2Config&&job.kind==='results'&&(approved||collectionApproved)?await pendingModel2Slates(root,config.ownerId,at):[];
  let scorePromise:Promise<RawEvidence>|null=null;const secondaryResults=new Map<string,Promise<RawEvidence>>();
+ const readSecondary=(proof:TeamFixtureProof)=>{if(!proof.statsGameId)throw new Error('Exact statistics fixture required');let result=secondaryResults.get(proof.statsGameId);if(!result){result=readBdl('/v1/games/'+proof.statsGameId);secondaryResults.set(proof.statsGameId,result);}return result;};
  const withinRetention=current.positions.filter(p=>Date.parse(p.observation.eventStartsAt)<=Date.parse(at)&&Date.parse(at)-Date.parse(p.observation.eventStartsAt)<3*86400000);
  const provider={collectionPermitted:true,collect:async()=>{
-  if(job.kind==='results')return [];
+  if(job.kind==='results'){
+   if(model2Pending.length){const ids=[...new Set([...withinRetention.map(p=>p.observation.market.eventId.replace(/^the-odds-api\.com:/,'')),...model2Pending.flatMap(s=>s.record.fixtures.filter(f=>Date.parse(f.proof.earliestStartsAt)<=Date.parse(clock())&&Date.parse(clock())-Date.parse(f.proof.earliestStartsAt)<3*86400000).map(f=>f.eventId))])];
+    if(ids.length){scorePromise=(async()=>{await readOdds('/v4/sports',{},0);return readOdds('/v4/sports/basketball_nba/scores',{daysFrom:'3',eventIds:ids.join(','),dateFormat:'iso'},2);})();const scores=await scorePromise;
+     for(const slate of model2Pending)await recordModel2Results(root,slate,{scores,secondary:readSecondary,at:clock()});}}
+   return [];
+  }
   const cache=path.join(liveRoot,'features.json');let featureReceipts:RawEvidence[]=[];
   try{const saved=JSON.parse(await fs.readFile(cache,'utf8'));if(saved.through===clock().slice(0,10)&&Date.parse(clock())-Date.parse(saved.at)<4*3600000)featureReceipts=saved.receipts;}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
   if(!featureReceipts.length){
@@ -55,6 +64,11 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   }
   const base=latestTeamGames(await loadTeamDataset(root)),replacement=new Map(base.map(g=>[g.provider+':'+g.sourceGameId,g]));
   for(const e of featureReceipts)for(const g of await teamGames(e))replacement.set(g.provider+':'+g.sourceGameId,g);
+  // Existing source adapter + shared quota; explicit future fixture scope fixes
+  // the former end_date=today feature query's inability to discover tomorrow.
+  const from=clock().slice(0,10),through=new Date(Date.parse(clock())+2*86400000).toISOString().slice(0,10),future=await readBdl('/v1/games',{'seasons[]':new URL(featureReceipts[0].sourceUrl).searchParams.get('seasons[]')!,season_type:'regular',per_page:'100',start_date:from,end_date:through});
+  const futureBody=JSON.parse(future.raw);if(!Array.isArray(futureBody.data)||futureBody.meta?.next_cursor!==null&&futureBody.meta?.next_cursor!==undefined||futureBody.data.length>=100)throw new Error('Future fixture pagination incomplete; fail closed');
+  const fixtureReceipts=[...featureReceipts,future];for(const g of await teamGames(future))replacement.set(g.provider+':'+g.sourceGameId,g);
   const all=[...replacement.values()],receiptDir=path.join(root,'evidence-receipts');
   const retained=await Promise.all((await fs.readdir(receiptDir)).filter(f=>f.endsWith('.json')).map(async f=>JSON.parse(await fs.readFile(path.join(receiptDir,f),'utf8')) as Promise<RawEvidence>));
   const priorCatalog=retained.filter(e=>e.provider==='balldontlie'&&new URL(e.sourceUrl).pathname==='/v1/teams').sort((a,b)=>a.retrievedAt.localeCompare(b.retrievedAt)).at(-1);
@@ -66,13 +80,14 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   const screen=await screenTeamSlate(odds,rows,registry,coverage.complete?[season]:[],clock(),'elo_only');
   for(const [hash,history]of Object.entries(screen.snapshots))await atomicPrivateJson(path.join(liveRoot,'histories',hash+'.json'),history);
   for(const c of screen.candidates)if(c.observation&&c.forecast&&c.proof){
-   const originalFixtures=featureReceipts.find(e=>(JSON.parse(e.raw).data as {id:number}[]).some(g=>String(g.id)===c.proof!.statsGameId));
+   const originalFixtures=fixtureReceipts.find(e=>(JSON.parse(e.raw).data as {id:number}[]).some(g=>String(g.id)===c.proof!.statsGameId));
    if(!originalFixtures)throw new Error('Original provider fixture proof is absent');
    const purpose=modelManifestSchema.safeParse(manifest).data?.researchPurpose??'strongly_supported';
    const f={...c.forecast,researchTier:purpose,validation:approved?(purpose==='experimental'?'chronologically_evaluated' as const:'out_of_sample_validated' as const):'experimental' as const};forecasts.set(c.observation.id,f);
    await atomicPrivateJson(path.join(liveRoot,'proofs',c.observation.id+'.json'),{proof:c.proof,registry,originalFixtures,observation:c.observation,forecast:f,manifestHash:digest(JSON.stringify(manifest)),rawSource:odds});
   }
   await atomicPrivateJson(path.join(liveRoot,'screens',odds.id+'.json'),{screen,modelApprovalApplied:approved,financialWrites:0});
+  if(model2Config)await freezeModel2Slate(root,{ownerId:config.ownerId,source:odds,rows,registry,completeSeasons:coverage.complete?[season]:[],originalFixtures:fixtureReceipts,at:clock(),sourceCollectionApproved:approved||collectionApproved});
   return screen.candidates.flatMap(c=>c.observation?[c.observation]:[]);
  },grade:async(position:typeof current.positions[number])=>{
   if(job.kind!=='results')return null;

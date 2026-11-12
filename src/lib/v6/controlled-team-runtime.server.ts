@@ -16,11 +16,12 @@ import type { ScheduledJob } from './controlled-scheduler.server';
 import type { V6Repository } from './repository.server';
 import type { Forecast } from './types';
 import {SourcePilotBlocked} from './source-pilot';
+import type {SourceQuotaJournal} from './cloud/client.server';
 import { loadModel2ShadowConfig,freezeModel2Slate,pendingModel2Slates,pendingModel2Events,recordModel2Results } from './prediction/shadow.server';
 /** Concrete read-only ports for the registered worker. Never loads a shadow as
  * a new candidate, modifies the preserved dataset, or imports a V5 repository.
  */
-export async function prepareControlledTeamPorts(root:string,repository:V6Repository,job:ScheduledJob,controls:{config:ControlledConfig;manifest:unknown;receipt:unknown},keys:{oddsKey?:string;bdlKey?:string},clock:()=>string,readControl?:()=>Promise<{config:ControlledConfig;manifest:unknown;receipt:unknown}>){
+export async function prepareControlledTeamPorts(root:string,repository:V6Repository,job:ScheduledJob,controls:{config:ControlledConfig;manifest:unknown;receipt:unknown},keys:{oddsKey?:string;bdlKey?:string},clock:()=>string,readControl?:()=>Promise<{config:ControlledConfig;manifest:unknown;receipt:unknown}>,quotaJournal?:SourceQuotaJournal){
  const {config,manifest,receipt}=controls,at=clock(),liveRoot=path.join(root,'controlled'),approved=(await activationReasons(config,manifest,receipt,at)).length===0;
  if(!config.sourcesEnabled||config.killSwitch||config.mode==='disabled'||config.mode==='armed'&&!approved)throw new Error('Controlled source gate is closed');
  const collectionApproved=(await collectionApprovalReasons(config,receipt,at)).length===0;
@@ -33,8 +34,8 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   if(!isCollection&&!isPaper)throw new SourcePilotBlocked('Source receipt expired or scope invalid');
   try{await fs.access(path.join(root,'source-pilot/STOP'));throw new SourcePilotBlocked('Source STOP file engaged');}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
  };
- const api=freeSources({root,authorizeRead,clock:()=>Date.parse(clock()),oddsKey:keys.oddsKey,oddsPilot:'team-moneyline-v1',controlledQuota:approved||collectionApproved?{monthlyCeiling:config.monthlyOddsCeiling,approvalHash:digest(JSON.stringify(receipt))}:undefined});
- const secondary=teamSources({root,authorizeRead,clock:()=>Date.parse(clock()),bdlKey:keys.bdlKey});
+ const api=freeSources({root,authorizeRead,quotaJournal,clock:()=>Date.parse(clock()),oddsKey:keys.oddsKey,oddsPilot:'team-moneyline-v1',controlledQuota:approved||collectionApproved?{monthlyCeiling:config.monthlyOddsCeiling,approvalHash:digest(JSON.stringify(receipt))}:undefined});
+ const secondary=teamSources({root,authorizeRead,quotaJournal,clock:()=>Date.parse(clock()),bdlKey:keys.bdlKey});
  let bdlQueue:Promise<unknown>=Promise.resolve();
  const readBdl=(endpoint:string,params:Record<string,string>={})=>{
   const request=bdlQueue.then(async()=>{

@@ -120,6 +120,7 @@ fs.mkdirSync(artifacts, { recursive: true });
     await page.getByRole('button', { name: 'Record bet', exact: true }).click();
     const dialog = page.getByRole('dialog');
     assert.equal(await dialog.getByLabel('Accepted decimal odds', { exact: true }).inputValue(), '');
+    await dialog.getByRole('button', { name: 'Placed earlier', exact: true }).click();
     assert.equal(await dialog.getByLabel('Placed at · Melbourne', { exact: true }).inputValue(), '');
     await dialog.getByLabel('Bookmaker', { exact: true }).fill('SYNTHETIC cancelled draft');
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -133,6 +134,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       .getByLabel("Bookmaker", { exact: true })
       .fill("QA Synthetic Bookmaker");
     await dialog.getByLabel("Stake · AUD", { exact: true }).fill("5.00");
+    await dialog.getByRole('button', { name: 'Placed earlier', exact: true }).click();
     await dialog.getByLabel('Placed at · Melbourne', { exact: true }).fill('2026-01-15T12:00');
     await dialog.getByLabel('Sportsbook ticket reference · optional', { exact: true }).fill('QA-SYNTHETIC-TICKET-1');
     await dialog.getByLabel("Accepted decimal odds", { exact: true }).fill("2.10");
@@ -194,6 +196,7 @@ fs.mkdirSync(artifacts, { recursive: true });
       .getByLabel("Bookmaker", { exact: true })
       .fill("QA Synthetic Parlay");
     await dialog.getByLabel("Accepted decimal odds", { exact: true }).fill("3.80");
+    await dialog.getByRole('button', { name: 'Placed earlier', exact: true }).click();
     await dialog.getByLabel('Placed at · Melbourne', { exact: true }).fill('2026-01-15T12:00');
     await dialog.getByRole("button", { name: "Add leg" }).click();
     for (let i = 0; i < 2; i++) {
@@ -261,7 +264,8 @@ fs.mkdirSync(artifacts, { recursive: true });
       await dialog.getByLabel('Stake · AUD', { exact: true }).fill('5.00');
       await dialog.getByLabel('Stake type', { exact: true }).selectOption('bonus');
       await dialog.getByLabel('Accepted decimal odds', { exact: true }).fill('1.86');
-      await dialog.getByLabel('Placed at · Melbourne', { exact: true }).fill('2026-01-15T12:00');
+      await dialog.getByRole('button', { name: 'Placed earlier', exact: true }).click();
+    await dialog.getByLabel('Placed at · Melbourne', { exact: true }).fill('2026-01-15T12:00');
       await dialog.getByLabel('Participant / team', { exact: true }).fill('QA Bonus Player');
       await dialog.getByLabel('Event', { exact: true }).fill('QA Bonus fixture');
       await dialog.getByLabel('Exact market', { exact: true }).fill('Player points');
@@ -323,21 +327,15 @@ fs.mkdirSync(artifacts, { recursive: true });
       .click();
     await page.getByText("QA synthetic funding", { exact: true }).waitFor();
   });
-  await test("run simulated daily research", async () => {
+  await test("demo inbox preserves synthetic classification and performs no implicit research or financial writes", async () => {
+    const before = await page.evaluate(() => JSON.parse(localStorage.getItem("edgelab:demo:v1")));
     await route("/research");
-    const before = await page.evaluate(
-      () =>
-        JSON.parse(localStorage.getItem("edgelab:demo:v1")).researchRuns.length,
-    );
-    await page
-      .getByRole("button", { name: "Run Simulated Research", exact: true })
-      .click();
-    await page.getByText(/Simulation complete/).waitFor({ timeout: 20000 });
-    const after = await page.evaluate(
-      () =>
-        JSON.parse(localStorage.getItem("edgelab:demo:v1")).researchRuns.length,
-    );
-    assert.equal(after, before + 1);
+    await page.getByRole('heading', { name: 'Daily Research Inbox', exact: true }).waitFor();
+    const after = await page.evaluate(() => JSON.parse(localStorage.getItem("edgelab:demo:v1")));
+    assert(after.candidates.length > 0);
+    assert(after.candidates.every(candidate => candidate.oddsProvenance.simulated));
+    assert.deepEqual(after, before);
+    assert.equal(externalRequests.length, 0);
   });
   await test("research detail and immutable paper registration", async () => {
     await openEligibleResearch('Add to paper tracking');
@@ -465,7 +463,7 @@ fs.mkdirSync(artifacts, { recursive: true });
     assert(await dialog.getByLabel('Exact selection', { exact: true }).isDisabled());
     assert.equal(await dialog.getByLabel('Accepted decimal odds', { exact: true }).inputValue(), '');
     await dialog.getByLabel('Accepted decimal odds', { exact: true }).fill('2.10');
-    await dialog.getByRole('button', { name: 'Use current placement time', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Placed just now', exact: true }).click();
     await dialog.getByRole('button', { name: 'Review financial registration', exact: true }).click();
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('edgelab:demo:v1'))), before);
     assert(await dialog.getByRole('button', { name: 'Confirm financial registration', exact: true }).isDisabled());

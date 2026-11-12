@@ -2,9 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
 import { atomicPrivateJson,digest,exclusive,retainEvidence,type RawEvidence } from './evidence.server';
+import type {SourceQuotaJournal} from './cloud/client.server';
 
 const budgetSchema=z.object({period:z.string(),reserved:z.number().int().nonnegative(),remaining:z.number().int().nonnegative().nullable(),used:z.number().int().nonnegative().nullable(),lastRequest:z.number().nonnegative(),uncertain:z.boolean(),freeConfirmed:z.boolean().default(false)}).strict();
-export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number;oddsPilot?:'team-moneyline-v1';controlledQuota?:{monthlyCeiling:number;approvalHash:string};authorizeRead?:()=>Promise<void>; }
+export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number;oddsPilot?:'team-moneyline-v1';controlledQuota?:{monthlyCeiling:number;approvalHash:string};authorizeRead?:()=>Promise<void>;quotaJournal?:SourceQuotaJournal; }
 /** Explicit read-only transport. Every V6 collector/worker shares this on-disk quota.
  * Uncertain reservations are never silently refunded after transport failure.
  */
@@ -48,6 +49,7 @@ export function freeSources(options:FreeSourceOptions) {
       if(budget.lastRequest&&now-budget.lastRequest<spacing)throw new Error('Source cooldown; no request was sent');
       budget.reserved+=cost;budget.lastRequest=now;budget.uncertain=true;
       await atomicPrivateJson(file,budget);
+      const cloudReservation=options.quotaJournal?await options.quotaJournal.reserve('odds',endpoint,parameters,cost):null;
       const headers:Record<string,string>={Accept:'application/json'};
       if(odds)url.searchParams.set('apiKey',secret);else headers['x-apisports-key']=secret;
       let response:Response;
@@ -55,6 +57,7 @@ export function freeSources(options:FreeSourceOptions) {
       const numberHeader=(key:string)=>{const n=response.headers.get(key);return n!==null&&/^\d+$/.test(n)&&Number.isSafeInteger(Number(n))?Number(n):null;};
       const remaining=numberHeader(odds?'x-requests-remaining':'x-ratelimit-requests-remaining');
       const used=numberHeader('x-requests-used');
+      if(cloudReservation)await options.quotaJournal!.complete(cloudReservation,{used,remaining});
       budget.remaining=remaining;budget.used=used;
       const chunks:Uint8Array[]=[];let size=0;
       if(!response.body)throw new Error('Empty source body');

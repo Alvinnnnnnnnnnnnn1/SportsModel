@@ -1,0 +1,43 @@
+name: V6 source-only cloud pilot (disabled until approved)
+on:
+  workflow_dispatch:
+  schedule:
+    # Wakeups only. Original Melbourne due times/deadlines remain in the worker.
+    # GitHub may delay/drop schedules. No pre-start or late backdating allowed.
+    - cron: '3,13,23,33,43,53 7-11 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: edgelab-v6-source-only
+  cancel-in-progress: false
+jobs:
+  source-only:
+    # Enable switch is a repository variable: Environment vars are not available at job admission.
+    if: github.repository == 'Alvinnnnnnnnnnnnn1/SportsModel' && vars.V6_CLOUD_SOURCE_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    environment: v6-source-only
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate owner-pinned code revision
+        env:
+          REVIEWED_SHA: ${{ vars.V6_CLOUD_REVIEWED_SHA }}
+        run: '[[ "$REVIEWED_SHA" =~ ^[a-f0-9]{40}$ ]]'
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ vars.V6_CLOUD_REVIEWED_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.21.0'
+      - run: npm ci --ignore-scripts
+      - name: Execute existing registered source-only worker
+        env:
+          V6_CLOUD_SOURCE_ENABLED: ${{ vars.V6_CLOUD_SOURCE_ENABLED }}
+          V6_CLOUD_REVIEWED_SHA: ${{ vars.V6_CLOUD_REVIEWED_SHA }}
+          V6_CLOUD_PILOT_ID: ${{ vars.V6_CLOUD_PILOT_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          V6_SOURCE_CAPABILITY: ${{ secrets.V6_SOURCE_CAPABILITY }}
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+          BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
+        run: node scripts/run-v6-cloud-source.mjs

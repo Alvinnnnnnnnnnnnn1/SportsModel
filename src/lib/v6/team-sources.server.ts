@@ -2,11 +2,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
 import { atomicPrivateJson,digest,exclusive,retainEvidence,type RawEvidence } from './evidence.server';
+import type {SourceQuotaJournal} from './cloud/client.server';
 const budgetSchema=z.object({day:z.string(),requests:z.number().int().nonnegative(),lastAt:z.number().nonnegative(),blockedUntil:z.number().nonnegative(),starts:z.array(z.number().nonnegative())}).strict();
 /** Only documented permanent-free team/game paths. No player stats, trials,
  * accounts, mutable HTTP, redirects, automatic retry or implicit collection.
  */
-export function teamSources(options:{root:string;bdlKey?:string;fetcher?:typeof fetch;clock?:()=>number;authorizeRead?:()=>Promise<void>}){
+export function teamSources(options:{root:string;bdlKey?:string;fetcher?:typeof fetch;clock?:()=>number;authorizeRead?:()=>Promise<void>;quotaJournal?:SourceQuotaJournal}){
  const clock=options.clock??Date.now,fetcher=options.fetcher??fetch;
  return {async read(provider:'balldontlie'|'thesportsdb',endpoint:string,parameters:Record<string,string>={}):Promise<RawEvidence>{
   if(!['balldontlie','thesportsdb'].includes(provider)||Object.keys(parameters).some(k=>/key|token|password|secret/i.test(k)))throw new Error('Invalid free team source');
@@ -23,10 +24,12 @@ export function teamSources(options:{root:string;bdlKey?:string;fetcher?:typeof 
    budget.starts=budget.starts.filter(t=>now-t<60000);
    if(budget.requests>=(bdl?60:10)||now<budget.blockedUntil||budget.lastAt&&now-budget.lastAt<(bdl?12500:3000)||budget.starts.length>=(bdl?5:20))throw new Error('Free team-source quota/cooldown; no request sent');
    budget.requests++;budget.lastAt=now;budget.starts.push(now);await atomicPrivateJson(file,budget);
+   const cloudReservation=options.quotaJournal?await options.quotaJournal.reserve('bdl',endpoint,parameters,1):null;
    const headers:Record<string,string>={Accept:'application/json'};if(bdl)headers.Authorization=options.bdlKey!;
    let response:Response;try{await options.authorizeRead?.();response=await fetcher(url,{method:'GET',headers,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});}catch{throw new Error('Team source transport failed; reservation retained, no retry');}
    const retry=response.headers.get('retry-after'),seconds=retry&&/^\d+$/.test(retry)?Number(retry):null;
    if(response.status===429){const date=retry?Date.parse(retry):NaN;budget.blockedUntil=Math.max(now+60000,seconds!==null?now+seconds*1000:Number.isFinite(date)?date:0);await atomicPrivateJson(file,budget);}
+   if(cloudReservation)await options.quotaJournal!.complete(cloudReservation,{used:null,remaining:null,blockedUntil:budget.blockedUntil?new Date(budget.blockedUntil).toISOString():null});
    if(!response.body)throw new Error('Empty team source response');const reader=response.body.getReader(),chunks:Uint8Array[]=[];let size=0;
    try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>8000000){await reader.cancel();throw new Error('Team source body exceeds 8 MiB');}chunks.push(part.value);}}finally{reader.releaseLock();}
    const raw=Buffer.concat(chunks).toString('utf8');if(bdl&&raw.includes(options.bdlKey!))throw new Error('Credential echo discarded');

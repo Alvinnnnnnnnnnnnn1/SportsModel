@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   poweredByHeader: false,
+  // Private evidence is runtime-local or fetched under owner RLS, never bundled.
+  outputFileTracingExcludes: {"/**": ["./.local/**/*", "./.env*"]},
   async headers() {
     return [
       {

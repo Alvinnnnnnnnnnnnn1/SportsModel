@@ -1,0 +1,49 @@
+diff --git a/supabase/proposals/202611130001_v6_source_cloud.sql b/supabase/proposals/202611130002_v6_source_cloud_compatible.sql
+index 81c6a65..4bbe9e8 100644
+--- a/supabase/proposals/202611130001_v6_source_cloud.sql
++++ b/supabase/proposals/202611130002_v6_source_cloud_compatible.sql
+@@ -2,0 +3,2 @@
++-- Compatible replacement for 202611130001; apply ONLY this file after fresh Approval S.
++-- Original remains an unapplied review artifact, not a prerequisite migration.
+@@ -3,0 +6,2 @@ begin;
++-- PostgreSQL 16+: grant the non-superuser creator SET, never INHERIT, only in this transaction.
++set local createrole_self_grant='set';
+@@ -8,2 +12,16 @@ end$$;
+-grant usage on schema public,auth to edgelab_v6_source;
+-grant execute on function auth.uid() to edgelab_v6_source;
++-- Ownership transfer requires CREATE; revoke before commit. No Auth-schema grant.
++grant usage,create on schema public to edgelab_v6_source;
++
++-- Bind auth.uid() while the migration role can resolve it. SQL-standard bodies retain
++-- the actual function dependency; execution remains INVOKER, using the session JWT.
++-- Supabase postgres cannot grant Auth USAGE/EXECUTE on behalf of its admin owner.
++-- This bridge needs only existing PUBLIC EXECUTE on auth.uid(), not Auth schema access.
++create function public.v6_source_auth_uid() returns uuid
++ language sql stable security invoker set search_path='' return auth.uid();
++revoke all on function public.v6_source_auth_uid() from public,anon,authenticated;
++grant execute on function public.v6_source_auth_uid() to edgelab_v6_source;
++do $$begin
++ if not has_function_privilege('edgelab_v6_source','auth.uid()','EXECUTE') then
++  raise exception 'Existing Auth UID execution dependency unavailable; stop for review';
++ end if;
++end$$;
+@@ -104 +122 @@ create function public.v6_source_owner(p_id uuid,p_action text,p jsonb) returns
+-declare u uuid:=auth.uid();s public.v6_source_pilots; plan jsonb; receipt jsonb; result jsonb; exp timestamptz;credential_id uuid;
++declare u uuid:=public.v6_source_auth_uid();s public.v6_source_pilots; plan jsonb; receipt jsonb; result jsonb; exp timestamptz;credential_id uuid;
+@@ -166 +184 @@ begin
+- if p_token is null then u:=auth.uid();owner_bootstrap:=true;
++ if p_token is null then u:=public.v6_source_auth_uid();owner_bootstrap:=true;
+@@ -259,0 +278,13 @@ grant execute on function public.v6_source_path_ok(text) to edgelab_v6_source;
++-- Revoke every temporary runtime/DDL privilege before publishing this transaction.
++revoke create on schema public from edgelab_v6_source;
++revoke edgelab_v6_source from current_user;
++-- PostgreSQL retains the creator's bootstrap-issued ADMIN-only bookkeeping grant.
++-- It has no SET/INHERIT and is not a worker/API membership. Never broaden it.
++do $$begin
++ if has_schema_privilege('edgelab_v6_source','public','CREATE')
++  or exists(select 1 from pg_auth_members where member='edgelab_v6_source'::regrole)
++  or exists(select 1 from pg_auth_members where roleid='edgelab_v6_source'::regrole
++   and (member<>current_user::regrole or set_option or inherit_option)) then
++  raise exception 'Source role temporary privilege cleanup failed';
++ end if;
++end$$;

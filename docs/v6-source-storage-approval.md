@@ -1,4 +1,96 @@
-# Approval S — independent source storage review
+# Approval S — corrected source-only schema, 13 November 2026
+
+**READY FOR OWNER SCHEMA REVIEW; NOT APPROVED OR DEPLOYED.** This replaces the failing source proposal for any future deployment. It does not approve data upload, credentials, cloud scheduling, Mac handover, Production release or PAPER A/B/C. A verified backup and final remote preflight remain mandatory before execution.
+
+## Exact approval target
+
+| Item | Value |
+| --- | --- |
+| Supabase project | `ilgoswfckkzpoktabbfi` |
+| Corrected proposal | `supabase/proposals/202611130002_v6_source_cloud_compatible.sql` |
+| **New complete SHA-256** | **`0b80c5a2412c7a3d10348a75823ae4ad6696e552a29ddc73ccc755108b026a59`** |
+| Original source file | `202611130001_v6_source_cloud.sql`, unchanged `7a03d765f78b5c1939900d1ddb50809238987104e5399ed772cb900692caf451`; never apply as a prerequisite |
+| Original PAPER proposal | Unchanged/unapplied `c3a0d368ddbda1b50f3dab13aeec7cb3a939e423bce894aa1d55cfe9f13a3dff`; excluded from S |
+
+Deploy **only the corrected replacement**, after approval; never both source files. Neither is in `supabase/migrations` yet. The [complete original/revised diff](v6-source-sql-compatibility.diff) is retained alongside both full SQL files. No original function signatures, source counters, models, financial rules or qualification criteria changed.
+
+## Cause and targeted correction
+
+The non-superuser migration role must be able to SET ROLE to the new function owner, and that owner needs schema CREATE at ownership transfer. PostgreSQL 17's automatic creator ADMIN grant supplies neither runtime SET nor INHERIT. Earlier superuser-only DDL checks bypassed the requirement. [ALTER FUNCTION](https://www.postgresql.org/docs/17/sql-alterfunction.html), [role grants](https://www.postgresql.org/docs/17/sql-grant.html).
+
+The new transaction uses `SET LOCAL createrole_self_grant='set'`, temporarily grants public-schema CREATE to the restricted source role, transfers both definer functions, then revokes CREATE and the temporary creator SET membership **before COMMIT**. A final catalog assertion aborts if effective CREATE, SET/INHERIT memberships or membership of the source role in another role remain. The setting restores automatically at transaction end. No API role receives source-role membership.
+
+PostgreSQL retains a bootstrap-issued **ADMIN-only** grant to the privileged role that created the source role; its SET and INHERIT flags are false. This standard creator-administration record is explicit, tested and not described as zero memberships. Removing it as a non-superuser would require authority over the bootstrap grantor. It grants the source worker no administrative role and cannot itself be used to SET ROLE. The database administrator can still administer the role, as expected; no such credential is given to a worker.
+
+Actual hosted ACL inspection revealed a second dependency: postgres has Auth schema USAGE but cannot delegate it or `auth.uid()` EXECUTE. PUBLIC already has EXECUTE on `auth.uid()`. Rather than widening Auth privileges, the corrected SQL adds **`v6_source_auth_uid()`**, a SECURITY INVOKER, fixed-empty-search-path SQL-standard `RETURN auth.uid()` helper. PostgreSQL binds its Auth function dependency at creation time. The two existing definer functions call that helper; the source role needs no Auth-schema USAGE. It still returns the actual session's `auth.uid()`, not a supplied owner ID or replacement JWT interpretation. Missing upstream EXECUTE permission aborts the transaction. The Auth schema and its function ACLs are not changed.
+
+## Final catalog and security boundaries
+
+- Same seven source-only tables, all forced RLS; same 13 table policies plus one narrow existing-history-anchor SELECT policy; same three immutable triggers and three explicit supporting indexes.
+- **Five functions:** two SECURITY DEFINER RPCs owned by `edgelab_v6_source`; the Auth bridge and two existing helpers are SECURITY INVOKER, owned by the migration role. Every function fixes an empty search path. The Auth bridge has a catalog dependency on the real `auth.uid()` and is not executable by ordinary anon/authenticated callers.
+- Source role stays NOLOGIN/NOSUPERUSER/NOBYPASSRLS/NOCREATEDB/NOCREATEROLE/NOINHERIT. Final public CREATE=false, Auth schema USAGE=false in the representative ACL fixture, no membership in any other role. No source-role membership for authenticated/anon/authenticator; creator has only the ADMIN-only record described above.
+- Runtime source permissions remain public-schema USAGE; source-table SELECT/INSERT/UPDATE; audit-sequence USAGE/SELECT; helper EXECUTE; and RLS-filtered historical anchor SELECT. No source DELETE or V5/core financial RPC access. No registration or settlement action exists in dispatch.
+- Owners can directly SELECT only their own rows in six tables. Capability hashes have no owner/anonymous direct SELECT. The owner/dispatch responses do not expose them. Source-role internal policies deliberately span source rows; inaccessible role membership and explicit owner/capability binding are essential controls.
+- Existing platform `service_role` default privileges remain administrative access. This is not a service-role isolation claim. No service key or signer was used or issued.
+
+## Actual PostgreSQL evidence
+
+Tests execute the corrected file as **non-superuser CREATEROLE / NOBYPASSRLS** with representative Supabase default ACLs, separate Auth owner, Auth USAGE without grant option, and existing PUBLIC Auth UID EXECUTE. All three deployed legacy migrations are also exercised together with an existing synthetic historical workspace. No hosted test records were inserted.
+
+Passed actual SQL assertions cover fresh creation; final owners/attributes/ACLs/dependencies; no residual CREATE/SET/INHERIT; normal-owner reads; every readable table's cross-owner isolation; all seven tables' anonymous rejection; owner/capability gates; token format, expiry and revocation; private capability hashes; immutable objects/manifests/audits; exact bytes and nullable source facts; quota replay/rollback and lease fencing; forbidden PAPER state and unsupported register/settle calls; and no legacy data changes. A CHECK assertion on audit writes proves the owner RPC executes with the restricted role. Capability dispatch succeeds where the anonymous caller lacks table privileges, with catalog ownership also checked.
+
+An injected late exception **after ownership transfer and temporary-privilege cleanup, before COMMIT** rolls back every new function/table/index/sequence/role, the source-anchor policy, schema ACL changes and creator membership. Existing legacy data/policies remain byte-for-byte equal in the SQL snapshots. A missing Auth dependency also aborts cleanly. This is transaction rollback, not a destructive backout.
+
+Current verification: **752/752 tests across 67 files**, including four source SQL lifecycle/migration groups and three retention tests; **70 core +77 historical SQL checks**, **11 full-schema coexistence checks**, TypeScript, lint, production build and private-file safety checks pass. The original six-assertion failure reproducer remains unchanged. Private reports live under `.local/v6/approval-s-20261113/`. `first-sql-audit.json` preserves one corrected test-harness escaping error; `corrected-sql-audit.json` and `full-tests.json` retain successful reruns. It was not a SQL migration failure. Original hosted Preview evidence is untouched.
+
+These are local PostgreSQL assertions, not hosted deployment, production concurrency-load or hosted two-user source persistence proof. True simultaneous independent hosted sessions, platform DDL hooks, PostgREST schema-cache refresh and hosted source reads remain post-approval acceptance items. Existing local cross-process scheduler/lease tests do not remove that gap.
+
+## Remote preflight, backup and backout gate
+
+Read-only catalog/history checks on 13 November confirm project identity, PostgreSQL17.11, the three original deployed migrations only, no source/PAPER role or tables, approximately13.34MiB database, empty `createrole_self_grant`, required builtin UUID/SHA functions, existing anchor composite key/RLS and the observed Auth ACL dependency. The CLI inspection role has BYPASSRLS: this establishes catalogs only, never user isolation. No hosted DDL was attempted.
+
+Before approved deployment: secure a current schema/data backup and owner experiment export; validate restoration on disposable PostgreSQL; verify exact new file hash, project, actual migration execution role's CREATEROLE/schema-grant authority, Auth UID EXECUTE dependency, absence of source-object collisions, no PUBLIC schema CREATE, no competing deployment and free capacity. No new backup/restore of the real database has been performed here. Do not print/store passwords in source or rely on a paid backup product.
+
+After explicit S approval and prerequisites, stage only this corrected file as migration202611130002, inspect remote history and show `db push --dry-run --remote` containing only that file, no seed/vault/role synchronization. Apply only that reviewed transaction. Any unexpected collision/permission/history error stops deployment. Do not stage the original source or PAPER proposals, use reset/include-all, silently repair migration history or create a role membership workaround.
+
+If deployment fails before COMMIT, rollback and inspect catalogs/history. If committed, back out operationally: keep cloud disabled, issue no capability and preserve the Mac and all evidence. Do not DROP/CASCADE/delete tables or source objects. Separately review any future access-revocation rollback SQL. Uploading objects and publishing a snapshot are separate transactions; a failed later publication may leave private unreferenced objects and is not whole-bundle rollback.
+
+## Reverified retention and stopped provisioning preview
+
+The original private bundle remains untouched at `.local/v6/cloud-transfer/2026-11-12T21-40-02.656Z/`. Actual bytes still match original snapshot `a1d71651211ede1410903fe28f23b0240aded2b8e9262853bb7f797899e2b355` and inventory `8416185b74103ad9f3cc3d67c13dee2f9288bd94b0900ddd50fb96c9119e8f8f`; all objects were integrity-checked.
+
+Source terms were re-read on13November. [The Odds API terms](https://the-odds-api.com/terms-and-conditions.html) explicitly permit storage/retention and derived research, excluding standalone raw-data resale. [BALLDONTLIE terms](https://www.balldontlie.io/terms.html), updated20October2026, permit copying/storing/archiving lawfully obtained data and app/model use, with substitute-feed restrictions and reserved third-party rights; independent result verification remains required. [API-Sports terms](https://api-sports.io/terms) allow project uses but disclaim publication/competition rights; this review does not establish the needed cloud retention rights for those archived raw records. No new source API call was made.
+
+Offline filtering recursively inspects arrays/nested providers, fails closed for unknown sources and unresolved parent provenance, and propagates exclusions through known hash/reference dependencies. This fixes the old inventory's shallow classification of the mixed canonical game array without altering that old file. No raw bytes or original hashes are rewritten.
+
+**New private preview:** `.local/v6/cloud-transfer/retention-2026-11-12T22-49-24.840Z/`.
+
+| Binding | Exact SHA-256 |
+| --- | --- |
+| Filtered snapshot | `61a5c9ca052cc2898b5210194ff27ed4d1ee9b911d526d11e71fa3896b932876` |
+| Filtered inventory | `3a5bc03897056ebb93af3f5330f94f22b9ee9efd82d767243513d22ff0d32357` |
+| Retention review | `c81b224bca56420219dc6786226b3cca89504e83a3f756718896e40bff48114a` |
+
+103 references/distinct objects, **3,101,754 raw bytes (~2.96MiB)**, proposed for private retention; **71 files withheld locally**. Included:83 BDL receipts,17 Odds API receipts and3 internal protocol/quota files. Withheld: API-NBA/API-Basketball, TheSportsDB, mixed-provider histories, unresolved derived records and permitted-provider records linked to withheld evidence. Per-file reasons remain in private `retention-review.json`; no private archive is committed to Git.
+
+**Functional impact:** the mixed5,082-game journal/canonical snapshot, original frozen model artifact and dependent analyses are not in the cloud preview. They remain unchanged locally. This filtered bundle cannot support the full forecasting runner or all model/observation views. Cloud host transfer is therefore **not technically ready for activation**. Resolve the relevant retention provenance/permissions in a separately reviewed package, without replacing the frozen model or silently relabelling its training history. The Mac remains the approved collector.
+
+The filtered bundle passes offline provision validation; a future apply must bind its new proposal/snapshot/inventory/**retentionReviewHash** and explicit owner rights review. Old unfiltered bundles cannot enter the write path without a filtered review. Owner-JWT/anchor checks, stopped-only bootstrap, object hashes, revision CAS, read-after-write and new-session persistence tests remain the provisioning plan. No owner session file/credential, upload or quota seeding was created/performed.
+
+Free-tier capacity: inspection saw13.34MiB existing database; filtered bodies add2.96MiB before indexes/TOAST/WAL and future revisions. Supabase Free's published500MB database/5GB uncached egress must be rechecked against actual project usage. The16MiB object/96MiB aggregate guards remain unchanged. This estimate is not proof of billed footprint, egress or available capacity. [Supabase pricing](https://supabase.com/pricing).
+
+## Separate hosted acceptance and approvals
+
+S authorises schema only. Provisioning needs its own exact reviewed inventory, rights decision and stopped owner approval. Then verify exact read-after-write/new-session hashes, owner/other/anonymous access, immutable rejection, stale revision rollback, private capability hashes, no V5/funding/PAPER changes and no provider reads. Hosted second-owner/expired-session/sports-POST Preview tests remain unverified; none is claimed passed here.
+
+Mac config/receipt/model/dataset and quotas remain frozen. First capture remains14November19:00 Melbourne;14November00:00→28November00:00 window,50 additional/cumulative60 odds credits,100 reserve. Cloud Actions stays disabled; no credentials or host transfer. No new Preview deployment is needed: changes are SQL proposals, offline planning/provisioning tools, tests and docs, with no dashboard runtime behavior change.
+
+**Exact owner decision requested:** Approve schema-only deployment of `202611130002_v6_source_cloud_compatible.sql`, SHA-256 `0b80c5a2412c7a3d10348a75823ae4ad6696e552a29ddc73ccc755108b026a59`, to `ilgoswfckkzpoktabbfi`, after the documented backup and final preflight. This excludes data upload/provisioning, credentials, cloud activation, Mac transfer, Production release and PAPER A/B/C. Do not apply until explicit approval is received.
+
+<details>
+<summary>Original pre-correction review — preserved historical evidence</summary>
+
+# Approval S — original source storage review
 
 **Decision status: NOT READY TO APPLY AS WRITTEN. No approval requested for the failing file.** The Preview is deployed separately; source schema, provisioning, credentials and host transfer remain unapproved. No hosted changes were made during this review.
 
@@ -94,3 +186,5 @@ After separately approved provisioning, use two **normal authenticated accounts*
 3. Reject direct writes/deletes, altered object hash, immutable edits, stale revision, duplicate/conflicting publication and cross-owner keys. Check that failed commit leaves the prior snapshot/revision/audit unchanged; separately account for any uploaded unreferenced objects.
 4. Confirm zero PAPER/V5/funding mutations. Test capability expiry/revocation, fenced lease, quota reserve/ceiling, emergency stop and fresh-runner recovery using specifically authorised source fixtures or retained evidence, without initiating provider reads.
 5. Only after those pass may a separately reviewed S/provisioning acceptance be recorded. Source-host transfer/credentials/scheduling and Production promotion remain independent decisions. The Mac remains the sole collector throughout this task.
+
+</details>

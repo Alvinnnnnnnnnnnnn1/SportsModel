@@ -9,11 +9,19 @@ try{
  const staging=JSON.parse(await fs.readFile(path.join(base,'staging.json'),'utf8')),manifestRaw=await fs.readFile(path.join(base,'manifest.json'),'utf8'),manifest=validateSnapshot(JSON.parse(manifestRaw));
  const inventoryRaw=await fs.readFile(path.join(base,'retention-inventory.json'),'utf8'),inventory=JSON.parse(inventoryRaw);
  if(digest(inventoryRaw)!==staging.inventoryHash||inventory.snapshotHash!==staging.snapshotHash||inventory.files.length!==manifest.files.length||!inventory.files.every((f,i)=>f.path===manifest.files[i].path&&f.hash===manifest.files[i].hash&&f.bytes===manifest.files[i].bytes))throw new Error('Retention inventory is missing or changed');
+ let retentionReviewHash=null;
+ if(staging.retentionReviewHash){
+  const reviewRaw=await fs.readFile(path.join(base,'retention-review.json'),'utf8'),review=JSON.parse(reviewRaw);
+  retentionReviewHash=digest(reviewRaw);
+  if(retentionReviewHash!==staging.retentionReviewHash||review.snapshotHash!==staging.snapshotHash||review.cloudUploadApproved!==false||manifest.files.some(f=>!review.files.some(r=>r.path===f.path&&r.hash===f.hash&&r.bytes===f.bytes&&r.decision==='include_in_preview')))throw new Error('Filtered retention review mismatch');
+ }
  if(staging.projectRef!=='ilgoswfckkzpoktabbfi'||staging.planHash!==ORIGINAL_PLAN||digest(staging.planRaw)!==ORIGINAL_PLAN||staging.receiptHash!==ORIGINAL_RECEIPT||digest(staging.receiptRaw)!==ORIGINAL_RECEIPT||digest(manifestRaw)!==staging.snapshotHash)throw new Error('Staging approval/integrity mismatch');
  for(const f of manifest.files){const name=await fs.realpath(path.join(base,'objects',f.hash+'.json'));if(!name.startsWith(base+path.sep))throw new Error('Outside staging');const body=await fs.readFile(name,'utf8');if(digest(body)!==f.hash||Buffer.byteLength(body)!==f.bytes)throw new Error('Staging object integrity mismatch');}
  if(!process.argv.includes('--apply-stopped'))console.log(JSON.stringify({status:'offline_validated',files:manifest.files.length,snapshotHash:staging.snapshotHash,hostedWrites:0}));
  else{
-  const approval=JSON.parse(await fs.readFile(arg('--approval-file'),'utf8')),proposalHash=digest(await fs.readFile('supabase/proposals/202611130001_v6_source_cloud.sql','utf8'));
+  if(!retentionReviewHash)throw new Error('A filtered source-retention review is required before hosted upload');
+  const approval=JSON.parse(await fs.readFile(arg('--approval-file'),'utf8')),proposalHash=digest(await fs.readFile('supabase/proposals/202611130002_v6_source_cloud_compatible.sql','utf8'));
+  if(approval.retentionReviewHash!==retentionReviewHash)throw new Error('Approval must bind the exact filtered source-retention review');
   if(approval.format!=='edgelab.v6-source-storage-approval'||approval.approved!==true||approval.projectRef!==staging.projectRef||approval.proposalHash!==proposalHash||approval.snapshotHash!==staging.snapshotHash||approval.inventoryHash!==staging.inventoryHash||approval.sourceRightsReviewed!==true||approval.storageOnly!==true||approval.cloudActivation!==false||approval.credentialIssue!==false||!approval.approvalReference||!Number.isFinite(Date.parse(approval.approvedAt))||Date.parse(approval.approvedAt)>Date.now()||Date.now()-Date.parse(approval.approvedAt)>86400000)throw new Error('Fresh explicit storage-only approval required');
   const sessionFile=await fs.realpath(arg('--owner-session-file'));if(!sessionFile.startsWith(privateRoot+path.sep)||(await fs.stat(sessionFile)).mode&0o077)throw new Error('Owner session file must be private (0600) under .local/v6');
   const {access_token:token}=JSON.parse(await fs.readFile(sessionFile,'utf8'));let claims;try{claims=JSON.parse(Buffer.from(token.split('.')[1],'base64url').toString());}catch{throw new Error('Normal owner session required');}

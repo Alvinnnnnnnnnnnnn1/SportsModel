@@ -1,7 +1,7 @@
 import { sha256 } from '@/lib/imports/duplicates';
 import { V6_POLICY } from './policy';
 import { teamResearchChecks } from './team-research-policy';
-import { poissonCountProbability, poissonPushProbability, surfaceEloProbability,teamEloProbability } from './models';
+import { poissonCountProbability, poissonPushProbability, surfaceEloProbability,teamEloProbability,teamEloOnlyProbability } from './models';
 import { marketSchema, observationSchema, forecastSchema, gradeSchema, positionSchema, v6StateSchema, type CanonicalMarket, type Forecast, type Grade, type Observation, type PaperPosition, type V6State } from './types';
 
 export const marketKey = (market: CanonicalMarket) => { const m=marketSchema.parse(market);return JSON.stringify([m.sport,m.eventId,m.subjectId,m.statistic,m.operator,m.threshold,m.period,m.periodNumber,m.overtime,m.termsVersion]); };
@@ -42,12 +42,13 @@ export function qualification(o:Observation,f:Forecast|null,now:string,cohort:V6
   if(f.validation!=='out_of_sample_validated')reasons.push('model_not_validated');
   if(Date.parse(f.inputCutoff)>Date.parse(f.generatedAt)||Date.parse(f.generatedAt)>t||Date.parse(f.inputCutoff)>=start)reasons.push('forecast_leakage');
   if(Date.parse(f.inputs.sourceObservedAt)>Date.parse(f.inputCutoff))reasons.push('input_snapshot_leakage');
-  if(f.method==='nba_team_elo'&&(!f.inputs.team||Date.parse(f.inputs.team.safeEventStartsAt)>start||Date.parse(f.inputs.team.safeEventStartsAt)<=t||Date.parse(f.inputCutoff)>=Date.parse(f.inputs.team.safeEventStartsAt)))reasons.push('earliest_scheduled_start_gate');
-  if(f.method==='nba_team_elo')reasons.push(...teamResearchChecks(o,f));
+  if(['nba_team_elo','nba_team_elo_only'].includes(f.method)&&(!f.inputs.team||Date.parse(f.inputs.team.safeEventStartsAt)>start||Date.parse(f.inputs.team.safeEventStartsAt)<=t||Date.parse(f.inputCutoff)>=Date.parse(f.inputs.team.safeEventStartsAt)))reasons.push('earliest_scheduled_start_gate');
+  if(['nba_team_elo','nba_team_elo_only'].includes(f.method))reasons.push(...teamResearchChecks(o,f));
   try{
     const calculated=f.method==='poisson_minutes_rate'&&f.inputs.minutes!==null&&f.inputs.ratePerMinute!==null?poissonCountProbability(f.market,f.inputs.minutes,f.inputs.ratePerMinute)
       :f.method==='surface_elo'&&['ATP','WTA'].includes(f.market.sport)&&f.market.statistic==='moneyline'&&f.inputs.surface&&f.inputs.rating!==null&&f.inputs.opponentRating!==null?surfaceEloProbability(f.inputs.rating,f.inputs.opponentRating)
-      :f.method==='nba_team_elo'&&f.modelId==='nba-team-elo-form-rest'&&f.version==='experimental-1'&&f.inputs.team?teamEloProbability(f.market,f.inputs.team):null;
+      :f.method==='nba_team_elo'&&f.modelId==='nba-team-elo-form-rest'&&f.version==='experimental-1'&&f.inputs.team?teamEloProbability(f.market,f.inputs.team)
+      :f.method==='nba_team_elo_only'&&f.modelId==='nba-team-elo-only'&&f.version==='candidate-1'&&f.inputs.team?teamEloOnlyProbability(f.market,f.inputs.team):null;
     if(calculated===null||Math.abs(calculated-f.probability)>1e-10)reasons.push('unreproducible_probability');
     const push=f.method==='poisson_minutes_rate'&&f.inputs.minutes!==null&&f.inputs.ratePerMinute!==null?poissonPushProbability(f.market,f.inputs.minutes,f.inputs.ratePerMinute):0;
     if(Math.abs(push-f.pushProbability)>1e-10)reasons.push('unreproducible_push_probability');

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { atomicPrivateJson,digest,exclusive,retainEvidence,type RawEvidence } from './evidence.server';
 
 const budgetSchema=z.object({period:z.string(),reserved:z.number().int().nonnegative(),remaining:z.number().int().nonnegative().nullable(),used:z.number().int().nonnegative().nullable(),lastRequest:z.number().nonnegative(),uncertain:z.boolean(),freeConfirmed:z.boolean().default(false)}).strict();
-export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number;oddsPilot?:'team-moneyline-v1'; }
+export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number;oddsPilot?:'team-moneyline-v1';controlledQuota?:{monthlyCeiling:number;approvalHash:string}; }
 /** Explicit read-only transport. Every V6 collector/worker shares this on-disk quota.
  * Uncertain reservations are never silently refunded after transport failure.
  */
@@ -38,7 +38,8 @@ export function freeSources(options:FreeSourceOptions) {
       // Explicit team task adds a bounded slate/result audit, sharing all old
       // reservations. Never reset counters; this is not a position-volume cap.
       // This is an acquisition budget, never a paper count/exposure limit.
-      const ceiling=odds?(options.oddsPilot==='team-moneyline-v1'?12:6):10;
+      if(options.controlledQuota&&(!Number.isSafeInteger(options.controlledQuota.monthlyCeiling)||options.controlledQuota.monthlyCeiling<1||options.controlledQuota.monthlyCeiling>400||!/^[a-f0-9]{64}$/.test(options.controlledQuota.approvalHash)))throw new Error('Invalid controlled quota approval binding');
+      const ceiling=odds?(options.controlledQuota?.monthlyCeiling??(options.oddsPilot==='team-moneyline-v1'?12:6)):10;
       if(budget.uncertain&&cost)throw new Error('Source quota is uncertain; successful free status/catalogue read required');
       if(cost&&!budget.freeConfirmed)throw new Error('Verify the free plan through a status/catalogue read first');
       if(budget.reserved+cost>ceiling||budget.remaining!==null&&budget.remaining-cost<(odds?100:20))throw new Error('Free-source reserve/bounded pilot allowance reached');

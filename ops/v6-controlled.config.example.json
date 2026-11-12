@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "ownerId": "OWNER-REVIEW-REQUIRED",
+  "mode": "disabled",
+  "killSwitch": true,
+  "sourcesEnabled": false,
+  "modelManifest": null,
+  "activationReceipt": null,
+  "monthlyOddsCeiling": 300
+}

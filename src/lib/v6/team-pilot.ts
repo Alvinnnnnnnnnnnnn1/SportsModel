@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { sha256 } from '@/lib/imports/duplicates';
 import type { RawEvidence } from './evidence.server';
-import { deVig,teamEloProbability } from './models';
+import { deVig,teamEloProbability,teamEloOnlyProbability } from './models';
 import { forecastTeamGame,TEAM_MODEL } from './team-model';
 import { teamGames,type TeamGame } from './team-games';
 import { resolveTeamLabel,type TeamRegistry } from './team-identity';
@@ -15,7 +15,7 @@ export const TEAM_TERMS=Object.freeze({version:'sportsbet-nba-fullgame-moneyline
 const eventSchema=z.object({id:z.string().min(1),sport_key:z.literal('basketball_nba'),commence_time:stamp,home_team:z.string().min(1),away_team:z.string().min(1),bookmakers:z.array(z.object({key:z.string(),sid:z.string().nullish(),markets:z.array(z.object({key:z.string(),last_update:stamp.nullish(),outcomes:z.array(z.object({name:z.string(),price:z.number().min(1.0001).max(10000).refine(n=>Math.abs(n*10000-Math.round(n*10000))<.00001),point:z.number().optional()}))}))}))});
 export const TEAM_FIXTURE_MATCH=Object.freeze({version:'nba-team-scheduled-time-1',maximumDifferenceSeconds:900,deadline:'earliest_attributed_start',uniqueExactHomeAwayRequired:true});
 export interface TeamFixtureProof {eventId:string;homeName:string;awayName:string;statsHomeName:string;statsAwayName:string;homeId:string;awayId:string;startsAt:string;statsStartsAt:string|null;earliestStartsAt:string;clockDifferenceSeconds:number|null;statsGameId:string|null;registryHash:string;termsVersion:string;}
-export async function screenTeamSlate(source:RawEvidence,rows:TeamGame[],registry:TeamRegistry,completeSeasons:number[],at:string){
+export async function screenTeamSlate(source:RawEvidence,rows:TeamGame[],registry:TeamRegistry,completeSeasons:number[],at:string,modelChoice:'challenger'|'elo_only'='challenger'){
  stamp.parse(at);const url=new URL(source.sourceUrl);
  if(source.provider!=='the-odds-api.com'||await sha256(source.raw)!==source.hash||url.origin!=='https://api.the-odds-api.com'||url.pathname!=='/v4/sports/basketball_nba/odds'||url.searchParams.get('bookmakers')!=='sportsbet'||url.searchParams.get('markets')!=='h2h'||Date.parse(source.retrievedAt)>Date.parse(at))throw new Error('Invalid exact Sportsbet team source');
  if(Date.parse(registry.recordedAt)>Date.parse(at))throw new Error('Future team registry');
@@ -46,7 +46,9 @@ export async function screenTeamSlate(source:RawEvidence,rows:TeamGame[],registr
     if(observation&&modeled?.forecast&&proof){const f=modeled.forecast,features=f.inputs.features;
      const inputs={minutes:null,ratePerMinute:null,surface:null,rating:null,opponentRating:null,sampleSize:f.sampleSize,sourceObservedAt:rows.filter(g=>g.final&&g.compatibleTraining&&Date.parse(g.retrievedAt)<=Date.parse(at)).map(g=>g.retrievedAt).sort().at(-1)!,sourceUrl:'https://api.balldontlie.io/v1/games',
       team:{homeId:proof.homeId,awayId:proof.awayId,homeRating:features.homeRating,awayRating:features.awayRating,homeCourt:60 as const,formAdjustment:features.formAdjustment,restAdjustment:features.restAdjustment,shrinkage:.05 as const,historyHash:f.inputs.historyHash,registryHash:registry.hash,safeEventStartsAt:proof.earliestStartsAt,researchPolicyId:TEAM_RESEARCH_POLICY.id,homeOdds:market.outcomes.find(o=>o.name===e.home_team)!.price,awayOdds:market.outcomes.find(o=>o.name===e.away_team)!.price}};
-     forecast=forecastSchema.parse({market:observation.market,probability:teamEloProbability(observation.market,inputs.team),pushProbability:0,modelId:TEAM_MODEL.id,version:TEAM_MODEL.version,method:'nba_team_elo',validation:'experimental',generatedAt:at,inputCutoff:at,inputsHash:await sha256(JSON.stringify(inputs)),evidenceUrls:['https://api.balldontlie.io/v1/games'],inputs});
+     if(modelChoice==='elo_only'){inputs.team.formAdjustment=0;inputs.team.restAdjustment=0;}
+     const finalInputs=modelChoice==='elo_only'?{...inputs,team:{...inputs.team,shrinkage:0 as const}}:inputs;
+     forecast=forecastSchema.parse({market:observation.market,probability:modelChoice==='elo_only'?teamEloOnlyProbability(observation.market,finalInputs.team):teamEloProbability(observation.market,finalInputs.team),pushProbability:0,modelId:modelChoice==='elo_only'?'nba-team-elo-only':TEAM_MODEL.id,version:modelChoice==='elo_only'?'candidate-1':TEAM_MODEL.version,method:modelChoice==='elo_only'?'nba_team_elo_only':'nba_team_elo',validation:'experimental',generatedAt:at,inputCutoff:at,inputsHash:await sha256(JSON.stringify(finalInputs)),evidenceUrls:['https://api.balldontlie.io/v1/games'],inputs:finalInputs});
     }else reasons.push(...(modeled?.reasons??['independent_current_team_forecast_missing']));
     const p=forecast?.probability??null,ev=p===null?null:p*o.price-1,elo=modeled?.forecast?(o.name===e.home_team?modeled.forecast.eloOnlyHome:1-modeled.forecast.eloOnlyHome):null;
     const pass1=[...reasons];if(p!==null&&p<TEAM_RESEARCH_POLICY.minWinProbability)reasons.push('win_likelihood_below_frozen_threshold');if(ev!==null&&ev<TEAM_RESEARCH_POLICY.minExpectedValue)reasons.push('insufficient_expected_value');
@@ -71,7 +73,7 @@ export async function gradeTeamMoneyline(position:PaperPosition,proof:TeamFixtur
  const fail=(reason:string)=>({status:'unresolved' as const,reason,grade:null});const m=position.observation.market;
  if(m.sport!=='NBA'||m.statistic!=='moneyline'||m.period!=='full_game'||m.overtime!=='included'||m.termsVersion!==TEAM_TERMS.version||proof.termsVersion!==m.termsVersion||m.eventId!=='the-odds-api.com:'+proof.eventId||![proof.homeId,proof.awayId].includes(m.subjectId)||Date.parse(position.observation.eventStartsAt)!==Date.parse(proof.startsAt))return fail('exact_team_market_proof_mismatch');
  const originalTeam=position.forecast?.inputs.team;
- if(position.forecast?.method!=='nba_team_elo'||!originalTeam||originalTeam.homeId!==proof.homeId||originalTeam.awayId!==proof.awayId||originalTeam.registryHash!==proof.registryHash||originalTeam.safeEventStartsAt!==proof.earliestStartsAt)return fail('frozen_team_forecast_proof_mismatch');
+ if(!position.forecast||!['nba_team_elo','nba_team_elo_only'].includes(position.forecast.method)||!originalTeam||originalTeam.homeId!==proof.homeId||originalTeam.awayId!==proof.awayId||originalTeam.registryHash!==proof.registryHash||originalTeam.safeEventStartsAt!==proof.earliestStartsAt)return fail('frozen_team_forecast_proof_mismatch');
  if(scores.provider!=='the-odds-api.com'||secondary.provider!=='balldontlie'&&secondary.provider!=='thesportsdb'||[scores,secondary].some(e=>Date.parse(e.retrievedAt)>Date.parse(at)))return fail('invalid_result_provider_or_clock');
  const primary=(await teamGames(scores)).filter(g=>g.sourceGameId===proof.eventId),other=await teamGames(secondary);
  const exact=(g:TeamGame)=>g.final&&g.startsAt!==null&&Date.parse(g.startsAt)===Date.parse(g.provider==='the-odds-api.com'?proof.startsAt:proof.statsStartsAt??proof.startsAt)&&g.home.name===(g.provider==='the-odds-api.com'?proof.homeName:proof.statsHomeName)&&g.away.name===(g.provider==='the-odds-api.com'?proof.awayName:proof.statsAwayName)&&g.homeScore!==null&&g.awayScore!==null&&g.homeScore!==g.awayScore;

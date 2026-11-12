@@ -4,6 +4,8 @@ import { usableTeamGames,type TeamGame,fixtureKey } from './team-games';
  * separately reviewed out-of-sample manifest and standing activation exist. */
 export const TEAM_MODEL=Object.freeze({id:'nba-team-elo-form-rest',version:'experimental-1',initialRating:1500,k:20,homeCourt:60,seasonRetention:.75,
  formGames:5,formEloScale:80,backToBackPenalty:20,minTeamGames:20,maxFeatureAgeDays:21,probabilityShrinkage:.05});
+export const ELO_ONLY_DEFINITION=Object.freeze({id:'nba-team-elo-only',version:'candidate-1',method:'nba_team_elo_only',initialRating:1500,k:20,homeCourt:60,
+ seasonRetention:.75,formAdjustment:0,restAdjustment:0,probabilityShrinkage:0,minTeamGames:20,maxFeatureAgeDays:21});
 interface Strength {rating:number;played:number;wins:number;residuals:number[];lastStart:string|null;season:number|null;}
 const initial=():Strength=>({rating:1500,played:0,wins:0,residuals:[],lastStart:null,season:null});
 const logistic=(delta:number)=>1/(1+10**(-delta/400));

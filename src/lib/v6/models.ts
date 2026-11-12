@@ -13,6 +13,12 @@ export function surfaceEloProbability(rating:number,opponentRating:number):numbe
   if(!Number.isFinite(rating)||!Number.isFinite(opponentRating)||rating<0||opponentRating<0||rating>5000||opponentRating>5000)throw new Error('Invalid surface Elo inputs');
   return 1/(1+10**((opponentRating-rating)/400));
 }
+/** Candidate baseline is a distinct method, never a relabelled challenger. */
+export function teamEloOnlyProbability(market:CanonicalMarket,inputs:{homeId:string;awayId:string;homeRating:number;awayRating:number;homeCourt:number;formAdjustment:number;restAdjustment:number;shrinkage:number}):number {
+ if(inputs.formAdjustment!==0||inputs.restAdjustment!==0||inputs.shrinkage!==0)throw new Error('Elo-only cannot contain challenger adjustments');
+ teamEloProbability(market,{...inputs,shrinkage:.05});
+ const home=1/(1+10**(-(inputs.homeRating-inputs.awayRating+inputs.homeCourt)/400));return market.subjectId===inputs.homeId?home:1-home;
+}
 /** Frozen team model formula, distinct from tennis Elo. */
 export function teamEloProbability(market:CanonicalMarket,inputs:{homeId:string;awayId:string;homeRating:number;awayRating:number;homeCourt:number;formAdjustment:number;restAdjustment:number;shrinkage:number}):number {
  const m=marketSchema.parse(market);

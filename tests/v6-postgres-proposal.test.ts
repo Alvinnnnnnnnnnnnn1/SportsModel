@@ -8,7 +8,7 @@ import { registerPaper,positionHash } from '@/lib/v6/engine';
 import { emptyV6State,positionSchema,type PaperPosition } from '@/lib/v6/types';
 import { V6_POLICY } from '@/lib/v6/policy';
 import { observation,forecast,grade } from './fixtures/v6';
-import { teamEloProbability } from '@/lib/v6/models';
+import { teamEloProbability,teamEloOnlyProbability } from '@/lib/v6/models';
 import { type Forecast } from '@/lib/v6/types';
 interface DB{exec(s:string):Promise<unknown>;query<T extends Record<string,unknown>=Record<string,unknown>>(s:string,a?:unknown[]):Promise<{rows:T[]}>;close():Promise<void>;}
 const runtime=process.env.EDGELAB_POSTGRES_RUNTIME;
@@ -51,6 +51,16 @@ describe.skipIf(!runtime)('V6 isolated SQL proposal',()=>{
    await db.query('insert into public.v6_models values($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',[owner,teamF.modelId,teamF.version,teamF.method,'a'.repeat(64),'out_of_sample_validated',activated,'{}']);
    await insertObservation(teamO);const teamP=(await registerPaper(emptyV6State(owner),teamO,teamF,'pre_event_once',at)).position!;
    expect(positionSchema.parse(await register(teamP)).forecast?.method).toBe('nba_team_elo');
+   const baselineO=structuredClone(teamO);baselineO.id=crypto.randomUUID();baselineO.market.eventId='LOCAL-BASELINE';
+   const baselineInputs={...inputs,team:{...inputs.team,shrinkage:0 as const,formAdjustment:0,restAdjustment:0}};
+   const baselineF:Forecast={...teamF,market:baselineO.market,modelId:'nba-team-elo-only',version:'candidate-1',method:'nba_team_elo_only',probability:teamEloOnlyProbability(baselineO.market,baselineInputs.team),inputs:baselineInputs,inputsHash:await sha256(JSON.stringify(baselineInputs))};
+   const baselineP=(await registerPaper(emptyV6State(owner),baselineO,baselineF,'pre_event_once',at)).position!;
+   await db.exec('savepoint baseline_review');
+   await db.query('insert into public.v6_models values($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',[owner,baselineF.modelId,baselineF.version,baselineF.method,'a'.repeat(64),'out_of_sample_validated',activated,'{}']);
+   await insertObservation(baselineO);await expect(register(baselineP)).rejects.toThrow(/validation review/);
+   await db.exec('rollback to savepoint baseline_review');
+   await db.query('insert into public.v6_models values($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',[owner,baselineF.modelId,baselineF.version,baselineF.method,'a'.repeat(64),'out_of_sample_validated',activated,JSON.stringify({reviewStatus:'owner_approved',chronologicalGames:500,verifiedProspectiveFixtures:30,teamResultsOnlyAccepted:true,notice:raw})]);
+   await insertObservation(baselineO);expect(positionSchema.parse(await register(baselineP)).forecast?.method).toBe('nba_team_elo_only');
    const badTeam=structuredClone(teamP);badTeam.id=crypto.randomUUID();badTeam.observation.id=crypto.randomUUID();badTeam.observation.market.eventId='LOCAL-other-team-event';badTeam.forecast!.market=badTeam.observation.market;badTeam.forecast!.probability=.99;await insertObservation(badTeam.observation);
    await expect(register(badTeam)).rejects.toThrow(/reproducible/);await db.exec('rollback');
    expect((await db.query("select count(*)::int n from public.v6_positions where model_id='nba-team-elo-form-rest'")).rows[0].n).toBe(0);

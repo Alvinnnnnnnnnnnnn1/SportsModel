@@ -41,7 +41,7 @@ create table public.v6_controls (
 );
 create table public.v6_models (
   user_id uuid not null references auth.users(id), id text not null, version text not null,
-  method text not null check(method in ('poisson_minutes_rate','surface_elo','nba_team_elo')),
+  method text not null check(method in ('poisson_minutes_rate','surface_elo','nba_team_elo','nba_team_elo_only')),
   manifest_hash text not null check(manifest_hash ~ '^[a-f0-9]{64}$'),
   validation text not null check(validation in ('experimental','out_of_sample_validated')),
   approved_at timestamptz, payload jsonb not null,
@@ -189,9 +189,11 @@ declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;t jsonb;field te
     or (f->>'inputCutoff')::timestamptz>(f->>'generatedAt')::timestamptz or (f->>'generatedAt')::timestamptz>clock
     or (f#>>'{inputs,sourceObservedAt}')::timestamptz is null or (f#>>'{inputs,sourceObservedAt}')::timestamptz>(f->>'inputCutoff')::timestamptz
     or (f->>'probability')::numeric*NEW.original_odds+(f->>'pushProbability')::numeric-1<0.02 then raise exception 'V6 pre-event/source/model quality gate failed';end if;
-  if m.method='nba_team_elo' then
+  if m.method in ('nba_team_elo','nba_team_elo_only') then
     t:=f#>'{inputs,team}';
-    if jsonb_typeof(t) is distinct from 'object' or m.id<>'nba-team-elo-form-rest' or m.version<>'experimental-1'
+    if jsonb_typeof(t) is distinct from 'object'
+      or not ((m.method='nba_team_elo' and m.id='nba-team-elo-form-rest' and m.version='experimental-1')
+        or (m.method='nba_team_elo_only' and m.id='nba-team-elo-only' and m.version='candidate-1'))
       or NEW.canonical_market->>'sport' is distinct from 'NBA' or NEW.canonical_market->>'statistic' is distinct from 'moneyline'
       or NEW.canonical_market->>'operator' is distinct from 'win' or NEW.canonical_market->>'period' is distinct from 'full_game'
       or NEW.canonical_market->>'overtime' is distinct from 'included' or (f->>'pushProbability')::numeric<>0
@@ -204,11 +206,24 @@ declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;t jsonb;field te
     end loop;
     if (t->>'homeRating')::numeric not between 0 and 5000 or (t->>'awayRating')::numeric not between 0 and 5000
       or (t->>'homeCourt')::numeric<>60 or (t->>'formAdjustment')::numeric not between -160 and 160
-      or (t->>'restAdjustment')::numeric not between -20 and 20 or (t->>'shrinkage')::numeric<>0.05
+      or (t->>'restAdjustment')::numeric not between -20 and 20
+      or (t->>'shrinkage')::numeric<>(case when m.method='nba_team_elo_only' then 0 else 0.05 end)
+      or (m.method='nba_team_elo_only' and ((t->>'formAdjustment')::numeric<>0 or (t->>'restAdjustment')::numeric<>0))
       or nullif(t->>'safeEventStartsAt','') is null or (t->>'safeEventStartsAt')::timestamptz>start_time
       or (t->>'safeEventStartsAt')::timestamptz<=clock or (f->>'inputCutoff')::timestamptz>=(t->>'safeEventStartsAt')::timestamptz
       then raise exception 'V6 team input/start gate failed';end if;
     home_prob:=0.95/(1+power(10::numeric,-((t->>'homeRating')::numeric-(t->>'awayRating')::numeric+60+(t->>'formAdjustment')::numeric+(t->>'restAdjustment')::numeric)/400))+0.025;
+    if m.method='nba_team_elo_only' then
+      home_prob:=1/(1+power(10::numeric,-((t->>'homeRating')::numeric-(t->>'awayRating')::numeric+60)/400));
+      if m.payload->>'reviewStatus' is distinct from 'owner_approved' or jsonb_typeof(m.payload->'chronologicalGames') is distinct from 'number'
+        or jsonb_typeof(m.payload->'verifiedProspectiveFixtures') is distinct from 'number'
+        or (m.payload->>'chronologicalGames')::numeric<500 or (m.payload->>'verifiedProspectiveFixtures')::numeric<30
+        or (m.payload->>'chronologicalGames')::numeric<>trunc((m.payload->>'chronologicalGames')::numeric)
+        or (m.payload->>'verifiedProspectiveFixtures')::numeric<>trunc((m.payload->>'verifiedProspectiveFixtures')::numeric)
+        or jsonb_typeof(m.payload->'teamResultsOnlyAccepted') is distinct from 'boolean'
+        or m.payload->>'teamResultsOnlyAccepted' is distinct from 'true'
+        then raise exception 'V6 controlled baseline validation review missing';end if;
+    end if;
     calculated:=case when NEW.canonical_market->>'subjectId'=t->>'homeId' then home_prob else 1-home_prob end;
     if abs(calculated-(f->>'probability')::numeric)>0.0000000001 then raise exception 'V6 team probability is not reproducible';end if;
     if t->>'researchPolicyId' is distinct from 'nba-moneyline-two-pass-1' or jsonb_typeof(t->'homeOdds') is distinct from 'number' or jsonb_typeof(t->'awayOdds') is distinct from 'number'

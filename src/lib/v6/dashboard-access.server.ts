@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import path from 'node:path';
 import { isV6DashboardRequest } from './dashboard-origin';
 import {loadCloudDashboard} from './cloud/dashboard.server';
+import {CLOUD_EVIDENCE_NOT_CONNECTED,CloudEvidenceNotConnected} from './cloud/errors';
 import { loadV6Dashboard, readDashboardAccess } from './dashboard.server';
 import {pilotResearchOwner} from './source-pilot.server';
 import type { V6Dashboard } from './dashboard';
@@ -30,8 +31,8 @@ export async function handleV6DashboardRequest(request:Request,ports:Ports=defau
  const token=request.headers.get('authorization')?.match(/^Bearer ([A-Za-z0-9_.-]+)$/)?.[1];if(!token)return send({error:'Sign into your existing private workspace.'},401);
  try{
   const owner=await ports.verifyUser(token);if(!owner)return send({error:'Valid private session required.'},401);
-  let access:{historyBatchId:string};try{access=await ports.access();}catch{return send({error:process.env.VERCEL==='1'||process.env.V6_EVIDENCE_MODE==='cloud'?'Cloud research data not connected. Owner binding and private evidence must be provisioned.':'Local V6 dashboard owner binding is unavailable. See docs/v6-dashboard.md.'},503);}
-  if(!await ports.ownsAnchor(token,owner,access.historyBatchId))return send({error:'This local evidence belongs to a different private workspace.'},403);
+  let access:{historyBatchId:string};try{access=await ports.access();}catch{return send({error:process.env.VERCEL==='1'||process.env.V6_EVIDENCE_MODE==='cloud'?CLOUD_EVIDENCE_NOT_CONNECTED:'Local V6 dashboard owner binding is unavailable. See docs/v6-dashboard.md.'},503);}
+  if(!await ports.ownsAnchor(token,owner,access.historyBatchId))return send({error:'This evidence belongs to a different private workspace.'},403);
   return send(await ports.load(owner,access.historyBatchId,token));
- }catch{return send({error:process.env.VERCEL==='1'||process.env.V6_EVIDENCE_MODE==='cloud'?'Cloud research data not connected or failed validation. No data or worker state was changed.':'V6 evidence is unavailable. No data or worker state was changed.'},503);}
+ }catch(error){return send({error:error instanceof CloudEvidenceNotConnected?CLOUD_EVIDENCE_NOT_CONNECTED:'V6 evidence is unavailable or failed validation. No data or worker state was changed.'},503);}
 }

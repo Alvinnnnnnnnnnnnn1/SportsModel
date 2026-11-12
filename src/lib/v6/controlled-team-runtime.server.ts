@@ -59,7 +59,7 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   if(job.kind==='results'){
    if(model2Pending.length){const ids=[...new Set([...withinRetention.map(p=>p.observation.market.eventId.replace(/^the-odds-api\.com:/,'')),...(await Promise.all(model2Pending.map(s=>pendingModel2Events(root,s,clock())))).flat()])];
     if(ids.length){scorePromise=(async()=>{await readOdds('/v4/sports',{},0);return readOdds('/v4/sports/basketball_nba/scores',{daysFrom:'3',eventIds:ids.join(','),dateFormat:'iso'},2);})();const scores=await scorePromise;
-     for(const slate of model2Pending)await recordModel2Results(root,slate,{scores,secondary:readSecondary,at:clock(),eventIds:await pendingModel2Events(root,slate,clock()),beforeCommit:authorizeRead});}}
+     for(const slate of model2Pending)await recordModel2Results(root,slate,{scores,secondary:readSecondary,at:clock(),clock,eventIds:await pendingModel2Events(root,slate,clock()),beforeCommit:authorizeRead});}}
    return [];
   }
   const cache=path.join(liveRoot,'features.json');let featureReceipts:RawEvidence[]=[];
@@ -86,7 +86,7 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   const retained=await Promise.all((await fs.readdir(receiptDir)).filter(f=>f.endsWith('.json')).map(async f=>JSON.parse(await fs.readFile(path.join(receiptDir,f),'utf8')) as Promise<RawEvidence>));
   const priorCatalog=retained.filter(e=>e.provider==='balldontlie'&&new URL(e.sourceUrl).pathname==='/v1/teams').sort((a,b)=>a.retrievedAt.localeCompare(b.retrievedAt)).at(-1);
   const catalog=await currentTeamCatalogue(priorCatalog,clock(),()=>readBdl('/v1/teams'));
-  const registry=await teamRegistry(catalog,all),rows=canonicalTeamRows(all,registry).matched;
+  const registry=await teamRegistry(catalog,all,clock()),rows=canonicalTeamRows(all,registry).matched;
   const season=Number(new URL(featureReceipts[0].sourceUrl).searchParams.get('seasons[]')),coverage=await regularSeasonCoverage(featureReceipts,season,clock());
   await atomicPrivateJson(path.join(liveRoot,'discovered-fixtures.json'),{at:clock(),fixtures:rows.filter(g=>!g.final&&g.startsAt&&Date.parse(g.startsAt)>Date.parse(clock())).map(g=>({id:g.provider+':'+g.sourceGameId,startsAt:g.startsAt}))});
   await readOdds('/v4/sports',{},0);const odds=await readOdds('/v4/sports/basketball_nba/odds',{bookmakers:'sportsbet',markets:'h2h',oddsFormat:'decimal',dateFormat:'iso',includeSids:'true'},1);

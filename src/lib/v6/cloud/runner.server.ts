@@ -23,13 +23,18 @@ export async function runCloudSourceTick(rpc:CloudRPC,options:{enabled:boolean;c
  if((await collectionApprovalReasons(controls.config,controls.receipt,clock())).length)throw new Error('Original source approval is invalid');
  if(!loaded.snapshot)throw new Error('Approved handover snapshot missing');
  const leaseId=crypto.randomUUID(),claim=await rpc.call<{epoch:number}>('claim',{leaseId}),lease={leaseId,epoch:claim.epoch};
- loaded=await rpc.call<Loaded>('load');if(loaded.pilot.epoch!==claim.epoch)throw new Error('Cloud lease fencing mismatch');
- const root=await fs.mkdtemp(path.join(os.tmpdir(),'edgelab-v6-source-'));let revision=loaded.pilot.revision,requests=0;
+ let cacheRoot:string|undefined;let revision=pilot.revision,requests=0;
  const refresh=async()=>{await rpc.call('renew',lease);return controls;};
  try{
+  loaded=await rpc.call<Loaded>('load');const claimedPilot=cloudPilotSchema.parse(loaded.pilot);
+  if(claimedPilot.epoch!==claim.epoch)throw new Error('Cloud lease fencing mismatch');
+  const claimedTransfer=validateHostTransfer(claimedPilot.transfer_approval,claimedPilot,clock());
+  if(claimedPilot.id!==pilot.id||claimedPilot.user_id!==pilot.user_id||claimedPilot.namespace!==pilot.namespace||claimedPilot.plan_hash!==pilot.plan_hash||claimedPilot.receipt_hash!==pilot.receipt_hash||claimedPilot.active_host!=='cloud'||claimedPilot.stopped||claimedTransfer.codeRevision!==options.reviewedCodeRevision)throw new Error('Cloud authority changed before lease acquisition');
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'edgelab-v6-source-'));cacheRoot=root;revision=claimedPilot.revision;
   if(!loaded.snapshotRaw||digest(loaded.snapshotRaw)!==loaded.pilot.snapshot_hash)throw new Error('Cloud manifest hash mismatch');
   const current=validateSnapshot(JSON.parse(loaded.snapshotRaw)),schedulerFile=current.files.find(f=>f.path===`controlled/${digest(plan.ownerId)}/scheduler.json`);
-  const scheduler=schedulerFile?JSON.parse((await rpc.call<{body:string}>('get',{hash:schedulerFile.hash})).body):{jobs:[]};
+  let scheduler={jobs:[] as {id:string;status:string;nextAt?:string}[]};
+  if(schedulerFile){const raw=(await rpc.call<{body:string}>('get',{hash:schedulerFile.hash})).body;if(digest(raw)!==schedulerFile.hash||Buffer.byteLength(raw)!==schedulerFile.bytes)throw new Error('Cloud scheduler hash mismatch');scheduler=JSON.parse(raw);if(!Array.isArray(scheduler.jobs))throw new Error('Invalid cloud scheduler');}
   const planned=planControlledJobs([],clock(),plan),now=Date.parse(clock());
   const due=planned.some(j=>{const old=scheduler.jobs.find((s:{id:string})=>s.id===j.id);return Date.parse(j.dueAt)<=now&&(!old||!['completed','failed','missed','blocked'].includes(old.status))&&(!old?.nextAt||Date.parse(old.nextAt)<=now);});
   if(!due)return {status:'idle',workerInvoked:false,providerRequests:0,paperRegistrations:0,snapshotRevision:revision};
@@ -48,5 +53,5 @@ export async function runCloudSourceTick(rpc:CloudRPC,options:{enabled:boolean;c
   const result=await runControlledTick(operational,{repository,clock,readControl:refresh,prepare:options.prepare??(async job=>prepareControlledTeamPorts(root,repository,job,controls,options.keys??{},clock,refresh,journal))},planControlledJobs(fixtures,clock(),plan));
   const final=await repository.read();if(final.positions.length||final.grades.length)throw new Error('Source-only invariant failed');
   await checkpoint();return {...result,providerRequests:requests,paperRegistrations:0,snapshotRevision:revision};
- }finally{try{await rpc.call('release',lease);}finally{await fs.rm(root,{recursive:true,force:true});}}
+ }finally{try{await rpc.call('release',lease);}finally{if(cacheRoot)await fs.rm(cacheRoot,{recursive:true,force:true});}}
 }

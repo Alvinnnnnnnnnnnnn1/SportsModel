@@ -5,7 +5,8 @@ import type { TeamGame } from './team-games';
 /** Exact provider IDs + shared league-qualified abbreviation, never fuzzy names.
  * Canonicalisation is a separately retained transformation, not a raw-source edit.
  */
-export async function teamRegistry(catalogue:RawEvidence,rows:TeamGame[]){
+export async function teamRegistry(catalogue:RawEvidence,rows:TeamGame[],recordedAt=new Date().toISOString()){
+ z.string().datetime({offset:true}).parse(recordedAt);
  if(catalogue.provider!=='balldontlie'||new URL(catalogue.sourceUrl).origin!=='https://api.balldontlie.io'||new URL(catalogue.sourceUrl).pathname!=='/v1/teams'||await sha256(catalogue.raw)!==catalogue.hash)throw new Error('Invalid team catalogue');
  const teams=z.array(z.object({id:z.number().int().positive(),full_name:z.string().min(1),city:z.string(),name:z.string(),abbreviation:z.string(),conference:z.string(),division:z.string()})).parse(JSON.parse(catalogue.raw).data)
   .filter(t=>['East','West'].includes(t.conference)&&['Atlantic','Central','Southeast','Northwest','Pacific','Southwest'].includes(t.division));
@@ -18,7 +19,7 @@ export async function teamRegistry(catalogue:RawEvidence,rows:TeamGame[]){
   const key=row.provider+':'+side.id,value={canonicalId:'NBA:'+side.code,name:t.full_name,code:side.code,aliases:[...new Set([t.full_name,`${t.city} ${t.name}`.trim()])]};
   if(mappings[key]&&JSON.stringify(mappings[key])!==JSON.stringify(value))throw new Error('Conflicting team identifier bridge');mappings[key]=value;
  }
- const registry={version:1,recordedAt:new Date().toISOString(),catalogueHash:catalogue.hash,catalogueReceiptId:catalogue.id,sourceHashes:[...new Set(rows.map(r=>r.rawHash))].sort(),mappings,blocked:[...new Set(blocked)]};
+ const registry={version:1,recordedAt,catalogueHash:catalogue.hash,catalogueReceiptId:catalogue.id,sourceHashes:[...new Set(rows.map(r=>r.rawHash))].sort(),mappings,blocked:[...new Set(blocked)]};
  return {...registry,hash:await sha256(JSON.stringify(registry))};
 }
 export type TeamRegistry=Awaited<ReturnType<typeof teamRegistry>>;

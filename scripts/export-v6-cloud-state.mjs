@@ -4,6 +4,7 @@ const root=path.resolve('.local/v6'),output=path.join(root,'cloud-transfer',new 
 const loader=await createServer({configFile:false,envDir:false,appType:'custom',resolve:{alias:{'@':process.cwd()+'/src'}},server:{middlewareMode:true,hmr:false,ws:false,watch:null}});
 try{
  const {snapshotDirectory}=await loader.ssrLoadModule('/src/lib/v6/cloud/snapshot.server.ts');
+ const {sourceRetentionInventory}=await loader.ssrLoadModule('/src/lib/v6/cloud/inventory.server.ts');
  const {digest}=await loader.ssrLoadModule('/src/lib/v6/evidence.server.ts');
  const {ORIGINAL_PLAN,ORIGINAL_RECEIPT,ORIGINAL_CONFIG}=await loader.ssrLoadModule('/src/lib/v6/cloud/client.server.ts');
  const planBody=await fs.readFile(path.join(root,'source-pilot/proposal/plan.json'),'utf8'),plan=JSON.parse(planBody),planRaw=JSON.stringify(plan),receiptRaw=await fs.readFile(path.join(root,'source-pilot/approved-receipt.json'),'utf8');
@@ -18,7 +19,9 @@ try{
  await fs.mkdir(path.join(output,'objects'),{recursive:true,mode:0o700});
  for(const [hash,body]of objects)await fs.writeFile(path.join(output,'objects',hash+'.json'),body,{mode:0o600,flag:'wx'});
  await fs.writeFile(path.join(output,'manifest.json'),manifestRaw,{mode:0o600,flag:'wx'});
- const bundle={format:'edgelab.v6-source-cloud-staging',version:1,exportedAt:new Date().toISOString(),projectRef:'ilgoswfckkzpoktabbfi',pilotId:crypto.randomUUID(),planHash:ORIGINAL_PLAN,planRaw,receiptHash:ORIGINAL_RECEIPT,receiptRaw,snapshotHash,quotas:{odds:JSON.parse(before.odds),bdl:JSON.parse(before.bdl)},sourceRightsReviewRequired:true,cloudActivationApproved:false,localStopped:false};
+ const inventoryRaw=JSON.stringify(sourceRetentionInventory(manifest,objects),null,2),inventoryHash=digest(inventoryRaw);
+ await fs.writeFile(path.join(output,'retention-inventory.json'),inventoryRaw,{mode:0o600,flag:'wx'});
+ const bundle={inventoryHash,format:'edgelab.v6-source-cloud-staging',version:1,exportedAt:new Date().toISOString(),projectRef:'ilgoswfckkzpoktabbfi',pilotId:crypto.randomUUID(),planHash:ORIGINAL_PLAN,planRaw,receiptHash:ORIGINAL_RECEIPT,receiptRaw,snapshotHash,quotas:{odds:JSON.parse(before.odds),bdl:JSON.parse(before.bdl)},sourceRightsReviewRequired:true,cloudActivationApproved:false,localStopped:false};
  await fs.writeFile(path.join(output,'staging.json'),JSON.stringify(bundle,null,2),{mode:0o600,flag:'wx'});
- console.log(JSON.stringify({status:'local_staging_only',output,objects:objects.size,files:manifest.files.length,bytes:[...objects.values()].reduce((n,b)=>n+Buffer.byteLength(b),0),snapshotHash,oddsReserved:bundle.quotas.odds.reserved,providerUsed:bundle.quotas.odds.used,cloudWrites:0,localServiceChanged:false}));
+ console.log(JSON.stringify({status:'local_staging_only',output,objects:objects.size,files:manifest.files.length,bytes:[...objects.values()].reduce((n,b)=>n+Buffer.byteLength(b),0),snapshotHash,inventoryHash,oddsReserved:bundle.quotas.odds.reserved,providerUsed:bundle.quotas.odds.used,cloudWrites:0,localServiceChanged:false}));
 }finally{await loader.close();}

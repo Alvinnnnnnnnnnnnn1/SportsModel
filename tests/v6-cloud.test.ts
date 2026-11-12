@@ -24,3 +24,17 @@ describe('Source-only disabled defaults and narrow cloud transport',()=>{
  it('rejects another project, broad credentials and never reflects server error bodies',async()=>{const options={url:'https://ilgoswfckkzpoktabbfi.supabase.co',publishableKey:'sb_publishable_TEST',pilotId:crypto.randomUUID(),capability:'1'.repeat(64)};expect(()=>cloudSourceClient({...options,url:'https://evil.invalid'})).toThrow();expect(()=>cloudSourceClient({...options,publishableKey:'sb_secret_TEST'})).toThrow();const fetcher=vi.fn(async()=>new Response('SECRET DETAILS',{status:403}));const client=cloudSourceClient({...options,fetcher});await expect(client.call('load')).rejects.toThrow('Cloud source operation rejected');expect(fetcher.mock.calls).toHaveLength(1);});
  it('reserves remote credits before provider I/O and never treats rejection as a free retry',async()=>temp(async root=>{const events:string[]=[],fetcher=vi.fn(async()=>{events.push('fetch');return Response.json({data:[]},{headers:{'x-requests-used':'10','x-requests-remaining':'490'}});});const journal={reserve:vi.fn(async()=>{events.push('reserve');return 'reservation';}),complete:vi.fn(async()=>{events.push('complete');})};const api=freeSources({root,oddsKey:'TEST-ONLY-SECRET',fetcher,quotaJournal:journal});await api.read('the-odds-api.com','/v4/sports');expect(events).toEqual(['reserve','fetch','complete']);journal.reserve.mockRejectedValueOnce(new Error('Quota exhausted'));const secondary=teamSources({root,bdlKey:'TEST-ONLY-SECRET',fetcher,quotaJournal:journal});await expect(secondary.read('balldontlie','/v1/teams')).rejects.toThrow('Quota exhausted');expect(fetcher).toHaveBeenCalledTimes(1);}));
 });
+
+it('keeps feature pushes separate from deliberate Vercel deployment',async()=>{
+ const config=JSON.parse(await fs.readFile('vercel.json','utf8'));
+ expect(config.git.deploymentEnabled['feature/v6-autonomous-paper']).toBe(false);
+ expect(config.git.deploymentEnabled.main).toBeUndefined();
+});
+
+it('classifies retained sources without approving transfer or exposing raw fields',async()=>{
+ const {sourceRetentionInventory}=await import('@/lib/v6/cloud/inventory.server');
+ const body=JSON.stringify({provider:'api-nba',sourceUpdatedAt:null,raw:'DO_NOT_EXPOSE'}),hash=digest(body),manifest=validateSnapshot({format:'edgelab.v6-source-snapshot',version:1,files:[{path:'evidence/'+hash+'.json',hash,bytes:Buffer.byteLength(body)}]});
+ const result=sourceRetentionInventory(manifest,new Map([[hash,body]]));
+ expect(result.cloudTransferApproved).toBe(false);expect(result.publicRedistributionApproved).toBe(false);expect(result.files[0].providers).toEqual(['api-nba']);expect(result.files[0].apiNbaRestriction).toContain('no new current-season access');expect(JSON.stringify(result)).not.toContain('DO_NOT_EXPOSE');
+ expect(()=>sourceRetentionInventory(manifest,new Map([[hash,'{}']]))).toThrow('integrity');
+});

@@ -3,6 +3,7 @@ import { describe,it,expect,vi } from 'vitest';
 import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
 import { loadV6Dashboard,readDashboardAccess } from '@/lib/v6/dashboard.server';
 import { handleV6DashboardRequest } from '@/lib/v6/dashboard-access.server';
+import {CloudEvidenceNotConnected,CLOUD_EVIDENCE_NOT_CONNECTED} from '@/lib/v6/cloud/errors';
 import { digest } from '@/lib/v6/evidence.server';
 import { emptyV6State } from '@/lib/v6/types';
 const at='2026-11-12T12:00:00Z',id='204dd518-19e2-4250-ad80-b6218430d838';
@@ -32,5 +33,6 @@ describe('V6 authenticated local endpoint',()=>{
  it('rejects anonymous, expired, cross-origin, public-host, path-query and mutation requests before private reads',async()=>{const p=ports();for(const r of [request({Authorization:''}),request({Origin:'http://evil.invalid'}),request({},'https://public.invalid/api/v6/dashboard'),request({},'http://localhost:3000/api/v6/dashboard?file=worker-credential.json'),request({},undefined,'POST')])expect((await handleV6DashboardRequest(r,p)).status).toBeGreaterThanOrEqual(400);expect(p.load).not.toHaveBeenCalled();p.verifyUser.mockResolvedValueOnce(null as unknown as string);expect((await handleV6DashboardRequest(request(),p)).status).toBe(401);expect(p.access).not.toHaveBeenCalled();});
  it('rejects a second authenticated account without exposing evidence or the anchor',async()=>{const p=ports();p.ownsAnchor.mockResolvedValue(false);const r=await handleV6DashboardRequest(request(),p);expect(r.status).toBe(403);expect(p.load).not.toHaveBeenCalled();expect(await r.text()).not.toContain('historyBatchId');});
  it('returns sanitized owner data with private no-store headers and no database write operation',async()=>{const p=ports(),r=await handleV6DashboardRequest(request(),p);expect(r.status).toBe(200);expect(r.headers.get('cache-control')).toContain('no-store');expect(p.ownsAnchor).toHaveBeenCalledWith('synthetic','owner',expect.any(String));expect(p.load).toHaveBeenCalledWith('owner',expect.any(String),'synthetic');});
+ it('returns the exact unconnected state after normal ownership checks on HTTPS',async()=>{const p=ports();p.load.mockRejectedValueOnce(new CloudEvidenceNotConnected());const r=await handleV6DashboardRequest(request({Origin:'https://sports-model-mauve.vercel.app'},'https://sports-model-mauve.vercel.app/api/v6/dashboard'),p);expect(r.status).toBe(503);expect(await r.json()).toEqual({error:CLOUD_EVIDENCE_NOT_CONNECTED});expect(p.ownsAnchor).toHaveBeenCalled();});
  it('redacts auth, storage and upstream error contents and permits safe retry',async()=>{const p=ports();p.load.mockRejectedValueOnce(new Error('SECRET /private/path'));const r=await handleV6DashboardRequest(request(),p);expect(r.status).toBe(503);expect(await r.text()).not.toMatch(/SECRET|private\/path/);expect((await handleV6DashboardRequest(request(),p)).status).toBe(200);});
 });

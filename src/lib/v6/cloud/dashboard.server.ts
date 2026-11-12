@@ -2,16 +2,17 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
 import {digest} from '../evidence.server';
 import {cloudPilotSchema} from './client.server';
+import {CloudEvidenceNotConnected} from './errors';
 import {restoreSnapshot,validateSnapshot} from './snapshot.server';
 import {loadV6Dashboard} from '../dashboard.server';
 /** Normal owner JWT/RLS SELECT only. Temporary files are a disposable projection,
  * never the durable store. No worker credential, provider key or service role. */
 export async function loadCloudDashboard(client:SupabaseClient,owner:string,batchId:string){
  const {data,error}=await client.from('v6_source_pilots').select('*').eq('user_id',owner).eq('history_batch_id',batchId).order('created_at',{ascending:false}).limit(1).maybeSingle();
- if(error||!data)throw new Error('Cloud research data not connected');
+ if(error){if(['42P01','PGRST205'].includes(error.code))throw new CloudEvidenceNotConnected();throw new Error('Cloud research lookup unavailable');}if(!data)throw new CloudEvidenceNotConnected();
  const pilot=cloudPilotSchema.parse(data);if(digest(pilot.plan_raw)!==pilot.plan_hash||digest(pilot.receipt_raw)!==pilot.receipt_hash)throw new Error('Cloud approval integrity');if(pilot.user_id!==owner||pilot.history_batch_id!==batchId)throw new Error('Cloud owner mismatch');
  const {data:snapshot,error:snapshotError}=await client.from('v6_source_snapshots').select('manifest_raw,hash').eq('user_id',owner).eq('pilot_id',pilot.id).eq('revision',pilot.revision).maybeSingle();
- if(snapshotError||!snapshot)throw new Error('Cloud research data not connected');
+ if(snapshotError)throw new Error('Cloud snapshot lookup unavailable');if(!snapshot)throw new CloudEvidenceNotConnected();
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'edgelab-v6-view-'));
  try{
   if(digest(snapshot.manifest_raw)!==pilot.snapshot_hash||snapshot.hash!==pilot.snapshot_hash)throw new Error('Cloud manifest integrity');

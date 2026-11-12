@@ -68,7 +68,7 @@ export async function pendingModel2Slates(root:string,ownerId:string,at:string){
  const records=[];for(const name of names.filter(n=>/^[a-f0-9-]{36}\.json$/.test(n))){const slate=await loadModel2Slate(root,name.slice(0,-5),ownerId);if((await pendingModel2Events(root,slate,at)).length)records.push(slate);}return records;
 }
 /** Genuine retained finals use the existing reconciliation policy; not a paper grade. */
-export async function recordModel2Results(root:string,slate:Model2Slate,input:{scores:RawEvidence;secondary:(proof:TeamFixtureProof)=>Promise<RawEvidence>;at:string;eventIds?:string[];beforeCommit?:()=>Promise<void>}):Promise<Model2ResultRecord>{
+export async function recordModel2Results(root:string,slate:Model2Slate,input:{scores:RawEvidence;secondary:(proof:TeamFixtureProof)=>Promise<RawEvidence>;at:string;clock?:()=>string;eventIds?:string[];beforeCommit?:()=>Promise<void>}):Promise<Model2ResultRecord>{
  stamp.parse(input.at);const previous=await latestModel2Results(root,slate);const results:Model2ResultRow[]=[];
  const odds=JSON.parse(await fs.readFile(path.join(root,'evidence-receipts',slate.record.sourceReceipt+'.json'),'utf8')) as RawEvidence;
  for(const fixture of slate.record.fixtures){
@@ -76,7 +76,7 @@ export async function recordModel2Results(root:string,slate:Model2Slate,input:{s
   if(Date.parse(fixture.proof.earliestStartsAt)>Date.parse(input.at)||Date.parse(input.at)-Date.parse(fixture.proof.earliestStartsAt)>=3*86400000||!fixture.originalFixtureReceipt){results.push({eventId:fixture.eventId,status:'unresolved',reason:'fixture_not_started_or_retention_or_evidence_missing',y:null});continue;}
   try{
   const original=JSON.parse(await fs.readFile(path.join(root,'evidence-receipts',fixture.originalFixtureReceipt+'.json'),'utf8')) as RawEvidence,secondary=await input.secondary(fixture.proof);
-  const quote=fixture.selections[0];const result=await reconcileTeamEvent({proof:fixture.proof,registry:slate.record.registry,originalOdds:odds,originalFixtures:original,scores:input.scores,secondary,frozenAt:slate.record.at,at:input.at,
+  const quote=fixture.selections[0];const result=await reconcileTeamEvent({proof:fixture.proof,registry:slate.record.registry,originalOdds:odds,originalFixtures:original,scores:input.scores,secondary,frozenAt:slate.record.at,at:stamp.parse(input.clock?.()??input.at),
    quote:{selectionName:quote.selection,odds:quote.odds,sourceUpdatedAt:quote.sourceUpdatedAt,retrievedAt:quote.retrievedAt,forecastAt:fixture.generatedAt}});
   const verified=result.identity.verified&&result.result.verified&&result.quoteEligibility.eligible;
   results.push({eventId:fixture.eventId,status:verified?'verified':'unresolved',reason:verified?null:result.result.reason??'identity_or_quote_unverified',y:verified?Number(result.result.winnerId===fixture.proof.homeId):null,sourceHashes:result.sourceHashes,decision:result});
@@ -84,7 +84,7 @@ export async function recordModel2Results(root:string,slate:Model2Slate,input:{s
  }
  await input.beforeCommit?.();
  const factHash=digest(JSON.stringify(results.map(r=>({eventId:r.eventId,status:r.status,reason:r.reason,y:r.y,homeScore:r.decision?.result.homeScore??null,awayScore:r.decision?.result.awayScore??null}))));if(previous?.record.factHash===factHash)return previous.record;
- const record:Model2ResultRecord={revision:(previous?.record.revision??0)+1,previousHash:previous?.hash??null,factHash,format:'edgelab.v6-model2-results',version:1,shadowHash:slate.hash,at:input.at,results,positions:0,paperSettlements:0},hash=digest(JSON.stringify(record));await atomicPrivateJson(path.join(root,'model-development/results',slate.record.sourceReceipt,hash+'.json'),record);return record;
+ const record:Model2ResultRecord={revision:(previous?.record.revision??0)+1,previousHash:previous?.hash??null,factHash,format:'edgelab.v6-model2-results',version:1,shadowHash:slate.hash,at:stamp.parse(input.clock?.()??input.at),results,positions:0,paperSettlements:0},hash=digest(JSON.stringify(record));await atomicPrivateJson(path.join(root,'model-development/results',slate.record.sourceReceipt,hash+'.json'),record);return record;
 }
 /** Earliest frozen quote per exact event+model version is primary, not every repricing/slate. */
 export async function evaluateModel2Slates(root:string,ownerId:string){

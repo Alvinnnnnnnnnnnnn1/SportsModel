@@ -26,3 +26,10 @@ describe('model 2 future source-only shadow lifecycle',()=>{
  }));
  it('preserves two-pass quality thresholds, adverse checks and experimental classifications',()=>{const good=researchTwoPass({probability:.6,odds:1.9,marketProbability:.55,baseline:.59,sourceReasons:[],adverseProbability:.58});expect(good.researchDecision).toBe('passes_research_screen');expect(good.stronglySupported).toBe(false);expect(good.registrationAllowed).toBe(false);const bad=researchTwoPass({probability:.6,odds:1.5,marketProbability:.65,baseline:.59,sourceReasons:[]});expect(bad.pass2).toContain('insufficient_expected_value');expect(researchTwoPass({probability:null,odds:2,marketProbability:.5,baseline:null,sourceReasons:[]}).estimatedEV).toBeNull();expect(()=>researchTwoPass({probability:.6,odds:NaN,marketProbability:.5,baseline:null,sourceReasons:[]})).toThrow();});
 });
+
+it('uses verification time after the independent response without changing source clocks',async()=>temp(async root=>{
+ const {data,rows}=await fixture(root),slate=(await freezeModel2Slate(root,{ownerId:'synthetic-owner',source:data.originalOdds,rows,registry:data.registry,completeSeasons:[2026],originalFixtures:[data.originalFixtures],at:freeze,clock:()=>freeze,sourceCollectionApproved:true}))!;
+ const receivedAt=new Date(Date.parse(after)+1000).toISOString(),verifiedAt=new Date(Date.parse(after)+2000).toISOString();
+ const result=await recordModel2Results(root,slate,{scores:data.scores,secondary:async()=>({...data.secondary,id:crypto.randomUUID(),retrievedAt:receivedAt}),at:after,clock:()=>verifiedAt});
+ expect(result.results[0].status).toBe('verified');expect(result.at).toBe(verifiedAt);expect(data.secondary.sourceUpdatedAt).toBeNull();expect(slate.record.at).toBe(freeze);
+}));

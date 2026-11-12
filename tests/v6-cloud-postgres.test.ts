@@ -1,19 +1,16 @@
 /** Disposable synthetic PostgreSQL only; no hosted changes or real source import. */
 import {describe,it,expect} from 'vitest';
-import {createRequire} from 'node:module';import path from 'node:path';import fs from 'node:fs/promises';
 import {digest} from '@/lib/v6/evidence.server';
-import type {V6TestDB} from './fixtures/v6-postgres';
+import {sourceSqlTestDatabase} from './fixtures/v6-source-sql';
 const runtime=process.env.EDGELAB_POSTGRES_RUNTIME;
 describe.skipIf(!runtime)('V6 source-only cloud SQL acceptance',()=>{
  it('enforces RLS, immutable state, capability expiry, fenced leases, atomic quotas, replay and stopped controls',async()=>{
-  const {PGlite}=createRequire(path.resolve(runtime!,'package.json'))('@electric-sql/pglite') as {PGlite:new()=>V6TestDB};const db=new PGlite();
-  const owner=crypto.randomUUID(),other=crypto.randomUUID(),anchor=crypto.randomUUID(),pilot=crypto.randomUUID(),token='a'.repeat(64),leaseId=crypto.randomUUID();let epoch=0;
+  const db=await sourceSqlTestDatabase();
+  const owner=crypto.randomUUID(),other=crypto.randomUUID(),anchor=crypto.randomUUID(),pilot=crypto.randomUUID(),leaseId=crypto.randomUUID();let token='a'.repeat(64),epoch=0;
   const login=async(id:string,role='authenticated')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role '+role);};
   const call=async(action:string,p:Record<string,unknown>={},secret:string|null=token)=>{const r=await db.query<{v:unknown}>('select public.v6_source_dispatch($1,$2,$3,$4::jsonb) v',[pilot,secret,action,JSON.stringify(p)]);return r.rows[0].v as Record<string,unknown>;};
-  const control=(action:string,p:Record<string,unknown>={})=>db.query('select public.v6_source_owner($1,$2,$3::jsonb)',[pilot,action,JSON.stringify(p)]);
+  const control=async(action:string,p:Record<string,unknown>={})=>(await db.query<{result:Record<string,unknown>}>('select public.v6_source_owner($1,$2,$3::jsonb) result',[pilot,action,JSON.stringify(p)])).rows[0].result;
   try{
-   await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;create table public.historical_import_batches(user_id uuid,id uuid,primary key(user_id,id));alter table public.historical_import_batches enable row level security;create policy owner_read on public.historical_import_batches using(user_id=auth.uid());grant select on public.historical_import_batches to authenticated;");
-   await db.exec(await fs.readFile('supabase/proposals/202611130001_v6_source_cloud.sql','utf8'));
    await db.query('insert into auth.users values($1),($2)',[owner,other]);await db.query('insert into public.historical_import_batches values($1,$2)',[owner,anchor]);
    // Administrator fixture setup is explicitly synthetic. Worker assertions below run anon with a scoped token.
    const now=Date.now(),start=new Date(now-60000).toISOString(),end=new Date(now-60000+14*86400000).toISOString(),period=new Date(now).toISOString().slice(0,7);
@@ -22,7 +19,7 @@ describe.skipIf(!runtime)('V6 source-only cloud SQL acceptance',()=>{
    await login(other);expect((await db.query('select * from public.v6_source_pilots')).rows).toHaveLength(0);await expect(call('load',{},null)).rejects.toThrow();await expect(control('stop')).rejects.toThrow();
    await login('','anon');await expect(db.query('select * from public.v6_source_objects')).rejects.toThrow();await expect(call('load')).rejects.toThrow(/capability/);
    await login(owner);expect((await db.query('select * from public.v6_source_pilots')).rows).toHaveLength(1);await expect(db.query('update public.v6_source_pilots set stopped=false')).rejects.toThrow();await expect(db.query('delete from public.v6_source_pilots')).rejects.toThrow();
-   await control('issue',{tokenHash:digest(token),expiresAt:new Date(now+3600000).toISOString()});await expect(db.query('select * from public.v6_source_capabilities')).rejects.toThrow();
+   const issued=await control('issue',{tokenHash:digest(token),expiresAt:new Date(now+3600000).toISOString()});await expect(db.query('select * from public.v6_source_capabilities')).rejects.toThrow();
    const body=JSON.stringify({odds:1.72,sourceUpdatedAt:null,originalForecast:.62}),hash=digest(body);
    await call('put',{body,hash},null);await expect(call('put',{body:body+' ',hash},null)).rejects.toThrow();
    const manifest={format:'edgelab.v6-source-snapshot',version:1,files:[{path:'model-development/artifacts/'+hash+'.json',hash,bytes:Buffer.byteLength(body)}]};const manifestRaw=JSON.stringify(manifest);
@@ -55,8 +52,28 @@ describe.skipIf(!runtime)('V6 source-only cloud SQL acceptance',()=>{
    await db.exec('reset role');await db.query("update public.v6_source_quotas set reserved=60,last_request_at=now()-interval '2 seconds' where provider='odds'");await login('','anon');
    await expect(call('reserve',{...request,leaseId:next,epoch,id:crypto.randomUUID()})).rejects.toThrow(/quota/);
    await login(other);expect((await db.query('select * from public.v6_source_objects')).rows).toHaveLength(0);expect((await db.query('select * from public.v6_source_audit')).rows).toHaveLength(0);
-   await login(owner);expect((await db.query('select * from public.v6_source_objects')).rows).toHaveLength(2);expect((await db.query('select * from public.v6_source_audit')).rows.length).toBeGreaterThan(5);await control('stop');await login('','anon');await expect(call('renew',{leaseId:next,epoch})).rejects.toThrow(/disabled/);
+   await login(owner);expect((await db.query('select * from public.v6_source_objects')).rows).toHaveLength(2);expect((await db.query('select * from public.v6_source_audit')).rows.length).toBeGreaterThan(5);
+   await control('revoke',{credentialId:issued.credentialId});await login('','anon');
+   await expect(call('commit',{leaseId:next,epoch,expectedRevision:1,hash:digest(manifestRaw),manifestRaw})).rejects.toThrow(/capability/);
+   await login(owner);token='b'.repeat(64);await control('issue',{tokenHash:digest(token),expiresAt:new Date(now+3600000).toISOString()});await login('','anon');
+   const forbiddenState=JSON.stringify({ownerId:'source-only:'+digest('synthetic'),positions:[{id:'SYNTHETIC_PAPER'}],grades:[]}),stateHash=digest(forbiddenState);
+   await call('put',{leaseId:next,epoch,hash:stateHash,body:forbiddenState});
+   const paperManifest=JSON.stringify({...manifest,files:[...manifest.files,{path:'controlled/'+digest('test-owner')+'/source-only-state/'+digest('test-state')+'.json',hash:stateHash,bytes:Buffer.byteLength(forbiddenState)}]});
+   await expect(call('commit',{leaseId:next,epoch,expectedRevision:1,hash:digest(paperManifest),manifestRaw:paperManifest})).rejects.toThrow(/PAPER/);
+   for(const action of ['register','settle'])await expect(call(action,{leaseId:next,epoch})).rejects.toThrow(/Unsupported source-only/);
+   expect((await call('load')).pilot).toMatchObject({revision:1});
+   await login(owner);await control('stop');await login('','anon');await expect(call('renew',{leaseId:next,epoch})).rejects.toThrow(/disabled/);
    await db.exec('reset role');await db.query("update public.v6_source_capabilities set expires_at=now()-interval '1 second'");await login('','anon');await expect(call('load')).rejects.toThrow(/capability/);
+   const readable=['pilots','objects','snapshots','quotas','reservations','audit'];
+   await login(owner);for(const table of readable)expect((await db.query('select * from public.v6_source_'+table)).rows.length).toBeGreaterThan(0);
+   const ownerRead=await call('load',{},null);expect(JSON.stringify(ownerRead)).not.toContain('token_hash');expect(JSON.stringify(ownerRead)).not.toContain(token);
+   await login(other);for(const table of readable)expect((await db.query('select * from public.v6_source_'+table)).rows).toHaveLength(0);
+   await login('','anon');for(const table of [...readable,'capabilities'])await expect(db.query('select * from public.v6_source_'+table)).rejects.toThrow(/permission denied/);
+   await db.exec('reset role;set role edgelab_v6_source');
+   await expect(db.query("update public.v6_source_objects set body=body||' '")).rejects.toThrow(/append only/);
+   await expect(db.query('delete from public.v6_source_objects')).rejects.toThrow(/permission denied/);
+   await expect(db.query('update public.v6_source_snapshots set hash=hash')).rejects.toThrow(/append only/);
+   await expect(db.query('update public.v6_source_audit set action=action')).rejects.toThrow(/append only/);
    await db.exec('reset role');expect((await db.query("select count(*)::int n from pg_tables where schemaname='public' and tablename like 'v6_source_%' and rowsecurity")).rows[0].n).toBe(7);expect((await db.query("select rolbypassrls,rolcanlogin from pg_roles where rolname='edgelab_v6_source'")).rows[0]).toMatchObject({rolbypassrls:false,rolcanlogin:false});
   }finally{await db.close();}
  },30000);

@@ -8,6 +8,8 @@ console.log('PASS browser bundles contain none of the configured private source/
 const traces=(await walk('.next/server')).filter(f=>f.endsWith('.nft.json'));for(const file of traces){const trace=JSON.parse(await fs.readFile(file,'utf8'));assert.ok(trace.files.every(f=>!/(?:^|\/)\.local\/|(?:^|\/)\.env(?:\.|$)/.test(f)),'Private file in production trace');}
 console.log('PASS production output traces exclude .local and environment files');
 assert.equal(sha(await fs.readFile('supabase/proposals/202611110001_v6_paper.sql')),'c3a0d368ddbda1b50f3dab13aeec7cb3a939e423bce894aa1d55cfe9f13a3dff');
+assert.equal(sha(await fs.readFile('supabase/proposals/202611130001_v6_source_cloud.sql')),'7a03d765f78b5c1939900d1ddb50809238987104e5399ed772cb900692caf451');
+assert.equal(sha(await fs.readFile('supabase/proposals/202611130002_v6_source_cloud_compatible.sql')),'0b80c5a2412c7a3d10348a75823ae4ad6696e552a29ddc73ccc755108b026a59');
 assert.equal(sha(await fs.readFile('.local/v6/source-pilot/config.json')),'2badec1068928b44c272c7641724d6e0d7d8dc675e1f03bdb85b9c0f169f7177');
 assert.equal(sha(await fs.readFile('.local/v6/source-pilot/approved-receipt.json')),'c5f236058560271ff86fe4c3f7c042d8a93ced970e171835adfb64c6ded55a16');
 assert.equal(sha(await fs.readFile('.local/v6/team-games/dataset.json')),'31aa630215a5583b90f87f92e6193883a778f6795a9068f2014118685c9283a0');

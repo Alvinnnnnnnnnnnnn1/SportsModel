@@ -39,7 +39,7 @@ export function qualification(o:Observation,f:Forecast|null,now:string,cohort:V6
   else if(Date.parse(o.sourceUpdatedAt)>Date.parse(o.retrievedAt)||t-Date.parse(o.sourceUpdatedAt)>V6_POLICY.maxQuoteAgeSeconds*1000)reasons.push('invalid_source_timestamp');
   if(!f){if(!V6_POLICY.exploratoryEnabled)reasons.push('no_independent_forecast');return reasons;}
   if(!exactMarket(o.market,f.market))reasons.push('forecast_market_mismatch');
-  if(f.validation!=='out_of_sample_validated')reasons.push('model_not_validated');
+  if(f.researchTier==='experimental'?f.validation!=='chronologically_evaluated'||f.method!=='nba_team_elo_only':f.validation!=='out_of_sample_validated')reasons.push('model_not_validated');
   if(Date.parse(f.inputCutoff)>Date.parse(f.generatedAt)||Date.parse(f.generatedAt)>t||Date.parse(f.inputCutoff)>=start)reasons.push('forecast_leakage');
   if(Date.parse(f.inputs.sourceObservedAt)>Date.parse(f.inputCutoff))reasons.push('input_snapshot_leakage');
   if(['nba_team_elo','nba_team_elo_only'].includes(f.method)&&(!f.inputs.team||Date.parse(f.inputs.team.safeEventStartsAt)>start||Date.parse(f.inputs.team.safeEventStartsAt)<=t||Date.parse(f.inputCutoff)>=Date.parse(f.inputs.team.safeEventStartsAt)))reasons.push('earliest_scheduled_start_gate');
@@ -64,7 +64,7 @@ export async function registerPaper(state:V6State,o:Observation,f:Forecast|null,
   const key=await decisionKey(o,window),existing=state.positions.find(p=>p.key===key);
   if(existing)return {state,reasons:['duplicate_position'],position:existing};
   // Deliberately no available-balance, daily-count, sport-count or exposure gate.
-  const position=positionSchema.parse({id:crypto.randomUUID(),ownerId:state.ownerId,cohort:state.cohort,key,policyId:V6_POLICY.id,registeredAt:now,decisionWindow:window,classification:f?'model_supported':'exploratory',stakeCents:V6_POLICY.stakeCents,observation:structuredClone(o),forecast:f?structuredClone(f):null});
+  const position=positionSchema.parse({id:crypto.randomUUID(),ownerId:state.ownerId,cohort:state.cohort,key,policyId:V6_POLICY.id,registeredAt:now,decisionWindow:window,classification:f?'model_supported':'exploratory',researchTier:f?.researchTier??'strongly_supported',stakeCents:V6_POLICY.stakeCents,observation:structuredClone(o),forecast:f?structuredClone(f):null});
   return {state:{...state,revision:state.revision+1,positions:[...state.positions,position]},reasons:[],position};
 }
 export async function appendGrade(state:V6State,input:Grade):Promise<V6State> {
@@ -80,6 +80,7 @@ export async function appendGrade(state:V6State,input:Grade):Promise<V6State> {
     &&/^nba-points-ot-dnp-void-v1:[a-f0-9]{64}$/.test(p.observation.market.termsVersion);
   if(g.exception!=='none'&&g.outcome!=='unresolved'&&!supportedDnpVoid)throw new Error('Exceptional settlement remains unresolved until supported rule handling exists');
   if(p.observation.market.operator==='win'&&['won','lost'].includes(g.outcome)&&(!g.winnerId||g.outcome!==(g.winnerId===p.observation.market.subjectId?'won':'lost')))throw new Error('Missing or inconsistent official winner identity');
+  if(p.forecast?.inputs.team&&['won','lost'].includes(g.outcome)&&![p.forecast.inputs.team.homeId,p.forecast.inputs.team.awayId].includes(g.winnerId??''))throw new Error('Winner outside exact fixture');
   if(g.observedValue!==null&&p.observation.market.operator!=='win'&&['won','lost','push'].includes(g.outcome)&&g.outcome!==gradeCount(p.observation.market,g.observedValue))throw new Error('Observed statistic disagrees with grade');
   if(['won','lost','push'].includes(g.outcome)&&g.observedValue===null&&p.observation.market.operator!=='win')throw new Error('Missing statistic cannot establish a grade');
   const previous=state.grades.filter(x=>x.positionId===p.id).sort((a,b)=>a.revision-b.revision).at(-1);
@@ -88,6 +89,15 @@ export async function appendGrade(state:V6State,input:Grade):Promise<V6State> {
   if(g.revision!==(previous?.revision??0)+1||g.previousGradeId!==(previous?.id??null))throw new Error('Stale grade revision');
   if(previous&&Date.parse(g.recordedAt)<Date.parse(previous.recordedAt))throw new Error('Grade revision clock moved backwards');
   return {...state,revision:state.revision+1,grades:[...state.grades,structuredClone(g)]};
+}
+/** Separate reporting slices share ONE nominal account; never add a second
+ * A$5,000 opening reference or silently upgrade older unlabelled positions. */
+export function paperResearchCohorts(state:V6State){
+ return (['experimental','strongly_supported','legacy_unclassified'] as const).map(tier=>{
+  const positions=state.positions.filter(p=>(p.researchTier??'legacy_unclassified')===tier),grades=state.grades.filter(g=>positions.some(p=>p.id===g.positionId));
+  const {profitCents,pendingCents,roi,wins,losses,brier,logLoss,uniqueFixtures}=paperAccounting({...state,positions,grades});
+  return {tier,positions:positions.length,profitCents,pendingCents,roi,wins,losses,brier,logLoss,uniqueFixtures};
+ });
 }
 export function paperAccounting(state:V6State) {
   v6StateSchema.parse(state);

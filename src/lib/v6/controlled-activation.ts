@@ -17,6 +17,11 @@ export const MODEL_READINESS_POLICY=Object.freeze({id:'nba-baseline-readiness-1'
  minimumProspectiveFixtures:30,sampleCountAloneIsInsufficient:true,scope:'limited_paper_baseline_not_proven_sportsbook_edge',
  requires:['frozen_definition','chronological_holdout','bookmaker_comparison','calibration_review','fixture_and_slate_uncertainty','injury_roster_limitations','explicit_owner_model_review']});
 export const COLLECTION_POLICY=Object.freeze({id:'v6-read-only-source-1',version:1,maximumApprovalDays:31,maximumMonthlyCredits:400,mode:'dry_run',registersPositions:false,settlesPositions:false});
+export const EXPERIMENTAL_MODEL_POLICY=Object.freeze({id:'nba-experimental-paper-1',version:1,modelId:'nba-team-elo-only',modelVersion:'candidate-1',minimumChronologicalGames:500,minimumChronologicalSeasons:2,
+ priorProspectiveWinsRequired:false,profitabilityClaim:false,calibrationClaim:false,tier1Claim:false,qualificationPolicy:TEAM_RESEARCH_POLICY.id});
+export const experimentalReviewSchema=z.object({policyId:z.literal('nba-experimental-paper-1'),reportHash:hash,trainingEvidenceHash:hash,featureCutoffPolicyHash:hash,
+ chronologicalSeasons:z.number().int().min(2),inputsReproducible:z.literal(true),chronologicalEvaluationReviewed:z.literal(true),historicalPublicationGapsDisclosed:z.literal(true),
+ uncertaintyAndInjuryLimitationsAccepted:z.literal(true),conclusion:z.literal('experimental_research_only_no_profitability_or_calibration_claim')}).strict();
 export const readinessReviewSchema=z.object({policyId:z.literal('nba-baseline-readiness-1'),scope:z.literal('limited_paper_baseline_not_proven_sportsbook_edge'),
  reportHash:hash,chronologicalSeasons:z.number().int().min(2),prospectiveSlates:z.number().int().min(5),
  historicalPublicationGapsDisclosed:z.literal(true),calibrationReviewed:z.literal(true),bookmakerComparisonReviewed:z.literal(true),
@@ -28,6 +33,7 @@ export const modelManifestSchema=z.object({
  chronologicalGames:z.number().int().nonnegative(),verifiedProspectiveFixtures:z.number().int().nonnegative(),
  evaluationHash:hash,definitionHash:hash,limitations:z.array(z.string()).min(1),teamResultsOnlyAccepted:z.boolean(),
  readinessReview:readinessReviewSchema.nullable().default(null),
+ researchPurpose:z.enum(['strongly_supported','experimental']).default('strongly_supported'),experimentalReview:experimentalReviewSchema.nullable().default(null),
 }).strict();
 export type ModelManifest=z.infer<typeof modelManifestSchema>;
 export const modelManifestHash=(input:unknown)=>sha256(JSON.stringify(modelManifestSchema.parse(input)));
@@ -46,10 +52,10 @@ export const controlledConfigSchema=z.object({
  version:z.literal(1),ownerId:z.string().min(1),mode:z.enum(['disabled','dry_run','armed']),killSwitch:z.boolean(),sourcesEnabled:z.boolean(),
  modelManifest:z.string().nullable(),activationReceipt:z.string().nullable(),
  monthlyOddsCeiling:z.number().int().min(1).max(400).default(300),
- persistence:z.object({kind:z.literal('supabase'),projectRef:z.string().regex(/^[a-z0-9]{20}$/),workerTokenFile:z.string().min(1)}).strict().nullable().default(null),
+ persistence:z.discriminatedUnion('kind',[z.object({kind:z.literal('supabase'),projectRef:z.string().regex(/^[a-z0-9]{20}$/),workerTokenFile:z.string().min(1)}).strict(),z.object({kind:z.literal('supabase_capability'),projectRef:z.string().regex(/^[a-z0-9]{20}$/),workerCredentialFile:z.string().min(1)}).strict()]).nullable().default(null),
 }).strict();
 export type ControlledConfig=z.infer<typeof controlledConfigSchema>;
-export const policyBundleHash=()=>sha256(JSON.stringify({financial:V6_POLICY,selection:TEAM_RESEARCH_POLICY,control:CONTROLLED_POLICY,modelReadiness:MODEL_READINESS_POLICY,collection:COLLECTION_POLICY,identity:TEAM_FIXTURE_MATCH,reconciliation:EVENT_RECONCILIATION_POLICY,catalogue:TEAM_CATALOGUE_POLICY,terms:TEAM_TERMS}));
+export const policyBundleHash=()=>sha256(JSON.stringify({financial:V6_POLICY,selection:TEAM_RESEARCH_POLICY,control:CONTROLLED_POLICY,modelReadiness:MODEL_READINESS_POLICY,experimentalModel:EXPERIMENTAL_MODEL_POLICY,collection:COLLECTION_POLICY,identity:TEAM_FIXTURE_MATCH,reconciliation:EVENT_RECONCILIATION_POLICY,catalogue:TEAM_CATALOGUE_POLICY,terms:TEAM_TERMS}));
 export async function collectionApprovalReasons(config:ControlledConfig,input:unknown,at:string){
  stamp.parse(at);
  const r=collectionReceiptSchema.safeParse(input);if(!r.success)return ['read_only_collection_approval_missing'];
@@ -65,9 +71,10 @@ export async function activationReasons(config:ControlledConfig,manifestInput:un
  if(m.data.ownerId!==config.ownerId||m.data.status!=='approved'||!m.data.approvedAt||Date.parse(m.data.approvedAt)>Date.parse(at)||!m.data.approvalReference)reasons.push('model_not_owner_approved');
  if(m.data.chronologicalGames<CONTROLLED_POLICY.minimumChronologicalGames)reasons.push('insufficient_chronological_sample');
  if(m.data.definitionHash!==await sha256(JSON.stringify(ELO_ONLY_DEFINITION)))reasons.push('model_definition_hash_mismatch');
- if(m.data.verifiedProspectiveFixtures<CONTROLLED_POLICY.minimumVerifiedProspectiveFixtures)reasons.push('insufficient_verified_prospective_sample');
+ if(m.data.researchPurpose==='strongly_supported'&&m.data.verifiedProspectiveFixtures<CONTROLLED_POLICY.minimumVerifiedProspectiveFixtures)reasons.push('insufficient_verified_prospective_sample');
  if(!m.data.teamResultsOnlyAccepted)reasons.push('limited_matchup_evidence_not_accepted');
- if(!m.data.readinessReview)reasons.push('multidimensional_baseline_review_missing');
+ if(m.data.researchPurpose==='strongly_supported'&&!m.data.readinessReview)reasons.push('multidimensional_baseline_review_missing');
+ if(m.data.researchPurpose==='experimental'&&!m.data.experimentalReview)reasons.push('experimental_reproducibility_review_missing');
  if(!r.success)return [...reasons,'standing_activation_missing_or_invalid'];
  if(r.data.ownerId!==config.ownerId||Date.parse(r.data.approvedAt)>Date.parse(at)||m.data.approvedAt&&Date.parse(r.data.approvedAt)<Date.parse(m.data.approvedAt)||r.data.policyBundleHash!==await policyBundleHash()||r.data.modelManifestHash!==await modelManifestHash(m.data))reasons.push('activation_owner_hash_or_clock_mismatch');
  return reasons;
@@ -91,7 +98,8 @@ export async function runControlledWorker(repository:V6Repository,provider:V6Rea
   const at=options.clock?.()??new Date().toISOString();return (await activationReasons(latest.config,latest.manifest,latest.receipt,at)).length===0
    ||config.mode==='dry_run'&&(await collectionApprovalReasons(latest.config,latest.receipt,at)).length===0;
  };
- const result=await runV6Worker(repository,provider,model,{runId:options.runId,now:options.now,clock:options.clock,mode:config.mode,killSwitch:config.killSwitch,
+ const boundModel:V6IndependentModel={...model,forecast:async(o,at)=>{const f=await model.forecast(o,at);return f&&m.success&&(f.researchTier??'strongly_supported')!==m.data.researchPurpose?null:f;}};
+ const result=await runV6Worker(repository,provider,boundModel,{runId:options.runId,now:options.now,clock:options.clock,mode:config.mode,killSwitch:config.killSwitch,
   activation:config.mode==='armed'?{ownerId:config.ownerId,policyHash:await v6PolicyHash(),activatedAt:activationReceiptSchema.parse(receipt).approvedAt}:null,canCommit:latched});
  return {...result,reasons};
 }

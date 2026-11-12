@@ -7,7 +7,7 @@ import {teamEloOnlyProbability} from '@/lib/v6/models';
 import {localV6Repository} from '@/lib/v6/repository.server';
 import {planControlledJobs,runControlledTick,type ScheduledJob} from '@/lib/v6/controlled-scheduler.server';
 import {digest} from '@/lib/v6/evidence.server';
-import {paperAccounting} from '@/lib/v6/engine';
+import {paperAccounting,paperResearchCohorts,qualification} from '@/lib/v6/engine';
 import {type Forecast,type Observation} from '@/lib/v6/types';
 import {gradeReconciledTeamPosition} from '@/lib/v6/reconciled-grading';
 import {reconciliationFixture,freeze,after} from './fixtures/v6-reconciliation';
@@ -46,6 +46,20 @@ describe('controlled paper activation and durable registered-worker scheduling',
   const result=await runControlledWorker(repo,provider,null,c.config,c.manifest,null,{runId:'LOCAL',now:at,clock:()=>at,readControl:async()=>c});
   expect(result.status).toBe('activation_blocked');expect(reads).toBe(0);
   expect((await runControlledWorker(repo,provider,null,{...c.config,killSwitch:true},c.manifest,c.receipt,{runId:'LOCAL',now:at,readControl:async()=>c})).status).toBe('disabled');
+ }));
+ it('separates explicitly approved experimental paper from stronger evidence without prior-profit claims',()=>temp(async root=>{
+  const c=await controls(),base=await source();
+  const manifest=modelManifestSchema.parse({...c.manifest,researchPurpose:'experimental',verifiedProspectiveFixtures:0,readinessReview:null,experimentalReview:{policyId:'nba-experimental-paper-1',reportHash:'a'.repeat(64),trainingEvidenceHash:'b'.repeat(64),featureCutoffPolicyHash:'c'.repeat(64),chronologicalSeasons:2,inputsReproducible:true,chronologicalEvaluationReviewed:true,historicalPublicationGapsDisclosed:true,uncertaintyAndInjuryLimitationsAccepted:true,conclusion:'experimental_research_only_no_profitability_or_calibration_claim'}});
+  const receipt={...c.receipt,modelManifestHash:digest(JSON.stringify(manifest))};expect(await activationReasons(c.config,manifest,receipt,at)).toEqual([]);
+  expect(await activationReasons(c.config,{...manifest,experimentalReview:null},receipt,at)).toContain('experimental_reproducibility_review_missing');
+  const model={modelId:manifest.modelId,version:manifest.modelVersion,validationManifestHash:digest(JSON.stringify(manifest)),forecast:async()=>({...base.f,researchTier:'experimental' as const,validation:'chronologically_evaluated' as const})};
+  const repo=localV6Repository(root,c.config.ownerId),readControl=async()=>({config:c.config,manifest,receipt});
+  const result=await runControlledWorker(repo,{collectionPermitted:true,collect:async()=>[base.o],grade:async()=>null},model,c.config,manifest,receipt,{runId:'LOCAL-EXPERIMENTAL',now:at,clock:()=>at,readControl});
+  expect(result.state.positions[0].researchTier).toBe('experimental');expect(paperResearchCohorts(result.state).find(c=>c.tier==='strongly_supported')?.positions).toBe(0);
+  expect(paperResearchCohorts(result.state).find(c=>c.tier==='experimental')?.positions).toBe(1);expect(paperAccounting(result.state).openingReferenceCents).toBe(500000);
+  const overpricedValue={...base.o,odds:4},experimental=await model.forecast();experimental.inputs={...experimental.inputs,team:{...experimental.inputs.team!,homeOdds:4}};
+  expect(qualification(overpricedValue,experimental,at,'v6-prospective')).toContain('large_market_disagreement_requires_review');
+  const mismatched={...model,forecast:async()=>base.f};const rejected=await runControlledWorker(repo,{collectionPermitted:true,collect:async()=>[{...base.o,id:crypto.randomUUID(),market:{...base.o.market,eventId:'LOCAL-OTHER'}}],grade:async()=>null},mismatched,c.config,manifest,receipt,{runId:'LOCAL-TIER-MISMATCH',now:at,clock:()=>at,readControl});expect(rejected.state.positions).toHaveLength(1);
  }));
  it('authorizes expiring shadow collection separately and never treats it as paper activation',async()=>{
   const c=await controls(),config={...c.config,mode:'dry_run' as const};

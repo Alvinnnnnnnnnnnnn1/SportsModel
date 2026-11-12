@@ -68,7 +68,8 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   for(const c of screen.candidates)if(c.observation&&c.forecast&&c.proof){
    const originalFixtures=featureReceipts.find(e=>(JSON.parse(e.raw).data as {id:number}[]).some(g=>String(g.id)===c.proof!.statsGameId));
    if(!originalFixtures)throw new Error('Original provider fixture proof is absent');
-   const f={...c.forecast,validation:approved?'out_of_sample_validated' as const:'experimental' as const};forecasts.set(c.observation.id,f);
+   const purpose=modelManifestSchema.safeParse(manifest).data?.researchPurpose??'strongly_supported';
+   const f={...c.forecast,researchTier:purpose,validation:approved?(purpose==='experimental'?'chronologically_evaluated' as const:'out_of_sample_validated' as const):'experimental' as const};forecasts.set(c.observation.id,f);
    await atomicPrivateJson(path.join(liveRoot,'proofs',c.observation.id+'.json'),{proof:c.proof,registry,originalFixtures,observation:c.observation,forecast:f,manifestHash:digest(JSON.stringify(manifest)),rawSource:odds});
   }
   await atomicPrivateJson(path.join(liveRoot,'screens',odds.id+'.json'),{screen,modelApprovalApplied:approved,financialWrites:0});

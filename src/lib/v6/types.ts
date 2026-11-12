@@ -25,7 +25,8 @@ export const observationSchema = z.object({
 export type Observation = z.infer<typeof observationSchema>;
 export const forecastSchema = z.object({
   market: marketSchema, probability: z.number().min(0).max(1), pushProbability: z.number().min(0).max(1), modelId: text, version: text,
-  method: z.enum(['poisson_minutes_rate','surface_elo','nba_team_elo','nba_team_elo_only']), validation: z.enum(['experimental','out_of_sample_validated']),
+  method: z.enum(['poisson_minutes_rate','surface_elo','nba_team_elo','nba_team_elo_only']), validation: z.enum(['experimental','chronologically_evaluated','out_of_sample_validated']),
+  researchTier:z.enum(['experimental','strongly_supported']).optional(),
   generatedAt: stamp, inputCutoff: stamp, inputsHash: hash, evidenceUrls: z.array(url).min(1),
   inputs: z.object({minutes:z.number().finite().nullable(),ratePerMinute:z.number().finite().nullable(),surface:z.enum(['hard','clay','grass']).nullable(),rating:z.number().finite().nullable(),opponentRating:z.number().finite().nullable(),sampleSize:z.number().int().positive(),sourceObservedAt:stamp,sourceUrl:url,
     team:z.object({homeId:text,awayId:text,homeRating:z.number().min(0).max(5000),awayRating:z.number().min(0).max(5000),homeCourt:z.literal(60),formAdjustment:z.number().min(-160).max(160),restAdjustment:z.number().min(-20).max(20),shrinkage:z.union([z.literal(.05),z.literal(0)]),historyHash:hash,registryHash:hash,safeEventStartsAt:stamp,researchPolicyId:text.optional(),homeOdds:z.number().min(1.0001).max(10000).optional(),awayOdds:z.number().min(1.0001).max(10000).optional()}).strict().optional()}).strict(),
@@ -35,8 +36,10 @@ export const positionSchema = z.object({
   id: z.string().uuid(), ownerId: text, cohort: z.enum(['v6-prospective','v6-synthetic']),
   key: hash, policyId: z.literal('v6-uncapped-paper-1'), registeredAt: stamp, decisionWindow: z.literal('pre_event_once'),
   classification: z.enum(['model_supported','exploratory']), stakeCents: z.literal(5000),
+  researchTier:z.enum(['experimental','strongly_supported']).optional(),
   observation: observationSchema, forecast: forecastSchema.nullable(),
 }).strict().superRefine((p,c)=>{
+  if(p.researchTier&&p.researchTier!==(p.forecast?.researchTier??'strongly_supported'))c.addIssue({code:'custom',message:'Paper cohort must retain the frozen forecast research tier'});
   if ((p.classification==='model_supported') !== (p.forecast!==null)) c.addIssue({code:'custom',message:'Model-supported classification requires its original forecast'});
   if (p.forecast && JSON.stringify(p.forecast.market)!==JSON.stringify(p.observation.market)) c.addIssue({code:'custom',message:'Forecast and quote market identity differ'});
 });

@@ -3,9 +3,13 @@ import {describe,it,expect} from 'vitest';
 import {supabaseV6Repository,workerTokenPreflight} from '@/lib/v6/supabase-repository.server';
 import {emptyV6State,type V6State} from '@/lib/v6/types';
 import {runV6Worker} from '@/lib/v6/worker';
+import {decodePrivateV6Json} from '@/lib/v6/worker-credentials';
 const owner='95000000-0000-4000-8000-000000000001',other='95000000-0000-4000-8000-000000000002',ref='ilgoswfckkzpoktabbfi',url=`https://${ref}.supabase.co`,now=Date.parse('2026-11-12T06:00:00Z');
 const token=(change:Record<string,unknown>={})=>['SYNTHETIC_HEADER',Buffer.from(JSON.stringify({sub:owner,role:'edgelab_v6_worker',iss:url+'/auth/v1',aud:'authenticated',exp:now/1000+3600,...change})).toString('base64url'),'SYNTHETIC_SIGNATURE'].join('.');
 describe('owner-scoped Supabase V6 worker repository',()=>{
+ it('does not echo secret-bearing malformed JSON into file-parser errors',()=>{
+  const secret='edgelab_v6_'+'d'.repeat(64);try{decodePrivateV6Json('{"credential":"'+secret+'",');throw new Error('Expected rejection');}catch(e){expect((e as Error).message.includes(secret)).toBe(false);expect((e as Error).message).toContain('contents omitted');}
+ });
  it.each([{role:'authenticated'},{role:'service_role'},{sub:other},{exp:now/1000},{iss:'https://wrong.invalid/auth/v1'},{nbf:now/1000+3600}])('rejects personal, privileged, wrong-owner and invalid lifetime claims before transport: %j',claims=>{
   expect(()=>workerTokenPreflight(token(claims),owner,url+'/auth/v1',now)).toThrow(/rejected/);
  });
@@ -42,5 +46,23 @@ describe('owner-scoped Supabase V6 worker repository',()=>{
   }});
   await expect(repo.transact(async s=>({...s,ownerId:other}))).rejects.toThrow(/owner/);expect(commits).toBe(0);
   await expect(repo.transact(async s=>({...s,revision:2} as V6State))).rejects.toThrow(/atomic/);expect(commits).toBe(0);
+ });
+ it('uses a rotating opaque capability without a browser JWT or signing key and sanitizes revocation failures',async()=>{
+  let calls=0,active='a'.repeat(64),credential='a'.repeat(64);
+  const repo=supabaseV6Repository({projectUrl:url,projectRef:ref,publishableKey:'sb_publishable_SYNTHETIC',ownerId:owner,clock:()=>now,rawSource:async()=>'',capability:async()=>({ownerId:owner,credentialId:crypto.randomUUID(),credential:'edgelab_v6_'+credential,scope:'research_only',expiresAt:new Date(now+3600000).toISOString()}),fetcher:async(input,init)=>{
+   calls++;expect(new URL(String(input)).pathname).toBe('/rest/v1/rpc/v6_worker_access');expect(new Headers(init?.headers).has('Authorization')).toBe(false);
+   const b=JSON.parse(init!.body as string);if(b.credential!=='edgelab_v6_'+active)return new Response('not echoed',{status:400});return Response.json(b.operation==='identity'?{ownerId:owner,role:'edgelab_v6_worker',cohort:'v6-prospective'}:emptyV6State(owner));
+  }});
+  expect((await repo.read()).ownerId).toBe(owner);active='b'.repeat(64);await expect(repo.read()).rejects.toThrow('HTTP 400');credential=active;expect((await repo.read()).ownerId).toBe(owner);expect(calls).toBe(5);
+ });
+ it('recovers a lost capability commit response by reading the durable run before worker replay',async()=>{
+  let state=emptyV6State(owner),commits=0,collects=0;
+  const repo=()=>supabaseV6Repository({projectUrl:url,projectRef:ref,publishableKey:'sb_publishable_SYNTHETIC',ownerId:owner,clock:()=>now,rawSource:async()=>'',capability:async()=>({ownerId:owner,credentialId:crypto.randomUUID(),credential:'edgelab_v6_'+'c'.repeat(64),scope:'research_only',expiresAt:new Date(now+3600000).toISOString()}),fetcher:async(_input,init)=>{
+   const b=JSON.parse(init!.body as string);if(b.operation==='identity')return Response.json({ownerId:owner,role:'edgelab_v6_worker',cohort:'v6-prospective'});
+   if(b.operation==='load')return Response.json(state);commits++;state={...state,revision:state.revision+1,runs:[...state.runs,b.request.run_snapshot]};throw new Error('SYNTHETIC lost response after commit');
+  }});
+  const provider={collectionPermitted:true,collect:async()=>{collects++;return [];},grade:async()=>null},options={runId:'LOCAL-CAPABILITY-LOST',now:new Date(now).toISOString(),clock:()=>new Date(now).toISOString(),mode:'dry_run' as const,killSwitch:false,activation:null};
+  await expect(runV6Worker(repo(),provider,null,options)).rejects.toThrow(/lost response/);
+  expect((await runV6Worker(repo(),provider,null,options)).status).toBe('already_processed');expect(commits).toBe(1);expect(collects).toBe(1);
  });
 });

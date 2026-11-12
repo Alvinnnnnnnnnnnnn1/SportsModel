@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { WorkspaceVerification } from "./workspace-verification";
+import { V6WorkerAccess } from "./v6-worker-access";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -179,6 +180,7 @@ export function Settings() {
         </p>
       )}
       <WorkspaceVerification />
+      {mode === 'supabase' && user && <V6WorkerAccess ownerId={user.id} />}
       <div className="grid items-start gap-5 xl:grid-cols-2">
         <section className="panel p-5 sm:p-6">
           <SectionTitle

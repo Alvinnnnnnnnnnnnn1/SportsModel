@@ -2,7 +2,8 @@
 -- V6-only tables and a non-login worker role. No V5 data changes or service role.
 begin;
 do $$begin
-  if not exists(select 1 from pg_roles where rolname='edgelab_v6_worker') then create role edgelab_v6_worker nologin noinherit; end if;
+  if exists(select 1 from pg_roles where rolname='edgelab_v6_worker') then raise exception 'V6 worker role collision requires explicit review';end if;
+  create role edgelab_v6_worker nologin noinherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls;
 end$$;
 grant usage on schema public,auth to edgelab_v6_worker;
 grant execute on function auth.uid() to edgelab_v6_worker;
@@ -43,7 +44,7 @@ create table public.v6_models (
   user_id uuid not null references auth.users(id), id text not null, version text not null,
   method text not null check(method in ('poisson_minutes_rate','surface_elo','nba_team_elo','nba_team_elo_only')),
   manifest_hash text not null check(manifest_hash ~ '^[a-f0-9]{64}$'),
-  validation text not null check(validation in ('experimental','out_of_sample_validated')),
+  validation text not null check(validation in ('experimental','chronologically_evaluated','out_of_sample_validated')),
   approved_at timestamptz, payload jsonb not null,
   primary key(user_id,id,version)
 );
@@ -157,7 +158,8 @@ declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;t jsonb;field te
   select * into p from public.v6_policies where user_id=NEW.user_id and id=NEW.policy_id;
   if p.activated_at is null or p.activated_at>clock or not exists(select 1 from public.v6_controls where user_id=NEW.user_id and policy_id=NEW.policy_id and enabled and not kill_switch) then raise exception 'V6 standing policy inactive';end if;
   select * into m from public.v6_models where user_id=NEW.user_id and id=NEW.model_id and version=NEW.model_version;
-  if m.approved_at is null or m.approved_at>clock or m.validation is distinct from 'out_of_sample_validated' then raise exception 'V6 model not activated and validated';end if;
+  if m.approved_at is null or m.approved_at>clock or not (m.validation='out_of_sample_validated'
+    or (m.validation='chronologically_evaluated' and m.method='nba_team_elo_only' and m.payload->>'researchPurpose'='experimental')) then raise exception 'V6 model not activated and validated';end if;
   select payload into o from public.v6_observations where user_id=NEW.user_id and id=NEW.observation_id;
   f:=NEW.payload->'forecast';
   if o is null or NEW.payload->'observation' is distinct from o or o->>'rawHash' is distinct from (select source_hash from public.v6_observations where user_id=NEW.user_id and id=NEW.observation_id)
@@ -167,7 +169,10 @@ declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;t jsonb;field te
     or NEW.payload->'observation'->'market' is distinct from NEW.canonical_market
     or f->'market' is distinct from NEW.canonical_market or o->>'bookmaker' is distinct from NEW.bookmaker
     or f->>'modelId' is distinct from m.id or f->>'version' is distinct from m.version or f->>'method' is distinct from m.method
-    or f->>'validation' is distinct from 'out_of_sample_validated'
+    or f->>'validation' is distinct from m.validation
+    or coalesce(f->>'researchTier','strongly_supported') not in ('experimental','strongly_supported')
+    or coalesce(NEW.payload->>'researchTier','strongly_supported') is distinct from coalesce(f->>'researchTier','strongly_supported')
+    or coalesce(f->>'researchTier','strongly_supported') is distinct from coalesce(m.payload->>'researchPurpose','strongly_supported')
     or jsonb_typeof(f->'probability') is distinct from 'number'
     or (f->>'probability')::numeric not between 0 and 1
     or jsonb_typeof(f->'pushProbability') is distinct from 'number'
@@ -216,7 +221,25 @@ declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;t jsonb;field te
     if m.method='nba_team_elo_only' then
       if (t->>'safeEventStartsAt')::timestamptz<=clock+interval '60 seconds' then raise exception 'V6 controlled pre-event safety buffer failed';end if;
       home_prob:=1/(1+power(10::numeric,-((t->>'homeRating')::numeric-(t->>'awayRating')::numeric+60)/400));
-      if m.payload->>'reviewStatus' is distinct from 'owner_approved' or jsonb_typeof(m.payload->'chronologicalGames') is distinct from 'number'
+      if m.payload->>'researchPurpose'='experimental' then
+        if m.validation<>'chronologically_evaluated' or m.payload->>'reviewStatus' is distinct from 'owner_approved'
+          or jsonb_typeof(m.payload->'chronologicalGames') is distinct from 'number' or (m.payload->>'chronologicalGames')::numeric<500
+          or (m.payload->>'chronologicalGames')::numeric<>trunc((m.payload->>'chronologicalGames')::numeric)
+          or m.payload->'teamResultsOnlyAccepted' is distinct from 'true'::jsonb
+          or m.payload#>>'{experimentalReview,policyId}' is distinct from 'nba-experimental-paper-1'
+          or jsonb_typeof(m.payload#>'{experimentalReview,chronologicalSeasons}') is distinct from 'number'
+          or coalesce((m.payload#>>'{experimentalReview,chronologicalSeasons}')::numeric,0)<2
+          or (m.payload#>>'{experimentalReview,chronologicalSeasons}')::numeric<>trunc((m.payload#>>'{experimentalReview,chronologicalSeasons}')::numeric)
+          or coalesce(m.payload#>>'{experimentalReview,reportHash}','') !~ '^[a-f0-9]{64}$'
+          or coalesce(m.payload#>>'{experimentalReview,trainingEvidenceHash}','') !~ '^[a-f0-9]{64}$'
+          or coalesce(m.payload#>>'{experimentalReview,featureCutoffPolicyHash}','') !~ '^[a-f0-9]{64}$'
+          or m.payload#>'{experimentalReview,inputsReproducible}' is distinct from 'true'::jsonb
+          or m.payload#>'{experimentalReview,chronologicalEvaluationReviewed}' is distinct from 'true'::jsonb
+          or m.payload#>'{experimentalReview,historicalPublicationGapsDisclosed}' is distinct from 'true'::jsonb
+          or m.payload#>'{experimentalReview,uncertaintyAndInjuryLimitationsAccepted}' is distinct from 'true'::jsonb
+          or m.payload#>>'{experimentalReview,conclusion}' is distinct from 'experimental_research_only_no_profitability_or_calibration_claim'
+          then raise exception 'V6 experimental model reproducibility review missing';end if;
+      elsif m.payload->>'reviewStatus' is distinct from 'owner_approved' or jsonb_typeof(m.payload->'chronologicalGames') is distinct from 'number'
         or jsonb_typeof(m.payload->'verifiedProspectiveFixtures') is distinct from 'number'
         or (m.payload->>'chronologicalGames')::numeric<500 or (m.payload->>'verifiedProspectiveFixtures')::numeric<30
         or (m.payload->>'chronologicalGames')::numeric<>trunc((m.payload->>'chronologicalGames')::numeric)
@@ -308,6 +331,7 @@ declare p public.v6_positions;previous public.v6_grade_revisions;market jsonb;ob
   if NEW.outcome in ('won','lost','push') then
     if market->>'operator'='win' then
       if NEW.payload->>'winnerId' is null then raise exception 'Official winner identity required';end if;
+      if p.payload#>'{forecast,inputs,team}' is not null and NEW.payload->>'winnerId' not in (p.payload#>>'{forecast,inputs,team,homeId}',p.payload#>>'{forecast,inputs,team,awayId}') then raise exception 'V6 winner outside exact fixture';end if;
       expected:=case when NEW.payload->>'winnerId'=market->>'subjectId' then 'won' else 'lost' end;
     else
       if jsonb_typeof(NEW.payload->'observedValue') is distinct from 'number' then raise exception 'Missing final statistic';end if;
@@ -438,4 +462,95 @@ begin perform pg_advisory_xact_lock(hashtextextended('edgelab-v6:'||NEW.user_id:
 create trigger v6_control_serialization before insert or update on public.v6_controls for each row execute function public.v6_control_serialization();
 revoke all on function public.v6_control_serialization() from public,anon,edgelab_v6_worker;
 grant execute on function public.v6_control_serialization() to authenticated;
+
+-- Owner-issued opaque capabilities replace the need for a project JWT signer.
+-- No authenticator membership, Auth account, service key or signing key is added.
+create table public.v6_worker_credentials (
+ user_id uuid not null references auth.users(id),id uuid not null default gen_random_uuid(),
+ secret_hash text not null unique check(secret_hash ~ '^[a-f0-9]{64}$'),
+ scope text not null check(scope in ('research_only','paper_worker')),
+ created_at timestamptz not null default clock_timestamp(),expires_at timestamptz not null,
+ revoked_at timestamptz,primary key(user_id,id),
+ check(expires_at>created_at and expires_at<=created_at+interval '90 days')
+);
+alter table public.v6_worker_credentials enable row level security;
+revoke all on public.v6_worker_credentials from public,anon,authenticated,edgelab_v6_worker;
+grant select,insert,update on public.v6_worker_credentials to edgelab_v6_worker;
+create policy v6_credential_lookup on public.v6_worker_credentials for select to edgelab_v6_worker using(true);
+create policy v6_credential_issue on public.v6_worker_credentials for insert to edgelab_v6_worker with check(user_id=auth.uid());
+create policy v6_credential_revoke on public.v6_worker_credentials for update to edgelab_v6_worker using(user_id=auth.uid()) with check(user_id=auth.uid());
+create function public.v6_credential_guard() returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+ if auth.uid() is null or NEW.user_id is distinct from auth.uid() or coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'role','')<>'authenticated' then raise exception 'V6 credential requires authenticated owner';end if;
+ if TG_OP='UPDATE' and ((to_jsonb(NEW)-'revoked_at') is distinct from (to_jsonb(OLD)-'revoked_at') or OLD.revoked_at is not null or NEW.revoked_at is null) then raise exception 'V6 credential only permits irreversible revocation';end if;
+ return NEW;
+end$$;
+create trigger v6_credential_guard before insert or update on public.v6_worker_credentials for each row execute function public.v6_credential_guard();
+create trigger v6_credential_audit after insert or update on public.v6_worker_credentials for each row execute function public.v6_audit_insert();
+revoke all on function public.v6_credential_guard() from public,anon,authenticated;
+grant execute on function public.v6_credential_guard() to edgelab_v6_worker;
+
+create function public.v6_issue_worker_credential(expected_owner uuid,capability_scope text default 'research_only',valid_hours integer default 720,rotate_from uuid default null) returns jsonb language plpgsql security definer set search_path='' as $$
+declare token text;new_id uuid:=gen_random_uuid();expiry timestamptz;begin
+ if auth.uid() is null or auth.uid() is distinct from expected_owner or coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'role','')<>'authenticated' then raise exception 'V6 credential requires authenticated owner';end if;
+ if capability_scope not in ('research_only','paper_worker') or capability_scope is null or valid_hours is null or valid_hours<1 or valid_hours>2160 then raise exception 'Invalid V6 credential scope or lifetime';end if;
+ if rotate_from is not null then
+  update public.v6_worker_credentials set revoked_at=clock_timestamp() where user_id=auth.uid() and id=rotate_from and revoked_at is null;
+  if not found then raise exception 'V6 credential rotation rejected';end if;
+ end if;
+ token:='edgelab_v6_'||replace(gen_random_uuid()::text,'-','')||replace(gen_random_uuid()::text,'-','');expiry:=clock_timestamp()+valid_hours*interval '1 hour';
+ insert into public.v6_worker_credentials(user_id,id,secret_hash,scope,expires_at) values(auth.uid(),new_id,public.v6_sha256(token),capability_scope,expiry);
+ return jsonb_build_object('credentialId',new_id,'ownerId',auth.uid(),'credential',token,'scope',capability_scope,'expiresAt',expiry);
+end$$;
+create function public.v6_revoke_worker_credential(expected_owner uuid,credential_id uuid) returns boolean language plpgsql security definer set search_path='' as $$
+begin
+ if auth.uid() is null or auth.uid() is distinct from expected_owner or coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'role','')<>'authenticated' then raise exception 'V6 credential requires authenticated owner';end if;
+ update public.v6_worker_credentials set revoked_at=clock_timestamp() where user_id=auth.uid() and id=credential_id and revoked_at is null;return found;
+end$$;
+create function public.v6_list_worker_credentials(expected_owner uuid) returns jsonb language plpgsql security definer set search_path='' as $$
+begin
+ if auth.uid() is null or auth.uid() is distinct from expected_owner then raise exception 'V6 credential requires authenticated owner';end if;
+ return coalesce((select jsonb_agg(jsonb_build_object('credentialId',id,'scope',scope,'createdAt',created_at,'expiresAt',expires_at,'revokedAt',revoked_at) order by created_at) from public.v6_worker_credentials where user_id=auth.uid()),'[]'::jsonb);
+end$$;
+create function public.v6_worker_access(expected_owner uuid,credential text,operation text,request jsonb default '{}'::jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
+declare c public.v6_worker_credentials;result jsonb;old_sub text:=current_setting('request.jwt.claim.sub',true);old_claims text:=current_setting('request.jwt.claims',true);begin
+ if credential is null or credential !~ '^edgelab_v6_[a-f0-9]{64}$' then raise exception 'V6 worker credential rejected';end if;
+ select * into c from public.v6_worker_credentials where secret_hash=public.v6_sha256(credential) and user_id=expected_owner and revoked_at is null and expires_at>clock_timestamp();
+ if c.id is null then raise exception 'V6 worker credential rejected';end if;
+ if operation not in ('identity','load','commit') or operation is null then raise exception 'V6 worker operation rejected';end if;
+ if operation='commit' and c.scope='research_only' and (request#>>'{run_snapshot,mode}' is distinct from 'dry_run' or request->'position_rows' is distinct from '[]'::jsonb or request->'grade_rows' is distinct from '[]'::jsonb) then raise exception 'V6 read-only credential cannot register or grade';end if;
+ -- RLS owner is bound by the stored capability, never a caller-supplied claim.
+ perform set_config('request.jwt.claim.sub',c.user_id::text,true);
+ perform set_config('request.jwt.claims',jsonb_set(coalesce(nullif(old_claims,'')::jsonb,'{}'::jsonb),'{sub}',to_jsonb(c.user_id::text))::text,true);
+ -- Match the control-update lock order before taking the credential row lock.
+ if operation='commit' then perform pg_advisory_xact_lock(hashtextextended('edgelab-v6:'||c.user_id::text,0));end if;
+ select * into c from public.v6_worker_credentials where secret_hash=public.v6_sha256(credential) and user_id=expected_owner and revoked_at is null and expires_at>clock_timestamp() for share;
+ if c.id is null then raise exception 'V6 worker credential rejected';end if;
+ if operation='identity' then result:=public.v6_worker_identity(c.user_id);
+ elsif operation='load' then result:=public.v6_load_worker_state(c.user_id);
+ else
+  result:=public.v6_commit_worker_run(c.user_id,(request->>'expected_revision')::integer,request->'run_snapshot',request->'raw_sources',request->'position_rows',request->'grade_rows');
+  insert into public.v6_audit(user_id,entity,payload) values(c.user_id,'v6_worker_access',jsonb_build_object('credentialId',c.id,'runKey',request#>>'{run_snapshot,id}'));
+ end if;
+ if c.expires_at<=clock_timestamp() then raise exception 'V6 worker credential rejected';end if;
+ perform set_config('request.jwt.claim.sub',coalesce(old_sub,''),true);perform set_config('request.jwt.claims',coalesce(old_claims,''),true);return result;
+exception when others then
+ perform set_config('request.jwt.claim.sub',coalesce(old_sub,''),true);perform set_config('request.jwt.claims',coalesce(old_claims,''),true);raise;
+end$$;
+-- A non-login, non-owner-of-tables role executes only these narrow definer APIs.
+-- CREATE is needed solely for ownership transfer and is revoked before COMMIT.
+grant create on schema public to edgelab_v6_worker;
+alter function public.v6_issue_worker_credential(uuid,text,integer,uuid) owner to edgelab_v6_worker;
+alter function public.v6_revoke_worker_credential(uuid,uuid) owner to edgelab_v6_worker;
+alter function public.v6_list_worker_credentials(uuid) owner to edgelab_v6_worker;
+alter function public.v6_worker_access(uuid,text,text,jsonb) owner to edgelab_v6_worker;
+revoke create on schema public from edgelab_v6_worker;
+revoke all on function public.v6_issue_worker_credential(uuid,text,integer,uuid),public.v6_revoke_worker_credential(uuid,uuid),public.v6_list_worker_credentials(uuid),public.v6_worker_access(uuid,text,text,jsonb) from public,anon,authenticated;
+grant execute on function public.v6_issue_worker_credential(uuid,text,integer,uuid),public.v6_revoke_worker_credential(uuid,uuid),public.v6_list_worker_credentials(uuid) to authenticated;
+grant execute on function public.v6_worker_access(uuid,text,text,jsonb) to anon;
+-- Supabase installations can have additional default function ACLs. Remove
+-- privileged default grants on the definer surface without touching old APIs.
+do $$begin if exists(select 1 from pg_roles where rolname='service_role') then
+ revoke all on function public.v6_issue_worker_credential(uuid,text,integer,uuid),public.v6_revoke_worker_credential(uuid,uuid),public.v6_list_worker_credentials(uuid),public.v6_worker_access(uuid,text,text,jsonb) from service_role;
+end if;end$$;
 commit;

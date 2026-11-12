@@ -2,11 +2,12 @@ import { z } from 'zod';
 import { digest } from './evidence.server';
 import { v6StateSchema } from './types';
 import type { V6Repository } from './repository.server';
+import {workerCredentialSchema,type WorkerCredential} from './worker-credentials';
 
 interface WorkerStorageOptions {
  projectUrl:string;projectRef:string;publishableKey:string;ownerId:string;
  /** Provisioned outside this process. Never accept a personal/service-role token. */
- accessToken():Promise<string>;rawSource(hash:string):Promise<string>;fetcher?:typeof fetch;clock?:()=>number;
+ accessToken?:()=>Promise<string>;capability?:()=>Promise<WorkerCredential>;rawSource(hash:string):Promise<string>;fetcher?:typeof fetch;clock?:()=>number;
 }
 /** Claim parsing is a rejection preflight, NOT signature verification. Every
  * access also requires PostgREST's signed-JWT verification and scoped-role RPC. */
@@ -22,13 +23,18 @@ export function supabaseV6Repository(options:WorkerStorageOptions):V6Repository 
  if(!publicKey)try{publicKey=JSON.parse(Buffer.from(options.publishableKey.split('.')[1],'base64url').toString()).role==='anon';}catch{/* reject */}
  if(!publicKey)throw new Error('Public Supabase API key required');
  const fetcher=options.fetcher??fetch,clock=options.clock??Date.now;
- const request=async(name:string,args:unknown,token:string)=>{
-  const response=await fetcher(`${options.projectUrl}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:options.publishableKey,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(args),signal:AbortSignal.timeout(30000),redirect:'error'});
+ if(!!options.accessToken===!!options.capability)throw new Error('Select exactly one scoped worker credential method');
+ const request=async(name:string,args:unknown,authorization:string|WorkerCredential)=>{
+  const operation={v6_worker_identity:'identity',v6_load_worker_state:'load',v6_commit_worker_run:'commit'}[name];
+  if(!operation)throw new Error('Unsupported V6 worker RPC');const capability=typeof authorization!=='string';
+  const response=await fetcher(`${options.projectUrl}/rest/v1/rpc/${capability?'v6_worker_access':name}`,{method:'POST',headers:{apikey:options.publishableKey,...(capability?{}:{Authorization:'Bearer '+authorization}),'Content-Type':'application/json'},body:JSON.stringify(capability?{expected_owner:options.ownerId,credential:authorization.credential,operation,request:args}:args),signal:AbortSignal.timeout(30000),redirect:'error'});
   if(!response.ok)throw new Error(`V6 ${name} rejected (HTTP ${response.status}); reread before retry`);
-  const text=await response.text();if(Buffer.byteLength(text)>16000000)throw new Error('V6 worker response too large');return JSON.parse(text) as unknown;
+  const text=await response.text();if(Buffer.byteLength(text)>16000000)throw new Error('V6 worker response too large');try{return JSON.parse(text) as unknown;}catch{throw new Error('Invalid V6 worker response; contents omitted');}
  };
  const authorize=async()=>{
-  const token=await options.accessToken();workerTokenPreflight(token,options.ownerId,options.projectUrl+'/auth/v1',clock());
+  const token=options.capability?workerCredentialSchema.parse(await options.capability()):await options.accessToken!();
+  if(typeof token==='string')workerTokenPreflight(token,options.ownerId,options.projectUrl+'/auth/v1',clock());
+  else if(token.ownerId!==options.ownerId||Date.parse(token.expiresAt)<=clock()+60000)throw new Error('Worker capability owner or expiry rejected');
   const identity=z.object({ownerId:z.string().uuid(),role:z.literal('edgelab_v6_worker'),cohort:z.literal('v6-prospective')}).strict().parse(await request('v6_worker_identity',{expected_owner:options.ownerId},token));
   if(identity.ownerId!==options.ownerId)throw new Error('Server worker owner mismatch');return token;
  };

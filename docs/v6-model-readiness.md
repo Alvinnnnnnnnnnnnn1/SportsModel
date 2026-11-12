@@ -1,5 +1,7 @@
 # Elo-only baseline review — proposed policy, 12 November 2026
 
+**Updated purpose split:** [nba-experimental-paper-1](v6-experimental-paper-policy.proposed.md) separately permits research-grade prospective paper after explicit B/C, with reproducible chronological Elo, cutoff/uncertainty/source review and unchanged qualification rules. It requires no prior sportsbook profitability or thirty prospective results. The stronger-evidence floor described below applies to the stronger cohort; it is not a barrier to appropriately approved experimental research. Neither tier is activated or labelled Tier1/calibrated/profitable. [Current security/approval package](v6-deployment-approval-package.md).
+
 **Preferred candidate: Elo-only. Not activated. No demonstrated sportsbook edge.** This review preserves the saved owner-approved V5 Methodology Revision 1 and the owner-amended uncapped V6 specification. Saved methodology hash `850a575901851e8e8aa3274d2a609fb95df7766adc250614602dd0c6094c521e` was read from the existing private backup, without modifying it. The local V6 master and original 9 November foundation were read; the later unlimited-volume amendment takes precedence over the foundation's older balance/exposure caps. A separate complete verbatim V5.2 document was not found in the repository/Downloads; the existing documented two-pass interpretation and explicit owner requirements remain unchanged rather than claiming unavailable text was read.
 
 ## Existing evidence
@@ -15,7 +17,7 @@ The prospective sample has ten genuinely pre-event frozen probabilities/quotes, 
 
 Injury, rotation, current roster and alternative-market evidence are unavailable. Their absence is a model limitation requiring explicit acceptance, not a positive evidence check. Elo can be a reproducible, statistically usable **limited baseline**, distinct from a model proven to beat Sportsbet or a genuinely independent ensemble. Current evidence does not approve even that limited production use automatically.
 
-## Proposed readiness policy `nba-baseline-readiness-1`
+## Proposed stronger-evidence policy `nba-baseline-readiness-1`
 
 The earlier thirty-fixture requirement is retained as a **minimum engineering review floor**, not a significance test, proof of reliability, position-volume cap or permission to promote a model automatically. Additional independent slates and actual review are now mandatory:
 

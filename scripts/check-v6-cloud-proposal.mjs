@@ -1,4 +1,6 @@
-/** Full-schema compatibility acceptance in disposable PostgreSQL; no env/network. */
+/** Full-schema compatibility under local superuser DDL; no env/network.
+ * This DOES NOT prove hosted migration-role compatibility. See the separate
+ * check-v6-source-role-compatibility.mjs reproducer and Approval S blocker. */
 import {createRequire} from 'node:module';import fs from 'node:fs/promises';import path from 'node:path';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
 const i=process.argv.indexOf('--runtime');if(i<0)throw new Error('Supply existing --runtime path');const {PGlite}=createRequire(path.resolve(process.argv[i+1],'package.json'))('@electric-sql/pglite'),db=new PGlite();let checks=0;
 const check=(name,condition)=>{assert.ok(condition,name);checks++;console.log('PASS '+name);};

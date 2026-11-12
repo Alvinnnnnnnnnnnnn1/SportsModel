@@ -6,7 +6,7 @@ const budgetSchema=z.object({day:z.string(),requests:z.number().int().nonnegativ
 /** Only documented permanent-free team/game paths. No player stats, trials,
  * accounts, mutable HTTP, redirects, automatic retry or implicit collection.
  */
-export function teamSources(options:{root:string;bdlKey?:string;fetcher?:typeof fetch;clock?:()=>number}){
+export function teamSources(options:{root:string;bdlKey?:string;fetcher?:typeof fetch;clock?:()=>number;authorizeRead?:()=>Promise<void>}){
  const clock=options.clock??Date.now,fetcher=options.fetcher??fetch;
  return {async read(provider:'balldontlie'|'thesportsdb',endpoint:string,parameters:Record<string,string>={}):Promise<RawEvidence>{
   if(!['balldontlie','thesportsdb'].includes(provider)||Object.keys(parameters).some(k=>/key|token|password|secret/i.test(k)))throw new Error('Invalid free team source');
@@ -17,13 +17,14 @@ export function teamSources(options:{root:string;bdlKey?:string;fetcher?:typeof 
   const url=new URL(endpoint,bdl?'https://api.balldontlie.io':'https://www.thesportsdb.com');for(const [k,v]of Object.entries(parameters))url.searchParams.set(k,v);
   const file=path.join(options.root,provider+'-team-budget.json');
   return exclusive(file+'.lock',async()=>{
+   await options.authorizeRead?.();
    const now=clock(),day=new Date(now).toISOString().slice(0,10);let budget={day,requests:0,lastAt:0,blockedUntil:0,starts:[] as number[]};
    try{const old=budgetSchema.parse(JSON.parse(await fs.readFile(file,'utf8')));if(old.day===day)budget=old;}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
    budget.starts=budget.starts.filter(t=>now-t<60000);
    if(budget.requests>=(bdl?60:10)||now<budget.blockedUntil||budget.lastAt&&now-budget.lastAt<(bdl?12500:3000)||budget.starts.length>=(bdl?5:20))throw new Error('Free team-source quota/cooldown; no request sent');
    budget.requests++;budget.lastAt=now;budget.starts.push(now);await atomicPrivateJson(file,budget);
    const headers:Record<string,string>={Accept:'application/json'};if(bdl)headers.Authorization=options.bdlKey!;
-   let response:Response;try{response=await fetcher(url,{method:'GET',headers,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});}catch{throw new Error('Team source transport failed; reservation retained, no retry');}
+   let response:Response;try{await options.authorizeRead?.();response=await fetcher(url,{method:'GET',headers,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});}catch{throw new Error('Team source transport failed; reservation retained, no retry');}
    const retry=response.headers.get('retry-after'),seconds=retry&&/^\d+$/.test(retry)?Number(retry):null;
    if(response.status===429){const date=retry?Date.parse(retry):NaN;budget.blockedUntil=Math.max(now+60000,seconds!==null?now+seconds*1000:Number.isFinite(date)?date:0);await atomicPrivateJson(file,budget);}
    if(!response.body)throw new Error('Empty team source response');const reader=response.body.getReader(),chunks:Uint8Array[]=[];let size=0;

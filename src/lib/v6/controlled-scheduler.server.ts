@@ -3,6 +3,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { atomicPrivateJson,digest,exclusive } from './evidence.server';
 import { activationReasons,collectionApprovalReasons,runControlledWorker,type ControlledConfig } from './controlled-activation';
+import {SourcePilotBlocked,type SourcePilotPlan} from './source-pilot';
 import type { V6Repository } from './repository.server';
 import type { V6ReadProvider,V6IndependentModel } from './worker';
 const stamp=z.string().datetime({offset:true});
@@ -15,8 +16,9 @@ const localParts=(at:number)=>Object.fromEntries(new Intl.DateTimeFormat('en-CA'
 /** Wall-clock jobs at 18/19h avoid the ambiguous DST transition hour. */
 function wallClock(at:number,hour:number){const p=localParts(at),target=Date.UTC(p.year,p.month-1,p.day,hour);let guess=target;
  for(let i=0;i<3;i++){const x=localParts(guess);guess+=target-Date.UTC(x.year,x.month-1,x.day,x.hour,x.minute,x.second);}return guess;}
-export function planControlledJobs(fixtures:{id:string;startsAt:string}[],now:string):ScheduledJob[]{
+export function planControlledJobs(fixtures:{id:string;startsAt:string}[],now:string,pilot?:SourcePilotPlan):ScheduledJob[]{
  stamp.parse(now);const n=Date.parse(now),jobs:ScheduledJob[]=[],make=(kind:ScheduledJob['kind'],at:number,deadline:number,id:string)=>({id,kind,dueAt:new Date(at).toISOString(),deadline:new Date(deadline).toISOString(),status:'pending' as const,attempts:0,nextAt:new Date(at).toISOString(),leaseUntil:null,lastError:null,controlHash:null});
+ if(pilot){const tail=wallClock(Date.parse(pilot.startsAt)+13*86400000,21);jobs.push(make('results',tail,Math.min(tail+120*60000,Date.parse(pilot.expiresAt)),'results:'+new Date(tail).toISOString()));for(let day=0;day<14;day++){const anchor=Date.parse(pilot.startsAt)+day*86400000;for(const [kind,hour]of [['discovery',19],['results',18]] as const){if(kind==='discovery'&&day>=13)continue;const due=wallClock(anchor,hour);if(due<Date.parse(pilot.startsAt)||due>=Date.parse(pilot.expiresAt))continue;jobs.push(make(kind,due,Math.min(due+120*60000,Date.parse(pilot.expiresAt)),kind+':'+new Date(due).toISOString()));}}return jobs;}
  for(const offset of [0,86400000])for(const [kind,hour]of [['discovery',19],['results',18]] as const){const due=wallClock(n+offset,hour);jobs.push(make(kind,due,due+(kind==='results'?12:24)*3600000,kind+':'+new Date(due).toISOString()));}
  const windows=new Map<number,number>();
  for(const f of fixtures){stamp.parse(f.startsAt);const start=Date.parse(f.startsAt);if(start<=n||start>n+48*3600000)continue;
@@ -50,6 +52,7 @@ export async function runControlledTick(root:string,ports:ScheduledPorts,planned
    else if(j.status==='running'&&j.leaseUntil&&Date.parse(j.leaseUntil)<=now){j.status='pending';j.nextAt=at;j.lastError='expired_lease_recovery';}
    else if(j.status==='blocked'&&j.controlHash!==controlHash){j.status='pending';j.nextAt=at;}
   }
+  if(state.jobs.some(j=>j.status==='running'&&j.leaseUntil&&Date.parse(j.leaseUntil)>now))return null;
   const job=state.jobs.filter(j=>j.status==='pending'&&Date.parse(j.nextAt)<=now&&Date.parse(j.deadline)>now).sort((a,b)=>a.dueAt.localeCompare(b.dueAt))[0];
   if(job){job.status='running';job.attempts++;job.controlHash=controlHash;job.leaseUntil=new Date(now+15*60000).toISOString();state.attempts.push({jobId:job.id,at,status:'claimed',detail:null});}
   await atomicPrivateJson(file,state);return job?structuredClone(job):null;
@@ -58,10 +61,12 @@ export async function runControlledTick(root:string,ports:ScheduledPorts,planned
  let status='failed',detail:string|null=null,workerInvoked=false;
  try{
   const latest=await ports.readControl();if(digest(JSON.stringify(latest))!==controlHash)throw new Error('Control changed after job claim');
+  if((await ports.repository.read()).runs.some(r=>r.id==='scheduled:'+claimed.id)){workerInvoked=true;status='completed';detail='already_processed';}
+  else{
   const prepared=await ports.prepare(claimed);
   const result=await runControlledWorker(ports.repository,prepared.provider,prepared.model,controls.config,controls.manifest,controls.receipt,{runId:'scheduled:'+claimed.id,now:ports.clock(),clock:ports.clock,readControl:ports.readControl});
-  workerInvoked=['paper_run_completed','dry_run_completed','already_processed'].includes(result.status);status=workerInvoked?'completed':'blocked';detail=result.status;
- }catch(e){detail=e instanceof Error?e.message:'Worker operation failed';}
+  workerInvoked=['paper_run_completed','dry_run_completed','already_processed'].includes(result.status);status=workerInvoked?'completed':'blocked';detail=result.status;}
+ }catch(e){if(e instanceof SourcePilotBlocked)status='blocked';detail=e instanceof Error?e.message:'Worker operation failed';}
  await exclusive(file+'.lock',async()=>{
   const state=await load(),job=state.jobs.find(j=>j.id===claimed.id);if(!job||job.status!=='running'||job.attempts!==claimed.attempts)throw new Error('Scheduler lease/revision changed');
   job.status=status==='completed'?'completed':status==='blocked'?'blocked':job.attempts>=6?'failed':'pending';job.lastError=status==='completed'?null:detail;job.leaseUntil=null;

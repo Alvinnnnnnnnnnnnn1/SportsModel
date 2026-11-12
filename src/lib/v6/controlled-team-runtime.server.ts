@@ -11,42 +11,54 @@ import { currentTeamCatalogue } from './team-catalogue';
 import { screenTeamSlate,type TeamFixtureProof } from './team-pilot';
 import { gradeReconciledTeamPosition } from './reconciled-grading';
 import type { TeamRegistry } from './team-identity';
-import { activationReasons,collectionApprovalReasons,modelManifestSchema,type ControlledConfig } from './controlled-activation';
+import { activationReasons,collectionApprovalReasons,collectionReceiptSchema,modelManifestSchema,type ControlledConfig } from './controlled-activation';
 import type { ScheduledJob } from './controlled-scheduler.server';
 import type { V6Repository } from './repository.server';
 import type { Forecast } from './types';
-import { loadModel2ShadowConfig,freezeModel2Slate,pendingModel2Slates,recordModel2Results } from './prediction/shadow.server';
+import {SourcePilotBlocked} from './source-pilot';
+import { loadModel2ShadowConfig,freezeModel2Slate,pendingModel2Slates,pendingModel2Events,recordModel2Results } from './prediction/shadow.server';
 /** Concrete read-only ports for the registered worker. Never loads a shadow as
  * a new candidate, modifies the preserved dataset, or imports a V5 repository.
  */
-export async function prepareControlledTeamPorts(root:string,repository:V6Repository,job:ScheduledJob,controls:{config:ControlledConfig;manifest:unknown;receipt:unknown},keys:{oddsKey?:string;bdlKey?:string},clock:()=>string){
+export async function prepareControlledTeamPorts(root:string,repository:V6Repository,job:ScheduledJob,controls:{config:ControlledConfig;manifest:unknown;receipt:unknown},keys:{oddsKey?:string;bdlKey?:string},clock:()=>string,readControl?:()=>Promise<{config:ControlledConfig;manifest:unknown;receipt:unknown}>){
  const {config,manifest,receipt}=controls,at=clock(),liveRoot=path.join(root,'controlled'),approved=(await activationReasons(config,manifest,receipt,at)).length===0;
  if(!config.sourcesEnabled||config.killSwitch||config.mode==='disabled'||config.mode==='armed'&&!approved)throw new Error('Controlled source gate is closed');
  const collectionApproved=(await collectionApprovalReasons(config,receipt,at)).length===0;
- const api=freeSources({root,clock:()=>Date.parse(clock()),oddsKey:keys.oddsKey,oddsPilot:'team-moneyline-v1',controlledQuota:approved||collectionApproved?{monthlyCeiling:config.monthlyOddsCeiling,approvalHash:digest(JSON.stringify(receipt))}:undefined});
- const secondary=teamSources({root,clock:()=>Date.parse(clock()),bdlKey:keys.bdlKey});
+ if(!approved&&!collectionApproved)throw new Error('Exact source collection receipt required before preparing provider access');
+ const expected=digest(JSON.stringify(controls));
+ const authorizeRead=async()=>{const latest=readControl?await readControl():controls,now=clock();if(digest(JSON.stringify(latest))!==expected)throw new SourcePilotBlocked('Source controls changed; stop before next request');
+  if(latest.config.killSwitch||latest.config.mode==='disabled'||!latest.config.sourcesEnabled)throw new SourcePilotBlocked('Source emergency stop');
+  if(latest.config.sourceOnly&&latest.config.mode!=='dry_run')throw new SourcePilotBlocked('Source-only cannot arm');
+  const isCollection=(await collectionApprovalReasons(latest.config,latest.receipt,now)).length===0,isPaper=(await activationReasons(latest.config,latest.manifest,latest.receipt,now)).length===0;
+  if(!isCollection&&!isPaper)throw new SourcePilotBlocked('Source receipt expired or scope invalid');
+  try{await fs.access(path.join(root,'source-pilot/STOP'));throw new SourcePilotBlocked('Source STOP file engaged');}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
+ };
+ const api=freeSources({root,authorizeRead,clock:()=>Date.parse(clock()),oddsKey:keys.oddsKey,oddsPilot:'team-moneyline-v1',controlledQuota:approved||collectionApproved?{monthlyCeiling:config.monthlyOddsCeiling,approvalHash:digest(JSON.stringify(receipt))}:undefined});
+ const secondary=teamSources({root,authorizeRead,clock:()=>Date.parse(clock()),bdlKey:keys.bdlKey});
  let bdlQueue:Promise<unknown>=Promise.resolve();
  const readBdl=(endpoint:string,params:Record<string,string>={})=>{
   const request=bdlQueue.then(async()=>{
   let delay=0;try{const b=JSON.parse(await fs.readFile(path.join(root,'balldontlie-team-budget.json'),'utf8'));delay=Math.max(0,b.lastAt+12600-Date.parse(clock()));}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
-  if(delay)await new Promise(r=>setTimeout(r,delay));return secondary.read('balldontlie',endpoint,params);
+  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();return secondary.read('balldontlie',endpoint,params);
   });bdlQueue=request.then(()=>undefined,()=>undefined);return request;
  };
  const readOdds=async(endpoint:string,params:Record<string,string>,cost:number)=>{
   let delay=0;try{const b=JSON.parse(await fs.readFile(path.join(root,'odds-shared-budget.json'),'utf8'));delay=Math.max(0,b.lastRequest+1100-Date.parse(clock()));}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
-  if(delay)await new Promise(r=>setTimeout(r,delay));return api.read('the-odds-api.com',endpoint,params,cost);
+  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();return api.read('the-odds-api.com',endpoint,params,cost);
  };
  const forecasts=new Map<string,Forecast>(),current=await repository.read();
  const model2Config=await loadModel2ShadowConfig(root,config.ownerId,at);
+ const pilot=collectionReceiptSchema.safeParse(receipt).data?.pilot;
+ if(pilot&&(!model2Config||model2Config.artifactHash!==pilot.plan.artifactHash))throw new SourcePilotBlocked('Exact pilot model artifact configuration missing');
  const model2Pending=model2Config&&job.kind==='results'&&(approved||collectionApproved)?await pendingModel2Slates(root,config.ownerId,at):[];
  let scorePromise:Promise<RawEvidence>|null=null;const secondaryResults=new Map<string,Promise<RawEvidence>>();
  const readSecondary=(proof:TeamFixtureProof)=>{if(!proof.statsGameId)throw new Error('Exact statistics fixture required');let result=secondaryResults.get(proof.statsGameId);if(!result){result=readBdl('/v1/games/'+proof.statsGameId);secondaryResults.set(proof.statsGameId,result);}return result;};
  const withinRetention=current.positions.filter(p=>Date.parse(p.observation.eventStartsAt)<=Date.parse(at)&&Date.parse(at)-Date.parse(p.observation.eventStartsAt)<3*86400000);
  const provider={collectionPermitted:true,collect:async()=>{
   if(job.kind==='results'){
-   if(model2Pending.length){const ids=[...new Set([...withinRetention.map(p=>p.observation.market.eventId.replace(/^the-odds-api\.com:/,'')),...model2Pending.flatMap(s=>s.record.fixtures.filter(f=>Date.parse(f.proof.earliestStartsAt)<=Date.parse(clock())&&Date.parse(clock())-Date.parse(f.proof.earliestStartsAt)<3*86400000).map(f=>f.eventId))])];
+   if(model2Pending.length){const ids=[...new Set([...withinRetention.map(p=>p.observation.market.eventId.replace(/^the-odds-api\.com:/,'')),...(await Promise.all(model2Pending.map(s=>pendingModel2Events(root,s,clock())))).flat()])];
     if(ids.length){scorePromise=(async()=>{await readOdds('/v4/sports',{},0);return readOdds('/v4/sports/basketball_nba/scores',{daysFrom:'3',eventIds:ids.join(','),dateFormat:'iso'},2);})();const scores=await scorePromise;
-     for(const slate of model2Pending)await recordModel2Results(root,slate,{scores,secondary:readSecondary,at:clock()});}}
+     for(const slate of model2Pending)await recordModel2Results(root,slate,{scores,secondary:readSecondary,at:clock(),eventIds:await pendingModel2Events(root,slate,clock()),beforeCommit:authorizeRead});}}
    return [];
   }
   const cache=path.join(liveRoot,'features.json');let featureReceipts:RawEvidence[]=[];
@@ -87,9 +99,11 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
    await atomicPrivateJson(path.join(liveRoot,'proofs',c.observation.id+'.json'),{proof:c.proof,registry,originalFixtures,observation:c.observation,forecast:f,manifestHash:digest(JSON.stringify(manifest)),rawSource:odds});
   }
   await atomicPrivateJson(path.join(liveRoot,'screens',odds.id+'.json'),{screen,modelApprovalApplied:approved,financialWrites:0});
-  if(model2Config)await freezeModel2Slate(root,{ownerId:config.ownerId,source:odds,rows,registry,completeSeasons:coverage.complete?[season]:[],originalFixtures:fixtureReceipts,at:clock(),sourceCollectionApproved:approved||collectionApproved});
+  if(model2Config){const saved=await freezeModel2Slate(root,{ownerId:config.ownerId,source:odds,rows,registry,completeSeasons:coverage.complete?[season]:[],originalFixtures:fixtureReceipts,at:clock(),sourceCollectionApproved:approved||collectionApproved,clock,beforeCommit:authorizeRead,latestEventStart:pilot?new Date(Date.parse(pilot.plan.expiresAt)-8*3600000).toISOString():undefined});if(pilot&&(!saved||saved.record.fixtures.every(f=>!f.homeProbabilities)))throw new SourcePilotBlocked('No supported prospective forecasts; retained empty/blocked screen is not successful collection');}
+  if(config.sourceOnly)return [];
   return screen.candidates.flatMap(c=>c.observation?[c.observation]:[]);
  },grade:async(position:typeof current.positions[number])=>{
+  if(config.sourceOnly||collectionApproved)return null;
   if(job.kind!=='results')return null;
   if(!withinRetention.some(p=>p.id===position.id)){
    await atomicPrivateJson(path.join(liveRoot,'grading-diagnostics',position.id+'.json'),{ownerId:config.ownerId,positionId:position.id,at:clock(),status:'unresolved_or_outside_window',reason:'not_started_or_score_retention_elapsed',financialSettlement:false});

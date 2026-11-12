@@ -6,7 +6,7 @@ export const v6Sections: {id:V6Section;label:string;href:string}[] = [
  {id:'models',label:'Model Intelligence',href:'/v6/models'}, {id:'positions',label:'Paper Position Ledger',href:'/v6/positions'}, {id:'health',label:'Automation Health',href:'/v6/health'},
 ];
 export interface V6Metric {brier:number;logLoss:number;calibration:{count:number;meanProbability:number|null;observedRate:number|null}[];}
-export interface V6Selection {key:string;eventId:string;fixture:string;sport:string;selection:string;market:string;odds:number|null;breakEven:number|null;probability:number|null;eloProbability:number|null;ev:number|null;startsAt:string;quoteAt:string|null;capturedAt:string;forecastAt:string|null;frozenAt:string;pass1:string[];pass2:string[];limitations:string[];outcome:string;homeScore:number|null;awayScore:number|null;decision:string;}
+export interface V6Selection {deVigProbability?:number;verification?:string;sourceClass?:string;models?:{name:string;version:string;probability:number|null;ev:number|null;firstPass:string[];secondPass:string[];decision:string}[];key:string;eventId:string;fixture:string;sport:string;selection:string;market:string;odds:number|null;breakEven:number|null;probability:number|null;eloProbability:number|null;ev:number|null;startsAt:string;quoteAt:string|null;capturedAt:string;forecastAt:string|null;frozenAt:string;pass1:string[];pass2:string[];limitations:string[];outcome:string;homeScore:number|null;awayScore:number|null;decision:string;}
 export interface V6Dashboard {
  development?:ModelDevelopmentSummary|null;
  model2Prospective?:Model2ProspectiveSummary|null;

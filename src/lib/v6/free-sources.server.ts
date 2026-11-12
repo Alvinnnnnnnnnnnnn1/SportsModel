@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { atomicPrivateJson,digest,exclusive,retainEvidence,type RawEvidence } from './evidence.server';
 
 const budgetSchema=z.object({period:z.string(),reserved:z.number().int().nonnegative(),remaining:z.number().int().nonnegative().nullable(),used:z.number().int().nonnegative().nullable(),lastRequest:z.number().nonnegative(),uncertain:z.boolean(),freeConfirmed:z.boolean().default(false)}).strict();
-export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number;oddsPilot?:'team-moneyline-v1';controlledQuota?:{monthlyCeiling:number;approvalHash:string}; }
+export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number;oddsPilot?:'team-moneyline-v1';controlledQuota?:{monthlyCeiling:number;approvalHash:string};authorizeRead?:()=>Promise<void>; }
 /** Explicit read-only transport. Every V6 collector/worker shares this on-disk quota.
  * Uncertain reservations are never silently refunded after transport failure.
  */
@@ -26,6 +26,7 @@ export function freeSources(options:FreeSourceOptions) {
     for(const [key,value]of Object.entries(parameters))url.searchParams.set(key,value);
     const sourceUrl=url.toString(),file=path.join(options.root,odds?'odds-shared-budget.json':basketball?'basketball-pilot-budget.json':'nba-pilot-budget.json');
     return exclusive(file+'.lock',async()=>{
+      await options.authorizeRead?.();
       const now=clock(),period=new Date(now).toISOString().slice(0,odds?7:10);
       let budget={period,reserved:0,remaining:null as number|null,used:null as number|null,lastRequest:0,uncertain:false,freeConfirmed:false};
       try {const saved=budgetSchema.parse(JSON.parse(await fs.readFile(file,'utf8')));if(saved.period===period)budget=saved;}
@@ -42,7 +43,7 @@ export function freeSources(options:FreeSourceOptions) {
       const ceiling=odds?(options.controlledQuota?.monthlyCeiling??(options.oddsPilot==='team-moneyline-v1'?12:6)):10;
       if(budget.uncertain&&cost)throw new Error('Source quota is uncertain; successful free status/catalogue read required');
       if(cost&&!budget.freeConfirmed)throw new Error('Verify the free plan through a status/catalogue read first');
-      if(budget.reserved+cost>ceiling||budget.remaining!==null&&budget.remaining-cost<(odds?100:20))throw new Error('Free-source reserve/bounded pilot allowance reached');
+      if(Math.max(budget.reserved,odds?budget.used??0:0)+cost>ceiling||budget.remaining!==null&&budget.remaining-cost<(odds?100:20))throw new Error('Free-source reserve/bounded pilot allowance reached');
       const spacing=odds?1000:16000;
       if(budget.lastRequest&&now-budget.lastRequest<spacing)throw new Error('Source cooldown; no request was sent');
       budget.reserved+=cost;budget.lastRequest=now;budget.uncertain=true;
@@ -50,7 +51,7 @@ export function freeSources(options:FreeSourceOptions) {
       const headers:Record<string,string>={Accept:'application/json'};
       if(odds)url.searchParams.set('apiKey',secret);else headers['x-apisports-key']=secret;
       let response:Response;
-      try{response=await fetcher(url,{method:'GET',headers,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(12000)});}catch{throw new Error('Source transport failed; reservation retained, no retry');}
+      try{await options.authorizeRead?.();response=await fetcher(url,{method:'GET',headers,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(12000)});}catch{throw new Error('Source transport failed; reservation retained, no retry');}
       const numberHeader=(key:string)=>{const n=response.headers.get(key);return n!==null&&/^\d+$/.test(n)&&Number.isSafeInteger(Number(n))?Number(n):null;};
       const remaining=numberHeader(odds?'x-requests-remaining':'x-ratelimit-requests-remaining');
       const used=numberHeader('x-requests-used');

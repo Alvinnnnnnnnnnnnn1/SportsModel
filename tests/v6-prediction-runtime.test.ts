@@ -1,5 +1,6 @@
 /** Actual scheduler and collector orchestration, intercepted synthetic provider responses only. */
 import {it,expect,vi} from 'vitest';import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
+import {sourcePilotPlanSchema} from '@/lib/v6/source-pilot';
 import {model2Fixture} from './fixtures/v6-prediction';
 import {freeze,after} from './fixtures/v6-reconciliation';
 import {digest,retainEvidence,type RawEvidence} from '@/lib/v6/evidence.server';
@@ -15,13 +16,14 @@ vi.mock('@/lib/v6/team-sources.server',()=>({teamSources:(options:{root:string})
 it('runs existing scheduled discovery and results through source-only approvals; forecasts and grades observations with zero positions',async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'v6-model-runtime-'));
  try{
-  const {data,history}=await model2Fixture(root);let now=freeze;
+  const {data,history,artifactHash}=await model2Fixture(root);let now=freeze;
   const evidence=(provider:RawEvidence['provider'],url:string,body:unknown):RawEvidence=>{const raw=JSON.stringify(body);return {id:crypto.randomUUID(),provider,sourceUrl:url,retrievedAt:now,sourceUpdatedAt:null,raw,hash:digest(raw)};};
   const historical=evidence('api-nba','https://v2.nba.api-sports.io/games?season=2026',{errors:[],response:history.map((g,i)=>({id:'SYNTHETIC-TRAIN-'+i,league:'standard',season:2026,stage:2,date:{start:g.startsAt},status:{short:3},teams:{home:{id:1,name:'LOCAL Home',code:'H'},visitors:{id:2,name:'LOCAL Away',code:'A'}},scores:{home:{points:g.homeScore},visitors:{points:g.awayScore}}}))});
   await ingestTeamGames(root,historical);
   const catalog=evidence('balldontlie','https://api.balldontlie.io/v1/teams',{data:Array.from({length:30},(_,i)=>({id:i+1,full_name:i===0?'LOCAL Home':i===1?'LOCAL Away':'LOCAL '+i,abbreviation:i===0?'H':i===1?'A':'T'+i,city:'LOCAL',name:i===0?'Home':i===1?'Away':String(i),conference:'East',division:'Atlantic'}))});await retainEvidence(root,catalog);
-  const config=controlledConfigSchema.parse({version:1,ownerId:'synthetic-owner',mode:'dry_run',killSwitch:false,sourcesEnabled:true,modelManifest:null,activationReceipt:null,monthlyOddsCeiling:300});
-  const receipt={format:'edgelab.v6-shadow-collection',version:1,ownerId:config.ownerId,approvedAt:freeze,expiresAt:'2026-11-15T00:00:00Z',approvalReference:'SYNTHETIC TEST CONTROL ONLY',policyBundleHash:await policyBundleHash(),scope:'zero_cost_read_only_shadow',sourceRightsConfirmed:true,monthlyOddsCeiling:300};
+  const plan=sourcePilotPlanSchema.parse({format:'edgelab.v6-source-pilot',version:1,ownerId:'synthetic-owner',historyBatchId:crypto.randomUUID(),startsAt:'2026-11-12T00:00:00Z',expiresAt:'2026-11-26T00:00:00Z',period:'2026-11',baselineReserved:10,baselineUsed:10,additionalOddsCredits:50,monthlyOddsCeiling:60,providerReserve:100,artifactHash,scope:'NBA_Sportsbet_full_game_moneyline_observations_only',cadence:{discoveryHourMelbourne:19,resultsHourMelbourne:18,finalResultsHourMelbourne:21,lastEventHoursBeforeEnd:8,captureDays:13,resultTailDays:1,preStartJobs:false,catchupMinutes:120,tickSeconds:60},paperRegistrations:false,paperSettlements:false,modelActivation:false,hostedAccess:false,externalMessaging:false});
+  const config=controlledConfigSchema.parse({version:1,ownerId:'synthetic-owner',mode:'dry_run',killSwitch:false,sourcesEnabled:true,modelManifest:null,activationReceipt:null,monthlyOddsCeiling:60,sourceOnly:true,sourcePilotPlanHash:digest(JSON.stringify(plan))});
+  const receipt={format:'edgelab.v6-shadow-collection',version:1,ownerId:config.ownerId,approvedAt:freeze,expiresAt:plan.expiresAt,approvalReference:'SYNTHETIC TEST CONTROL ONLY',policyBundleHash:await policyBundleHash(),scope:'zero_cost_read_only_shadow',sourceRightsConfirmed:true,monthlyOddsCeiling:60,pilot:{plan,planHash:digest(JSON.stringify(plan)),approvalStatus:'approved'}};
   transport.read.mockImplementation(async(directory:string,provider:RawEvidence['provider'],endpoint:string,params:Record<string,string>)=>{
    let result:RawEvidence;
    if(endpoint==='/v1/games'&&params.start_date){const body=JSON.parse(data.originalFixtures.raw);for(const g of body.data){g.home_team.abbreviation='H';g.visitor_team.abbreviation='A';}result=evidence(provider,'https://api.balldontlie.io/v1/games?'+new URLSearchParams(params),{...body,meta:{per_page:100,next_cursor:null}});}
@@ -40,7 +42,7 @@ it('runs existing scheduled discovery and results through source-only approvals;
   const calls=transport.read.mock.calls;expect(calls.some(c=>c[2]==='/v1/games'&&c[3].start_date===freeze.slice(0,10))).toBe(true);
   expect((await repository.read()).positions).toEqual([]);const files=await fs.readdir(path.join(root,'model-development/slates'));expect(files).toHaveLength(1);
   now=after;expect((await runControlledTick(path.join(root,'scheduler'),ports,[job('TEST-RESULTS','results')])).status).toBe('completed');
-  const report=await evaluateModel2Slates(root,config.ownerId);expect(report.fixtures).toBe(1);expect(report.models).toHaveLength(9);expect((await repository.read()).positions).toEqual([]);expect((await repository.read()).grades).toEqual([]);
-  const before=transport.read.mock.calls.length;config.mode='disabled';expect((await runControlledTick(path.join(root,'scheduler'),ports,[job('TEST-OFF','discovery')])).status).toBe('disabled');expect(transport.read.mock.calls.length).toBe(before);
+  const report=await evaluateModel2Slates(root,config.ownerId);expect(report.fixtures).toBe(1);expect(report.models).toHaveLength(9);expect((await repository.read()).positions).toEqual([]);expect((await repository.read()).grades).toEqual([]);const resultCalls=transport.read.mock.calls.length;expect((await runControlledTick(path.join(root,'scheduler'),ports,[job('TEST-RESULTS-REPEAT','results')])).status).toBe('completed');expect(transport.read.mock.calls.length).toBe(resultCalls);
+  const before=transport.read.mock.calls.length;await fs.mkdir(path.join(root,'source-pilot'),{recursive:true});await fs.writeFile(path.join(root,'source-pilot/STOP'),'SYNTHETIC TEST STOP');expect((await runControlledTick(path.join(root,'scheduler'),ports,[job('TEST-EMERGENCY','discovery')])).status).toBe('blocked');expect(transport.read.mock.calls.length).toBe(before);await fs.unlink(path.join(root,'source-pilot/STOP'));config.mode='disabled';expect((await runControlledTick(path.join(root,'scheduler'),ports,[job('TEST-OFF','discovery')])).status).toBe('disabled');expect(transport.read.mock.calls.length).toBe(before);
  }finally{await fs.rm(root,{recursive:true,force:true});}
 },30000);

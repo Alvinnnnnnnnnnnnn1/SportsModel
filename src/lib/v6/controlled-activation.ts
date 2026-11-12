@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {pilotReceiptExtension} from './source-pilot';
 import { sha256 } from '@/lib/imports/duplicates';
 import { V6_POLICY } from './policy';
 import { TEAM_RESEARCH_POLICY } from './team-research-policy';
@@ -47,11 +48,12 @@ export type ActivationReceipt=z.infer<typeof activationReceiptSchema>;
  * the prospective evidence needed for model review. It can never arm positions. */
 export const collectionReceiptSchema=z.object({format:z.literal('edgelab.v6-shadow-collection'),version:z.literal(1),ownerId:z.string().min(1),
  approvedAt:stamp,expiresAt:stamp,approvalReference:z.string().min(1),policyBundleHash:hash,scope:z.literal('zero_cost_read_only_shadow'),
- sourceRightsConfirmed:z.literal(true),monthlyOddsCeiling:z.number().int().min(1).max(400)}).strict();
+ sourceRightsConfirmed:z.literal(true),monthlyOddsCeiling:z.number().int().min(1).max(400),pilot:pilotReceiptExtension.optional()}).strict();
 export const controlledConfigSchema=z.object({
  version:z.literal(1),ownerId:z.string().min(1),mode:z.enum(['disabled','dry_run','armed']),killSwitch:z.boolean(),sourcesEnabled:z.boolean(),
  modelManifest:z.string().nullable(),activationReceipt:z.string().nullable(),
  monthlyOddsCeiling:z.number().int().min(1).max(400).default(300),
+ sourceOnly:z.boolean().optional(),sourcePilotPlanHash:hash.optional(),
  persistence:z.discriminatedUnion('kind',[z.object({kind:z.literal('supabase'),projectRef:z.string().regex(/^[a-z0-9]{20}$/),workerTokenFile:z.string().min(1)}).strict(),z.object({kind:z.literal('supabase_capability'),projectRef:z.string().regex(/^[a-z0-9]{20}$/),workerCredentialFile:z.string().min(1)}).strict()]).nullable().default(null),
 }).strict();
 export type ControlledConfig=z.infer<typeof controlledConfigSchema>;
@@ -59,12 +61,15 @@ export const policyBundleHash=()=>sha256(JSON.stringify({financial:V6_POLICY,sel
 export async function collectionApprovalReasons(config:ControlledConfig,input:unknown,at:string){
  stamp.parse(at);
  const r=collectionReceiptSchema.safeParse(input);if(!r.success)return ['read_only_collection_approval_missing'];
+ if(config.modelManifest!==null||config.persistence!==null)return ['source_only_disallows_model_and_hosted_credentials'];
+ if((config.sourceOnly||config.sourcePilotPlanHash)&&!r.data.pilot)return ['exact_bounded_source_pilot_receipt_required'];
+ if(r.data.pilot){const p=r.data.pilot;if(p.approvalStatus!=='approved'||!config.sourceOnly||config.sourcePilotPlanHash!==p.planHash||p.planHash!==await sha256(JSON.stringify(p.plan))||p.plan.ownerId!==config.ownerId||p.plan.monthlyOddsCeiling!==config.monthlyOddsCeiling||p.plan.period!==at.slice(0,7)||Date.parse(at)<Date.parse(p.plan.startsAt)||Date.parse(at)>=Date.parse(p.plan.expiresAt)||r.data.expiresAt!==p.plan.expiresAt)return ['pilot_pending_owner_hash_window_or_quota_mismatch'];}
  if(config.mode!=='dry_run'||config.killSwitch||!config.sourcesEnabled||r.data.ownerId!==config.ownerId||r.data.policyBundleHash!==await policyBundleHash()
   ||r.data.monthlyOddsCeiling!==config.monthlyOddsCeiling||Date.parse(r.data.approvedAt)>Date.parse(at)||Date.parse(r.data.expiresAt)<=Date.parse(at)
   ||Date.parse(r.data.expiresAt)-Date.parse(r.data.approvedAt)>31*86400000)return ['read_only_collection_owner_scope_budget_or_expiry_mismatch'];return [];
 }
 export async function activationReasons(config:ControlledConfig,manifestInput:unknown,receiptInput:unknown,at:string){
- stamp.parse(at);const reasons:string[]=[],m=modelManifestSchema.safeParse(manifestInput),r=activationReceiptSchema.safeParse(receiptInput);
+ stamp.parse(at);if(config.sourceOnly)return ['source_only_cannot_arm_or_activate_models'];const reasons:string[]=[],m=modelManifestSchema.safeParse(manifestInput),r=activationReceiptSchema.safeParse(receiptInput);
  if(config.killSwitch||config.mode==='disabled')reasons.push('emergency_stop_or_disabled');
  if(!config.sourcesEnabled)reasons.push('sources_not_enabled');
  if(!m.success)return [...reasons,'model_manifest_missing_or_invalid'];
@@ -84,6 +89,7 @@ export async function activationReasons(config:ControlledConfig,manifestInput:un
  */
 export async function runControlledWorker(repository:V6Repository,provider:V6ReadProvider,model:V6IndependentModel|null,config:ControlledConfig,manifest:unknown,receipt:unknown,options:{runId:string;now:string;clock?:()=>string;readControl:()=>Promise<{config:ControlledConfig;manifest:unknown;receipt:unknown}>}){
  const initial=await repository.read();if(initial.ownerId!==config.ownerId||initial.cohort!=='v6-prospective')throw new Error('Controlled worker owner or cohort changed');
+ if(config.sourceOnly&&(initial.positions.length||initial.grades.length))throw new Error('Source-only repository must contain no paper positions or grades');
  const reasons=await activationReasons(config,manifest,receipt,options.now);
  if(config.mode==='disabled'||config.killSwitch)return {status:'disabled' as const,reasons,state:initial};
  if(config.mode==='armed'&&reasons.length)return {status:'activation_blocked' as const,reasons,state:initial};

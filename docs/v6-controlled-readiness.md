@@ -1,3 +1,17 @@
+# Current source-only readiness — 13 November 2026
+
+The actual model2 worker integration has been exercised with controlled synthetic providers, including genuine-style future fixture discovery, common cutoff/frozen forecasts, exact Sportsbet market identity, dual-provider results, corrected/idempotent revisions, earliest-valid-quote locking, verified-event request suppression, restart recovery, emergency stop and cumulative credit exhaustion. It is ready for a **bounded approved source experiment**, subject to real provider availability and an awake/connected local host; it is not live-accepted or installed.
+
+[Exact proposed14-day window, cadence, file hashes and approval request](v6-source-pilot-approval.md). This uses the existing scheduler/CLI, not a new scheduler. No active receipt/config, network request, LaunchAgent installation or model activation was made. Source-only collection can release its operational kill switch while still forbidding armed mode, paper positions/grades, model/standing manifests, hosted persistence and paper credentials. Every provider request and evidence commit rechecks the approved window/control state; STOP suppresses subsequent calls. Pending/expired/tampered receipts reject.
+
+The source namespace is a local key derived from the existing private batch anchor, not a fabricated Auth account. Dashboard visibility still requires the real account's verified Auth and RLS-owned batch. Source-only state is isolated from actual paper and V5 financial repositories. Model2 prospective display includes actual new source rows only after authorised capture; an empty feed is explicitly not successful collection.
+
+Current retained source allowance:10 reserved/used,490remaining; approved maximum50 additional would become cumulative60, with100reserve. Proposed normal cadence41 credits +9 contingencies,13 captures and result tail inside14days. Fully verified fixtures are not routinely fetched again; later independently supplied corrections append without rewriting forecasts. The Mac sleep/network/retention caveats and date-expiry approval requirement are explicit in the package. No uptime guarantee or future source acceptance is claimed from synthetic tests.
+
+Executed:730 tests,147 local SQL checks,8 intercepted browser groups, typecheck/lint/build; disabled CLI and offline plan/plist checks passed. A/B/C remain independent and unapproved. No new SQL hash; the existing c3a0… proposal is unchanged.
+
+---
+
 # V6 controlled activation readiness — 12 November 2026
 
 **Prepared locally, disabled, not deployed or activated.** All ten fixtures/twenty observations remain verified and immutable; no retrospective position/P&L. The [final security preflight](v6-security-preflight.md) adds owner-issued hashed/revocable capabilities and a separately proposed [experimental paper policy](v6-experimental-paper-policy.proposed.md). No external JWT signer or daily browser session is needed for that worker path. Hosted acceptance and independent A/B/C approvals remain open. No V5/account/methodology/funding/deployed-schema change. [Exact approval package](v6-deployment-approval-package.md).

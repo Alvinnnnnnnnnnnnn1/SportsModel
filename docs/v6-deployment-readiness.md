@@ -1,12 +1,14 @@
 # V6 deployment and rollback readiness
 
-Status: **not deployed, not enabled**. The [team-moneyline pilot](v6-team-moneyline-pilot.md) now has genuine pre-event forecasts/quotes and current game data, but no qualifying activated model or completed prospective position settlement. Player-prop blockers remain in [earlier evidence](v6-prospective-pilot.md). No existing migration, account or legacy financial record was changed. No new cloud service, paid plan, scheduler, public UI or external messaging was enabled.
+Status: **not deployed, not enabled**. The [12 November result check](v6-shadow-results-20261112.md) retrieved ten source-agreed finals; one fixture passes strict verification and nine have unresolved changed start fields. No qualifying model, registration or genuine paper settlement is claimed. [Controlled activation readiness](v6-controlled-readiness.md) documents the implemented, disabled headless scheduler and proposed Elo-only baseline. Player-prop blockers remain in [earlier evidence](v6-prospective-pilot.md). No existing migration, account or legacy financial record was changed. No cloud service, paid plan, scheduler or external messaging was enabled.
 
 ## SQL diff for review
 
 Proposed file: `supabase/proposals/202611110001_v6_paper.sql`, outside `migrations/`. Latest SHA-256:
 
-`3d6353aadfea1d0ef9fdd026ab6aa44b963e667732c3156aa6beb980f56c54f5`
+`bac90244c59afe3624d358b5840dfdae2e23f845b0effa8406bea593a21da5bc`
+
+This supersedes local hash `3d6353aadfea1d0ef9fdd026ab6aa44b963e667732c3156aa6beb980f56c54f5`, never deployed. The 12 November delta adds a separate `nba_team_elo_only` method with zero form/rest/shrinkage, exact model ID/version, owner-reviewed registry evidence and minimum 500 chronological/30 strictly verified prospective games. Those proposed validation thresholds require review; they are not paper-volume caps. Local tests reject missing approval, reproduce a valid baseline, and prove late failure rolls back its batch. Exact delta from the last proposal review: `git diff bada5d6 -- supabase/proposals/202611110001_v6_paper.sql`.
 
 Previous local hash `19316b6afaf61a1354aced38996fb061c223fdaa71c39e07da9c7c98889164c0` is superseded, never deployed. Team continuation adds `nba_team_elo` to the model registry, database reproduction of its frozen formula/two-pass/original-price/earliest-start gates, and HTTPS query support that rejects secret or encoded parameter names. No new table/role or wider V5 permission was added. Synthetic embedded tests prove team registration and late-failure rollback; they do not activate a real model. Diff from the previous review:
 
@@ -28,13 +30,15 @@ Remaining deployment work: finish model-registry validation governance, shared p
 
 ## Approval and failure/rollback plan
 
-1. Finish data/identity/model gates and review this exact SQL/hash and scope with the owner. Confirm linked project `ilgoswfckkzpoktabbfi` read-only and compare remote migration history/catalog; this continuation made no new remote catalog claim.
+1. Finish data/identity/model gates and review this exact SQL/hash and scope with the owner. Read-only linked migration history on 12 November confirmed project `ilgoswfckkzpoktabbfi` and only `202611030001`, `202611030002`, `202611040001`. This is migration-history evidence, not a new complete hosted catalog/RLS test. Repeat the read-only comparison before a separately approved deployment.
 2. Preserve a new owner-controlled backup before any separately approved deployment. Prepare only the approved V6 migration, inspect a dry-run and ask explicit final owner approval for its exact contents/project. Do not automatically move this proposal into migrations or push it.
 3. DDL is enclosed in one transaction. If any statement fails before COMMIT, stop and let PostgreSQL roll back; report the error, never reset/reseed or continue with a partially altered design. Privilege/role compatibility must be checked on the actual free Supabase project; PGlite cannot establish hosted support.
 4. If committed schema later needs operational rollback, first stop/revoke the **V6 worker only** under explicit approval, retain all rows/audits and leave V5 untouched. Preserve V6 tables for read-only investigation; do not automatically DROP/TRUNCATE them or delete a policy/model/position. Owner-approved corrective additive SQL is preferred to destructive rollback.
 5. After deployment, perform scoped authenticated two-user persistence/RLS tests with approved evidence, atomic registration/settlement and real restart/concurrency verification. Prior local successes are not hosted proof. Keep controls disabled until exact standing policy/model activation and a prospective pilot are separately authorised.
 
 ## Local worker, scheduler and emergency stop
+
+The current concrete entry point is `scripts/run-v6-controlled.mjs`, with disabled controls in `ops/v6-controlled.config.example.json`. Its **uninstalled** `ops/com.edgelab.v6-controlled.plist.example` runs a one-minute tick selecting Melbourne discovery/result and pre-start jobs. It calls the actual registered worker, uses exact owner/model/policy receipts, durable leases/retries and the atomic commit latch. It currently has one verified prospective fixture against a proposed minimum of thirty, so arming is blocked. The source adapter and local queue exist; live armed execution, hosted persistence and delivered alerts remain unverified. See [the current command and operations guide](v6-controlled-readiness.md). Older disabled worker/template instructions below remain valid smoke tests, not the new schedule.
 
 The worker uses Node and the installed npm/Vite runtime directly; **no `npm run dev` or Next HTTP server is needed**. A full existing `npm ci` installs the development runtime used by scripts; an `--omit=dev` worker distribution is not prepared. Example safe smoke test:
 
@@ -50,7 +54,7 @@ Emergency stop is `killSwitch: true` and/or `mode: disabled` in the private work
 
 ## Health, missed runs and UI deployment
 
-The team one-shot collector/worker runs in local observational `dry_run` only. `scripts/check-v6-team-results.mjs` has a no-request future-event gate, then narrow source/result verification and an append-only observation journal; it cannot settle financial positions. No command installs a schedule. After actual prospective model/rules review, the armed worker must enforce the same frozen two-pass checks and **earliest** attributed fixture clock, with the existing commit latch. Research labels and later results never upgrade the excluded pilot into qualifying positions. Source-key quota coordination remains single-host; the explicit team audit shares earlier odds reservations under a 12-cumulative-credit ceiling, not a position cap. See the pilot guide before any further read.
+The team one-shot collector/worker runs in local observational `dry_run` only. `scripts/check-v6-team-results.mjs` has a no-request future-event gate, then narrow source/result verification and an append-only observation journal; it cannot settle financial positions. Its actual follow-up used two credits, bringing usage to ten/500, with 490 remaining. No schedule is installed. After model/rules review, the controlled worker enforces frozen two-pass checks and the **earliest** attributed fixture clock with its commit latch. Later results never upgrade the excluded pilot. Quota coordination remains single-host; the manual team pilot retains its 12-credit ceiling. Only exact approved controlled receipts can enable the proposed 300-credit monthly controlled allowance (maximum 400, reserve 100). None was enabled.
 
 CLI operational attempts go to ignored `.local/v6/worker-health/`. `v6WorkerHealth` distinguishes stopped/disabled, never-run, failure, invalid clock, missed run (default >26 hours, accounting for Melbourne DST) and a fresh run with no usable source data/all candidates blocked. A recent successful transaction is not proof of healthy coverage. The function/receipts are implemented; no running monitoring daemon, alert delivery or hosted health dashboard is claimed. Failure receipts do not invent successful screened counts.
 

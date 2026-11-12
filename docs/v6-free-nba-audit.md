@@ -1,6 +1,6 @@
 # V6 free NBA coverage and observation archive — 11 November 2026
 
-Later team-market milestone: [BALLDONTLIE current games and genuine moneyline shadow](v6-team-moneyline-pilot.md). It resolves current game-level inputs; the player-stat coverage/rights restrictions in this earlier audit are preserved. Current odds usage is eight cumulative credits, not the five at this checkpoint.
+Later team-market milestone: [BALLDONTLIE current games and genuine moneyline shadow](v6-team-moneyline-pilot.md), followed by [12 November final results](v6-shadow-results-20261112.md). One strict fixture is verified; nine have unresolved clock changes. Current odds usage is ten cumulative credits/490 remaining. The player-stat coverage/rights restrictions below remain preserved. [Controlled readiness](v6-controlled-readiness.md) is disabled, with no qualifying registration or hosted deployment.
 
 Status: **REAL_DATA_SHADOW_BLOCKED / LOCAL_TEST_ONLY**. No new position, settlement, policy activation, hosted write or migration. No historical account import was repeated. The A$5,000/A$50 uncapped paper policy, V5 finances and saved methodology are unchanged.
 

@@ -1,5 +1,7 @@
 # V6 real-data pilot — 11 November 2026
 
+12 November continuation: [team-shadow final results](v6-shadow-results-20261112.md) and [disabled controlled-worker readiness](v6-controlled-readiness.md). One strict verified fixture; nine unresolved clock discrepancies. Ten cumulative odds credits/490 remaining. The player-prop evidence below is a preserved earlier checkpoint.
+
 Later milestone: the [NBA team-moneyline pilot](v6-team-moneyline-pilot.md) resolves current **game-level** data using BALLDONTLIE and freezes genuine experimental forecasts/quotes. The player-stat/identity findings below remain valid for this earlier prop sample; they do not block team-market research. No prospective paper settlement is claimed by either checkpoint.
 
 **Result: genuine source collection and blocked shadow screening, not a completed prospective paper lifecycle.** No paper position, settlement, hosted write, policy activation or real wager occurred. Code milestone: `f161368`, branch `feature/v6-autonomous-paper`. Existing personal account, 46 historical sources, legacy actual/paper positions, funding and Methodology Revision 1 were untouched.

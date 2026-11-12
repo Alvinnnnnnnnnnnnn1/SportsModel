@@ -1,5 +1,7 @@
 # V6 isolated paper engine and worker
 
+**12 November extension:** [controlled readiness](v6-controlled-readiness.md) adds a distinct Elo-only baseline candidate, exact versioned owner/model/standing-policy receipts and a durable scheduler invoking the existing registered worker. The baseline is unapproved; one strict prospective fixture falls short of the proposed thirty-fixture gate. Sources, unattended registration and hosted SQL remain disabled. All twenty old selections remain observational; [real result metrics](v6-shadow-results-20261112.md) distinguish strict from unresolved/provisional evidence. No V5 or financial policy change.
+
 The [team-moneyline milestone](v6-team-moneyline-pilot.md) adds a reproducible `nba_team_elo` method, exact current-team/fixture bridge, earlier-of-source-start gate, two-pass research checks and an independent-result grader. Twenty genuine future observations are frozen in a separate shadow store; all remain excluded. The core A$5,000/A$50 uncapped accounting, owner/cohort isolation, append-only registration and commit latch are unchanged. No production model/policy or hosted SQL is activated.
 
 Implementation checkpoint: **LOCAL_TEST_ONLY**, default disabled. This is a distinct prospective cohort, separate from Demo and legacy V5 financial/paper history. No standing policy/model has been activated and no V6 prospective position has been registered. Historical activation is complete; do not repeat it.

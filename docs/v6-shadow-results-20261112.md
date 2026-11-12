@@ -43,6 +43,19 @@ Separate **provisional source-agreement** cohort: ten fixtures including nine un
 
 Elo is slightly better on provisional Brier, challenger slightly better on log loss, and the bookmaker baseline best on both. No edge follows from ten games. Calibration bins/counts are retained; log loss uses an explicit `1e-15` clip. The models share a rating/data family and are not independent corroborating forecasts.
 
+Elo home-win calibration, **provisional ten-game source-agreement sample only**:
+
+| Probability bin | Fixtures | Mean forecast | Source-reported home-win rate |
+| --- | ---: | ---: | ---: |
+| 0.1–0.2 | 1 | 0.1968 | 0 |
+| 0.2–0.3 | 1 | 0.2343 | 0 |
+| 0.3–0.4 | 3 | 0.3369 | 0 |
+| 0.4–0.5 | 1 | 0.4116 | 1 |
+| 0.6–0.7 | 3 | 0.6335 | 0.3333 |
+| 0.7–0.8 | 1 | 0.7086 | 1 |
+
+Empty bins are omitted. Strict calibration contains just one 0.3262 home-win forecast with outcome zero. Neither view supports a calibration claim or model promotion; paired away selections do not double these counts.
+
 The historical benchmark is preserved: 4,774 held-out games, Elo Brier/log loss `0.2152337127/0.6189191514`, challenger `0.2156775888/0.6196628890`, win rates `0.2340920415/0.6606445973`. That remains retrospective chronological research without archived publication times. The challenger stays experimental.
 
 ## Why nothing was registered

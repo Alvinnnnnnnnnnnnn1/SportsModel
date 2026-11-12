@@ -1,5 +1,7 @@
 # V6 NBA team-moneyline pilot — 11 November 2026
 
+**12 November follow-up:** [actual final scores and frozen metrics](v6-shadow-results-20261112.md) now exist. Ten finals agree across sources, but only one fixture/two selections pass the original strict clock rule; nine fixtures/eighteen selections remain unresolved. No retrospective registrations or P/L. Usage is ten odds credits/490 remaining. The preserved original pilot checkpoint below precedes those results. [Controlled Elo activation and scheduling](v6-controlled-readiness.md) are prepared, disabled and unapproved; the current SQL hash is in [deployment readiness](v6-deployment-readiness.md).
+
 Implementation commit: `99f2afd`, `feature/v6-autonomous-paper`. **Genuine prospective observational shadow completed; production autonomy disabled.** This is not a completed registered-position lifecycle: no selection qualified, no position was registered and no newly forecast game had finished. The existing account, V5 methodology/ledger, historical imports, funding and deployed schema were untouched. No paid service, bookmaker account, direct bookmaker market scraping or external messaging.
 
 ## Acceptance evidence

@@ -1,3 +1,5 @@
+> **13 November cloud continuation:** authenticated Production/Preview HTTPS access and a private durable source-store adapter are implemented locally. The sports proxy stays loopback-only. Cloud storage, a disabled pinned GitHub Actions runner and code-bound host transfer are prepared; no hosted migration, deployment, credential issue, source request or local service change was performed. The approved Mac source-only pilot remains loaded. The original local-only descriptions below are dated checkpoints, superseded for the new dashboard access policy by [cloud deployment](v6-cloud-deployment.md). PAPER A/B/C and cloud host transfer remain unapproved.
+
 # V6 read-only dashboard
 
 The existing website now exposes the retained V6 research through the existing design system. It does not require the proposed V6 hosted schema. No dashboard action starts a worker, requests sporting data, activates a model, registers a position, settles a result or changes V5 history.

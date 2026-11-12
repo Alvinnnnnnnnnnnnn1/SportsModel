@@ -1,3 +1,5 @@
+> V6 cloud migration is prepared locally, not deployed: secure authenticated HTTPS dashboard access, private source-only SQL proposal, durable adapters and disabled GitHub Actions runner. The approved Mac pilot remains active; no host transfer or PAPER activation occurred. See [exact deployment, security evidence and pending approvals](docs/v6-cloud-deployment.md).
+
 # EdgeLab
 
 A private, zero-cost sports research and record-keeping MVP built with Next.js App Router, React, TypeScript, Tailwind CSS, shadcn/ui components, Recharts, Zod and optional Supabase Auth/PostgreSQL.

@@ -1,3 +1,5 @@
+> **13 November cloud continuation:** authenticated Production/Preview HTTPS access and a private durable source-store adapter are implemented locally. The sports proxy stays loopback-only. Cloud storage, a disabled pinned GitHub Actions runner and code-bound host transfer are prepared; no hosted migration, deployment, credential issue, source request or local service change was performed. The approved Mac source-only pilot remains loaded. The original local-only descriptions below are dated checkpoints, superseded for the new dashboard access policy by [cloud deployment](v6-cloud-deployment.md). PAPER A/B/C and cloud host transfer remain unapproved.
+
 # Installed source-only pilot — 13 November 2026
 
 The exact source-only pilot is now explicitly owner-approved and its reviewed LaunchAgent is installed/loaded. [Actual execution evidence and pending first capture](v6-source-pilot-activation.md). Startup/STOP/resume produced clean exit0; a pre-start CLI gate performs no research/provider work before the approved14November window. Approval A/B/C and paper autonomy remain disabled.

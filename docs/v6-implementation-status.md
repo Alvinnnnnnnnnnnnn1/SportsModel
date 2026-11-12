@@ -2,7 +2,20 @@
 
 Branch: `feature/v6-autonomous-paper`. Production autonomy remains **LOCAL_TEST_ONLY / disabled**. All ten genuine fixtures/twenty observational selections are verified under versioned reconciliation: one originally strict, nine newly verified, zero unresolved. The original strict journal and twenty excluded forecasts remain unchanged. Zero qualifying registrations or genuine registered-position settlements. No deployment, hosted migration, V5 change or messaging.
 
-## Latest continuation — final security preflight and experimental policy proposal
+## Latest continuation — visible private V6 dashboard
+
+The existing interface now has a distinct **EdgeLab V6** navigation entry and five functional routes: `/v6`, `/v6/research`, `/v6/models`, `/v6/positions`, `/v6/health`. See [dashboard access, data sources and limitations](v6-dashboard.md). V5 pages and business logic remain unchanged.
+
+- A private local-only GET adapter verifies the existing Supabase Auth session, then checks an existing archive batch through ordinary authenticated SELECT + RLS before reading local V6 evidence. The ignored owner binding was configured from the existing approved account export, with no new account, credential, import, audit or hosted write. Different owner, missing/invalid session, cross-origin/public host and arbitrary query requests fail closed. Demo never requests or displays the evidence; owner changes immediately hide prior loaded data.
+- Actual read-only adapter inspection loaded **30 retained selections** (20 frozen team moneylines plus ten blocked player-prop observations), ten verified observational fixture results, 5,082 historical model games / 4,774 chronological holdouts, and original model/market metrics. Every selection in those two allowlisted screens is displayed with exclusions and nullable original facts. No completed pilot or source request was repeated. Future batches need extending the allowlisted viewer; no current/upcoming market feed is implied.
+- Functional Brier/log-loss charts, sample switching, calibration, exact score table, evidence details/search/filters and source availability states are wired to retained reports. Bookmaker historical comparisons stay unavailable without retained historical odds. Original small-slate uncertainty and challenger limitations are visible.
+- Registered-position accounting reads only the requesting owner's isolated prospective worker repository and uses existing deterministic accounting. Missing repository/schedule/execution/control receipts display Not activated/Unavailable; old shadow results and isolated synthetic tests cannot fill the ledger. No worker credential file, private raw source, personal history or upstream error is sent to the browser. Quotas show retained snapshots, not asserted live availability.
+- Final checks: **701/701 tests in57 files**, **147 local SQL assertions**, **21 intercepted browser groups** (7 new V6 dashboard +4 Daily Cycle +6 reconciliation +4 credential regressions), TypeScript/lint/production build passed. Browser checks include all five sections, functional charts/search, empty ledger/reload, errors/retry, mobile layout and Demo isolation. The actual unauthenticated localhost API returned401. These browser transports/accounts are synthetic; positive normal-user access in the owner's real browser is not yet claimed. No production V6 hosted test was performed.
+- The SQL proposal still hashes to `c3a0d368ddbda1b50f3dab13aeec7cb3a939e423bce894aa1d55cfe9f13a3dff`, remains outside deployed migrations, and A/B/C remain unapproved. No dependencies, paid calls, model approvals, schedules, financial records or existing evidence were changed.
+
+**Next executable task:** open the routes in the existing signed-in private browser and verify the retained-source view. Future deployment/activation still follows independent A/B/C review; the dashboard cannot grant those approvals or arm anything.
+
+## Previous continuation — final security preflight and experimental policy proposal
 
 [SQL/security findings](v6-security-preflight.md), [experimental policy for Approval B](v6-experimental-paper-policy.proposed.md), [independent A/B/C decision package](v6-deployment-approval-package.md).
 

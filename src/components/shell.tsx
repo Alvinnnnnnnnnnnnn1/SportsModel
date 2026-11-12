@@ -25,6 +25,7 @@ import { useHistory } from "./history-provider";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 const navigation = [
+  { href: "/v6", label: "EdgeLab V6", icon: Activity },
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/ledger", label: "Betting Ledger", icon: BookOpen },
   { href: "/research", label: "Research Inbox", icon: Radar },
@@ -55,7 +56,7 @@ export function Shell({ children }: { children: ReactNode }) {
     (n) => !n.readAt && !n.dismissedAt,
   ).length + history.notifications.filter(n => !n.readAt && !n.dismissedAt).length;
   const current =
-    navigation.find((item) => item.href === pathname)?.label ?? "Workspace";
+    navigation.find((item) => item.href === pathname || (item.href === "/v6" && pathname.startsWith("/v6/")))?.label ?? "Workspace";
   return (
     <div className="min-h-screen">
       {open && (
@@ -98,10 +99,10 @@ export function Shell({ children }: { children: ReactNode }) {
               key={href}
               href={href}
               onClick={() => setOpen(false)}
-              aria-current={pathname === href ? "page" : undefined}
+              aria-current={(pathname === href || (href === "/v6" && pathname.startsWith("/v6/"))) ? "page" : undefined}
               className={cn(
                 "group flex h-11 items-center gap-3 rounded-lg px-3 text-[12px] transition-colors",
-                pathname === href
+                (pathname === href || (href === "/v6" && pathname.startsWith("/v6/")))
                   ? "bg-[#213429] text-primary"
                   : "text-[#96a399] hover:bg-white/4 hover:text-foreground",
               )}
@@ -211,7 +212,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </span>
             <span>
               {mode === "demo"
-                ? "All sports data, forecasts and results are synthetic. No live odds or real wagers."
+                ? "V5 demo sports data, forecasts and results are synthetic. Private V6 evidence requires sign-in."
                 : "Authenticated data only. Live research providers are not connected."}
             </span>
           </div>

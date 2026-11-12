@@ -59,7 +59,8 @@ describe.skipIf(!runtime)('V6 isolated SQL proposal',()=>{
    await db.query('insert into public.v6_models values($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',[owner,baselineF.modelId,baselineF.version,baselineF.method,'a'.repeat(64),'out_of_sample_validated',activated,'{}']);
    await insertObservation(baselineO);await expect(register(baselineP)).rejects.toThrow(/validation review/);
    await db.exec('rollback to savepoint baseline_review');
-   await db.query('insert into public.v6_models values($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',[owner,baselineF.modelId,baselineF.version,baselineF.method,'a'.repeat(64),'out_of_sample_validated',activated,JSON.stringify({reviewStatus:'owner_approved',chronologicalGames:500,verifiedProspectiveFixtures:30,teamResultsOnlyAccepted:true,notice:raw})]);
+   await db.query('insert into public.v6_models values($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',[owner,baselineF.modelId,baselineF.version,baselineF.method,'a'.repeat(64),'out_of_sample_validated',activated,JSON.stringify({reviewStatus:'owner_approved',chronologicalGames:500,verifiedProspectiveFixtures:30,teamResultsOnlyAccepted:true,notice:raw,
+    readinessReview:{policyId:'nba-baseline-readiness-1',scope:'limited_paper_baseline_not_proven_sportsbook_edge',reportHash:'a'.repeat(64),chronologicalSeasons:2,prospectiveSlates:5,historicalPublicationGapsDisclosed:true,calibrationReviewed:true,bookmakerComparisonReviewed:true,uncertaintyMethod:'fixture_and_slate_cluster',injuryRosterLimitationsAccepted:true,reviewConclusion:'owner_accepted_limited_baseline_no_edge_claim'}})]);
    await insertObservation(baselineO);expect(positionSchema.parse(await register(baselineP)).forecast?.method).toBe('nba_team_elo_only');
    const badTeam=structuredClone(teamP);badTeam.id=crypto.randomUUID();badTeam.observation.id=crypto.randomUUID();badTeam.observation.market.eventId='LOCAL-other-team-event';badTeam.forecast!.market=badTeam.observation.market;badTeam.forecast!.probability=.99;await insertObservation(badTeam.observation);
    await expect(register(badTeam)).rejects.toThrow(/reproducible/);await db.exec('rollback');
@@ -82,6 +83,22 @@ describe.skipIf(!runtime)('V6 isolated SQL proposal',()=>{
    await expect(db.query('update public.v6_positions set registered_at=clock_timestamp()')).rejects.toThrow(/append-only/);
    await expect(db.query('update public.v6_controls set enabled=true')).rejects.toThrow(/permission denied/);await expect(db.query('insert into public.v6_models values($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',[owner,'not-authorised','v1',f.method,'a'.repeat(64),'out_of_sample_validated',activated,'{}'])).rejects.toThrow(/permission denied/);
    const next=structuredClone(saved);next.id=crypto.randomUUID();next.observation=structuredClone(o);next.observation.id=crypto.randomUUID();next.observation.market.threshold=22;next.forecast=await forecast(next.observation);await insertObservation(next.observation);await register(next);
+   const batchO=structuredClone(o);batchO.id=crypto.randomUUID();batchO.eventStartsAt=new Date(Date.now()+3600000).toISOString();batchO.market.eventId='LOCAL-ATOMIC-RUN';
+   const batchF=await forecast(batchO),batchP=(await registerPaper(emptyV6State(owner),batchO,batchF,'pre_event_once',at)).position!;
+   const workerRun={id:'LOCAL-ATOMIC-RUN',at:new Date().toISOString(),mode:'armed',screened:1,registered:1,observations:[batchO],rejections:[]};
+   const commitRun=(run:unknown,positions:unknown[],grades:unknown[],revision=0)=>db.query<{state:Record<string,unknown>}>('select public.v6_commit_worker_run($1::uuid,$2::integer,$3::jsonb,$4::jsonb,$5::jsonb,$6::jsonb) state',[owner,revision,JSON.stringify(run),JSON.stringify({[o.rawHash]:raw}),JSON.stringify(positions),JSON.stringify(grades)]);
+   const positionRows=[{position:batchP,originalInputs:JSON.stringify(batchF.inputs)}];
+   const countsBefore=(await db.query('select (select count(*) from public.v6_positions)::int positions,(select count(*) from public.v6_audit)::int audit')).rows[0];
+   // Late orphan-grade failure rolls back the observation, position, audit and run.
+   await expect(commitRun(workerRun,positionRows,[{grade:{id:crypto.randomUUID(),positionId:crypto.randomUUID()},originalPosition:JSON.stringify(saved)}])).rejects.toThrow();
+   expect((await db.query('select (select count(*) from public.v6_positions)::int positions,(select count(*) from public.v6_audit)::int audit')).rows[0]).toEqual(countsBefore);
+   expect((await db.query('select count(*)::int n from public.v6_runs')).rows[0].n).toBe(0);
+   const committed=(await commitRun(workerRun,positionRows,[])).rows[0].state;expect(committed.revision).toBe(1);
+   expect((await commitRun(workerRun,positionRows,[])).rows[0].state).toEqual(committed);
+   await expect(commitRun({...workerRun,id:'LOCAL-STALE'},positionRows,[])).rejects.toThrow(/revision/);
+   await expect(commitRun(workerRun,[{...positionRows[0],originalInputs:'{}'}],[])).rejects.toThrow(/replay changed/);
+   await expect(db.query('select public.v6_worker_identity($1::uuid)',[other])).rejects.toThrow(/identity/);
+   await login(owner);await expect(db.query('select public.v6_load_worker_state($1::uuid)',[owner])).rejects.toThrow(/permission denied/);
    await login('','anon');await expect(summary()).rejects.toThrow(/permission denied/);
    await login(owner);expect((await db.query('select count(*)::int n from public.bets')).rows[0].n).toBe(0);expect((await db.query('select count(*)::int n from public.financial_transactions')).rows[0].n).toBe(0);
    // Let the short local fixture reach its real clock boundary. No trigger or
@@ -89,7 +106,11 @@ describe.skipIf(!runtime)('V6 isolated SQL proposal',()=>{
    await new Promise(resolve=>setTimeout(resolve,Math.max(0,Date.parse(saved.observation.eventStartsAt)-Date.now()+25)));
    const g=await grade(saved);g.sourceClass='prospective';g.recordedAt=new Date().toISOString();g.publishedAt=g.recordedAt;g.positionHash=await positionHash(saved);
    const append=async(value:typeof g)=>db.query('select public.v6_append_grade($1::uuid,$2::jsonb,$3::text)',[owner,JSON.stringify(value),JSON.stringify(saved)]);
-   await append(g);await append(g);expect((await summary()).profitCents).toBe(4500);
+   await login(owner,'edgelab_v6_worker');
+   const gradeRun={id:'LOCAL-ATOMIC-GRADE',at:new Date().toISOString(),mode:'armed',screened:0,registered:0,observations:[],rejections:[]};
+   await commitRun(gradeRun,[],[{grade:g,originalPosition:JSON.stringify(saved)}],1);
+   expect((await db.query('select public.v6_load_worker_state($1::uuid) state',[owner])).rows[0].state).toMatchObject({revision:2});
+   await append(g);expect((await summary()).profitCents).toBe(4500);
    const correction={...g,id:crypto.randomUUID(),revision:2,previousGradeId:g.id,outcome:'lost' as const,observedValue:10};await append(correction);expect((await summary()).profitCents).toBe(-5000);
    await expect(append({...correction,id:crypto.randomUUID()})).rejects.toThrow(/revision/);
    const rawEvidence='LOCAL SYNTHETIC FINAL RESULT; no source-issued publication timestamp';

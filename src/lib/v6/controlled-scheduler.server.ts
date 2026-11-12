@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
 import { atomicPrivateJson,digest,exclusive } from './evidence.server';
-import { activationReasons,runControlledWorker,type ControlledConfig } from './controlled-activation';
+import { activationReasons,collectionApprovalReasons,runControlledWorker,type ControlledConfig } from './controlled-activation';
 import type { V6Repository } from './repository.server';
 import type { V6ReadProvider,V6IndependentModel } from './worker';
 const stamp=z.string().datetime({offset:true});
@@ -40,6 +40,7 @@ export async function runControlledTick(root:string,ports:ScheduledPorts,planned
  if(!controls.config.sourcesEnabled)return {status:'blocked',workerInvoked:false,job:null,reasons:['sources_not_enabled']};
  const gates=await activationReasons(controls.config,controls.manifest,controls.receipt,at);
  if(controls.config.mode==='armed'&&gates.length)return {status:'activation_blocked',workerInvoked:false,job:null,reasons:gates};
+ if(controls.config.mode==='dry_run'&&gates.length&&(await collectionApprovalReasons(controls.config,controls.receipt,at)).length)return {status:'collection_approval_blocked',workerInvoked:false,job:null,reasons:['read_only_collection_approval_missing_or_invalid']};
  const load=async():Promise<SchedulerState>=>{try{return stateSchema.parse(JSON.parse(await fs.readFile(file,'utf8')));}catch(e){if((e as NodeJS.ErrnoException).code==='ENOENT')return {version:1,jobs:[],attempts:[]};throw e;}};
  const claimed=await exclusive(file+'.lock',async()=>{
   const state=await load(),now=Date.parse(at);

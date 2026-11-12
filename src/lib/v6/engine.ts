@@ -44,6 +44,7 @@ export function qualification(o:Observation,f:Forecast|null,now:string,cohort:V6
   if(Date.parse(f.inputs.sourceObservedAt)>Date.parse(f.inputCutoff))reasons.push('input_snapshot_leakage');
   if(['nba_team_elo','nba_team_elo_only'].includes(f.method)&&(!f.inputs.team||Date.parse(f.inputs.team.safeEventStartsAt)>start||Date.parse(f.inputs.team.safeEventStartsAt)<=t||Date.parse(f.inputCutoff)>=Date.parse(f.inputs.team.safeEventStartsAt)))reasons.push('earliest_scheduled_start_gate');
   if(['nba_team_elo','nba_team_elo_only'].includes(f.method))reasons.push(...teamResearchChecks(o,f));
+  if(f.method==='nba_team_elo_only'&&f.inputs.team&&t>=Date.parse(f.inputs.team.safeEventStartsAt)-60000)reasons.push('controlled_pre_event_safety_buffer');
   try{
     const calculated=f.method==='poisson_minutes_rate'&&f.inputs.minutes!==null&&f.inputs.ratePerMinute!==null?poissonCountProbability(f.market,f.inputs.minutes,f.inputs.ratePerMinute)
       :f.method==='surface_elo'&&['ATP','WTA'].includes(f.market.sport)&&f.market.statistic==='moneyline'&&f.inputs.surface&&f.inputs.rating!==null&&f.inputs.opponentRating!==null?surfaceEloProbability(f.inputs.rating,f.inputs.opponentRating)

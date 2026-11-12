@@ -7,8 +7,11 @@ import { teamGames } from './team-games';
 import { loadTeamDataset,latestTeamGames } from './team-dataset.server';
 import { teamRegistry,canonicalTeamRows } from './team-identity';
 import { regularSeasonCoverage } from './team-coverage';
-import { screenTeamSlate,gradeTeamMoneyline,type TeamFixtureProof } from './team-pilot';
-import { activationReasons,modelManifestSchema,type ControlledConfig } from './controlled-activation';
+import { currentTeamCatalogue } from './team-catalogue';
+import { screenTeamSlate,type TeamFixtureProof } from './team-pilot';
+import { gradeReconciledTeamPosition } from './reconciled-grading';
+import type { TeamRegistry } from './team-identity';
+import { activationReasons,collectionApprovalReasons,modelManifestSchema,type ControlledConfig } from './controlled-activation';
 import type { ScheduledJob } from './controlled-scheduler.server';
 import type { V6Repository } from './repository.server';
 import type { Forecast } from './types';
@@ -18,7 +21,8 @@ import type { Forecast } from './types';
 export async function prepareControlledTeamPorts(root:string,repository:V6Repository,job:ScheduledJob,controls:{config:ControlledConfig;manifest:unknown;receipt:unknown},keys:{oddsKey?:string;bdlKey?:string},clock:()=>string){
  const {config,manifest,receipt}=controls,at=clock(),liveRoot=path.join(root,'controlled'),approved=(await activationReasons(config,manifest,receipt,at)).length===0;
  if(!config.sourcesEnabled||config.killSwitch||config.mode==='disabled'||config.mode==='armed'&&!approved)throw new Error('Controlled source gate is closed');
- const api=freeSources({root,clock:()=>Date.parse(clock()),oddsKey:keys.oddsKey,oddsPilot:'team-moneyline-v1',controlledQuota:approved?{monthlyCeiling:config.monthlyOddsCeiling,approvalHash:digest(JSON.stringify(receipt))}:undefined});
+ const collectionApproved=(await collectionApprovalReasons(config,receipt,at)).length===0;
+ const api=freeSources({root,clock:()=>Date.parse(clock()),oddsKey:keys.oddsKey,oddsPilot:'team-moneyline-v1',controlledQuota:approved||collectionApproved?{monthlyCeiling:config.monthlyOddsCeiling,approvalHash:digest(JSON.stringify(receipt))}:undefined});
  const secondary=teamSources({root,clock:()=>Date.parse(clock()),bdlKey:keys.bdlKey});
  let bdlQueue:Promise<unknown>=Promise.resolve();
  const readBdl=(endpoint:string,params:Record<string,string>={})=>{
@@ -53,8 +57,8 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   for(const e of featureReceipts)for(const g of await teamGames(e))replacement.set(g.provider+':'+g.sourceGameId,g);
   const all=[...replacement.values()],receiptDir=path.join(root,'evidence-receipts');
   const retained=await Promise.all((await fs.readdir(receiptDir)).filter(f=>f.endsWith('.json')).map(async f=>JSON.parse(await fs.readFile(path.join(receiptDir,f),'utf8')) as Promise<RawEvidence>));
-  const catalog=retained.filter(e=>e.provider==='balldontlie'&&new URL(e.sourceUrl).pathname==='/v1/teams').sort((a,b)=>a.retrievedAt.localeCompare(b.retrievedAt)).at(-1);
-  if(!catalog||Date.parse(clock())-Date.parse(catalog.retrievedAt)>7*86400000)throw new Error('Current canonical team catalogue requires an explicit reviewed refresh');
+  const priorCatalog=retained.filter(e=>e.provider==='balldontlie'&&new URL(e.sourceUrl).pathname==='/v1/teams').sort((a,b)=>a.retrievedAt.localeCompare(b.retrievedAt)).at(-1);
+  const catalog=await currentTeamCatalogue(priorCatalog,clock(),()=>readBdl('/v1/teams'));
   const registry=await teamRegistry(catalog,all),rows=canonicalTeamRows(all,registry).matched;
   const season=Number(new URL(featureReceipts[0].sourceUrl).searchParams.get('seasons[]')),coverage=await regularSeasonCoverage(featureReceipts,season,clock());
   await atomicPrivateJson(path.join(liveRoot,'discovered-fixtures.json'),{at:clock(),fixtures:rows.filter(g=>!g.final&&g.startsAt&&Date.parse(g.startsAt)>Date.parse(clock())).map(g=>({id:g.provider+':'+g.sourceGameId,startsAt:g.startsAt}))});
@@ -62,8 +66,10 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   const screen=await screenTeamSlate(odds,rows,registry,coverage.complete?[season]:[],clock(),'elo_only');
   for(const [hash,history]of Object.entries(screen.snapshots))await atomicPrivateJson(path.join(liveRoot,'histories',hash+'.json'),history);
   for(const c of screen.candidates)if(c.observation&&c.forecast&&c.proof){
+   const originalFixtures=featureReceipts.find(e=>(JSON.parse(e.raw).data as {id:number}[]).some(g=>String(g.id)===c.proof!.statsGameId));
+   if(!originalFixtures)throw new Error('Original provider fixture proof is absent');
    const f={...c.forecast,validation:approved?'out_of_sample_validated' as const:'experimental' as const};forecasts.set(c.observation.id,f);
-   await atomicPrivateJson(path.join(liveRoot,'proofs',c.observation.id+'.json'),{proof:c.proof,observation:c.observation,forecast:f,manifestHash:digest(JSON.stringify(manifest)),rawSource:odds});
+   await atomicPrivateJson(path.join(liveRoot,'proofs',c.observation.id+'.json'),{proof:c.proof,registry,originalFixtures,observation:c.observation,forecast:f,manifestHash:digest(JSON.stringify(manifest)),rawSource:odds});
   }
   await atomicPrivateJson(path.join(liveRoot,'screens',odds.id+'.json'),{screen,modelApprovalApplied:approved,financialWrites:0});
   return screen.candidates.flatMap(c=>c.observation?[c.observation]:[]);
@@ -75,12 +81,13 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   }
   if(!scorePromise)scorePromise=(async()=>{await readOdds('/v4/sports',{},0);const ids=[...new Set(withinRetention.map(p=>p.observation.market.eventId.replace(/^the-odds-api\.com:/,'')))];return readOdds('/v4/sports/basketball_nba/scores',{daysFrom:'3',eventIds:ids.join(','),dateFormat:'iso'},2);})();
   const scoreSource=await scorePromise;
-  let proof:TeamFixtureProof;try{const record=JSON.parse(await fs.readFile(path.join(liveRoot,'proofs',position.observation.id+'.json'),'utf8'));if(JSON.stringify(record.observation)!==JSON.stringify(position.observation))throw new Error('Registered source proof changed');proof=record.proof;}
+  let proof:TeamFixtureProof,registry:TeamRegistry,originalFixtures:RawEvidence,originalOdds:RawEvidence;try{const record=JSON.parse(await fs.readFile(path.join(liveRoot,'proofs',position.observation.id+'.json'),'utf8'));if(JSON.stringify(record.observation)!==JSON.stringify(position.observation))throw new Error('Registered source proof changed');proof=record.proof;registry=record.registry;originalFixtures=record.originalFixtures;originalOdds=record.rawSource;}
   catch(e){if((e as NodeJS.ErrnoException).code==='ENOENT')return null;throw e;}
   if(!proof.statsGameId)return null;
   let box=secondaryResults.get(proof.statsGameId);if(!box){box=readBdl('/v1/games/'+proof.statsGameId);secondaryResults.set(proof.statsGameId,box);}
   const previous=current.grades.filter(g=>g.positionId===position.id).sort((a,b)=>a.revision-b.revision).at(-1)??null;
-  const result=await gradeTeamMoneyline(position,proof,scoreSource,await box,clock(),previous);
+  if(!registry||!originalFixtures||!originalOdds)throw new Error('Registered original reconciliation evidence absent');
+  const result=await gradeReconciledTeamPosition(position,{proof,registry,originalFixtures,originalOdds,scores:scoreSource,secondary:await box,at:clock()},previous);
   await atomicPrivateJson(path.join(liveRoot,'grading-diagnostics',position.id+'.json'),{ownerId:config.ownerId,positionId:position.id,at:clock(),status:result.status,reason:result.reason,sourceHash:scoreSource.hash,gradeProposed:result.grade!==null});
   return result.grade;
  }};

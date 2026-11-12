@@ -6,15 +6,15 @@ const loader=await createServer({configFile:false,envDir:false,appType:'custom',
 try{
  const {atomicPrivateJson,digest}=await loader.ssrLoadModule('/src/lib/v6/evidence.server.ts'),{ELO_ONLY_DEFINITION}=await loader.ssrLoadModule('/src/lib/v6/team-model.ts'),{CONTROLLED_POLICY,policyBundleHash}=await loader.ssrLoadModule('/src/lib/v6/controlled-activation.ts');
  const raw=await fs.readFile(file,'utf8'),evaluation=JSON.parse(raw);
- if(evaluation.format!=='edgelab.v6-prospective-evaluation')throw new Error('Unexpected evaluation format');
+ if(!['edgelab.v6-prospective-evaluation','edgelab.v6-reconciled-shadow-evaluation'].includes(evaluation.format))throw new Error('Unexpected evaluation format');
  const reports=await Promise.all((await fs.readdir(path.join(root,'team-reports'))).map(async f=>JSON.parse(await fs.readFile(path.join(root,'team-reports',f),'utf8'))));
  const benchmark=reports.filter(r=>r.format==='edgelab.v6-team-model-analysis').sort((a,b)=>b.at.localeCompare(a.at))[0];if(!benchmark)throw new Error('Chronological benchmark absent');
  const manifest={format:'edgelab.v6-model-manifest',version:1,ownerId:'OWNER-REVIEW-REQUIRED',modelId:'nba-team-elo-only',modelVersion:'candidate-1',method:'nba_team_elo_only',
   status:'draft',approvedAt:null,approvalReference:null,chronologicalGames:benchmark.evaluation.heldOutGames,verifiedProspectiveFixtures:evaluation.verifiedFixtures,
-  definitionHash:digest(JSON.stringify(ELO_ONLY_DEFINITION)),evaluationHash:digest(raw),teamResultsOnlyAccepted:false,
-  limitations:['No independently verified injury/roster coverage','Only strict verified fixtures count; clock discrepancies excluded','Challenger and baseline share the same rating family','Prospective sample below proposed controlled activation threshold']};
+  definitionHash:digest(JSON.stringify(ELO_ONLY_DEFINITION)),evaluationHash:digest(raw),teamResultsOnlyAccepted:false,readinessReview:null,
+  limitations:['No independently verified injury/roster coverage','Versioned reconciliation decisions are distinct from original strict journal','Challenger and baseline share the same rating family','Thirty fixtures alone do not establish reliability; calibration/benchmark/multiple-slate uncertainty review required']};
  const review={manifest,policyBundleHash:await policyBundleHash(),controlledPolicy:CONTROLLED_POLICY,chronological:{elo:benchmark.evaluation.eloOnly,challenger:benchmark.evaluation.challenger},
-  prospectiveVerified:evaluation.primaryVerifiedMetrics,provisional:evaluation.provisionalSourceAgreementMetrics,
-  blockers:['Explicit owner model and standing activation approvals absent','More genuinely verified prospective fixtures required','Hosted scoped identity/repository undeployed','Clock discrepancies require separate review; no automatic historical upgrade'],sourceEvaluation:file,activatesNothing:true};
+  prospectiveVerified:evaluation.metrics??evaluation.primaryVerifiedMetrics,provisional:evaluation.provisionalSourceAgreementMetrics??null,
+  blockers:['Explicit owner model and standing activation approvals absent','More fixtures AND independent slates plus multidimensional readiness review required','Hosted scoped identity/repository undeployed','Observational outcomes cannot upgrade original excluded forecasts into positions'],sourceEvaluation:file,activatesNothing:true};
  const out=path.join(root,'activation-review','elo-only-candidate-1-draft-'+digest(JSON.stringify(review))+'.json');await atomicPrivateJson(out,review);console.log(JSON.stringify({draft:out,chronologicalGames:manifest.chronologicalGames,verifiedProspectiveFixtures:manifest.verifiedProspectiveFixtures,requiredVerifiedFixtures:CONTROLLED_POLICY.minimumVerifiedProspectiveFixtures,status:'draft',activated:false}));
 }finally{await loader.close();}

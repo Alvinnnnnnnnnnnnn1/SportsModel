@@ -59,6 +59,17 @@ describe('V6 evidence, independent NBA baseline and shadow/result pilot',()=>{
    clock+=2000;await expect(api.read('the-odds-api.com','/v4/sports/basketball_nba/odds',{markets:'h2h',bookmakers:'sportsbet'},1)).rejects.toThrow(/uncertain/);expect(calls).toBe(2);
   }finally{await fs.rm(root,{recursive:true,force:true});}
  });
+ it('retains shared pilot credits under an approved controlled allowance and rejects overspending before transport',async()=>{
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'v6-controlled-quota-'));try{
+   let clock=Date.parse(now),calls=0;await fs.writeFile(path.join(root,'odds-shared-budget.json'),JSON.stringify({period:'2026-11',reserved:10,remaining:490,used:10,lastRequest:0,uncertain:false,freeConfirmed:true}));
+   const fetcher:typeof fetch=async()=>{calls++;return new Response('[]',{headers:{'x-requests-remaining':'489','x-requests-used':'11'}});};
+   const make=(ceiling:number)=>freeSources({root,oddsKey:'LOCAL-test-key',clock:()=>clock,fetcher,controlledQuota:{monthlyCeiling:ceiling,approvalHash:'a'.repeat(64)}});
+   await make(11).read('the-odds-api.com','/v4/sports/basketball_nba/odds',{markets:'h2h',bookmakers:'sportsbet'},1);clock+=2000;
+   await expect(make(11).read('the-odds-api.com','/v4/sports/basketball_nba/odds',{markets:'h2h',bookmakers:'sportsbet'},1)).rejects.toThrow(/allowance/);
+   await expect(make(401).read('the-odds-api.com','/v4/sports/basketball_nba/odds',{markets:'h2h',bookmakers:'sportsbet'},1)).rejects.toThrow(/approval/);expect(calls).toBe(1);
+   expect(JSON.parse(await fs.readFile(path.join(root,'odds-shared-budget.json'),'utf8')).reserved).toBe(11);
+  }finally{await fs.rm(root,{recursive:true,force:true});}
+ });
  it('requires free NBA subscription verification, discards account fields and retains denied-scope evidence without retry',async()=>{
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'v6-nba-free-'));try{
    let clock=Date.parse(now),calls=0;

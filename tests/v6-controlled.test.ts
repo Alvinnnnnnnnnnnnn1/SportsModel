@@ -1,7 +1,7 @@
 /** Synthetic local controls/approval receipts. No actual owner approval or live call. */
 import {describe,it,expect} from 'vitest';
 import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
-import {controlledConfigSchema,modelManifestSchema,activationReasons,policyBundleHash,runControlledWorker,type ModelManifest,type ActivationReceipt} from '@/lib/v6/controlled-activation';
+import {controlledConfigSchema,modelManifestSchema,activationReasons,collectionApprovalReasons,policyBundleHash,runControlledWorker,type ModelManifest,type ActivationReceipt} from '@/lib/v6/controlled-activation';
 import {ELO_ONLY_DEFINITION} from '@/lib/v6/team-model';
 import {teamEloOnlyProbability} from '@/lib/v6/models';
 import {localV6Repository} from '@/lib/v6/repository.server';
@@ -9,12 +9,15 @@ import {planControlledJobs,runControlledTick,type ScheduledJob} from '@/lib/v6/c
 import {digest} from '@/lib/v6/evidence.server';
 import {paperAccounting} from '@/lib/v6/engine';
 import {type Forecast,type Observation} from '@/lib/v6/types';
+import {gradeReconciledTeamPosition} from '@/lib/v6/reconciled-grading';
+import {reconciliationFixture,freeze,after} from './fixtures/v6-reconciliation';
 const at='2026-11-12T06:00:00.000Z',start='2026-11-13T00:00:00.000Z';
 async function controls(){
  const config=controlledConfigSchema.parse({version:1,ownerId:'LOCAL TEST OWNER',mode:'armed',killSwitch:false,sourcesEnabled:true,modelManifest:null,activationReceipt:null,monthlyOddsCeiling:300});
  const manifest:ModelManifest=modelManifestSchema.parse({format:'edgelab.v6-model-manifest',version:1,modelId:'nba-team-elo-only',modelVersion:'candidate-1',method:'nba_team_elo_only',ownerId:config.ownerId,status:'approved',
   approvedAt:'2026-11-11T00:00:00Z',approvalReference:'INVENTED TEST CONTROL ONLY',chronologicalGames:500,verifiedProspectiveFixtures:30,
-  definitionHash:digest(JSON.stringify(ELO_ONLY_DEFINITION)),evaluationHash:'a'.repeat(64),limitations:['SYNTHETIC TEST manifest; no real model approval'],teamResultsOnlyAccepted:true});
+  definitionHash:digest(JSON.stringify(ELO_ONLY_DEFINITION)),evaluationHash:'a'.repeat(64),limitations:['SYNTHETIC TEST manifest; no real model approval'],teamResultsOnlyAccepted:true,
+  readinessReview:{policyId:'nba-baseline-readiness-1',scope:'limited_paper_baseline_not_proven_sportsbook_edge',reportHash:'a'.repeat(64),chronologicalSeasons:2,prospectiveSlates:5,historicalPublicationGapsDisclosed:true,calibrationReviewed:true,bookmakerComparisonReviewed:true,uncertaintyMethod:'fixture_and_slate_cluster',injuryRosterLimitationsAccepted:true,reviewConclusion:'owner_accepted_limited_baseline_no_edge_claim'}});
  const receipt:ActivationReceipt={format:'edgelab.v6-standing-activation',version:1,id:crypto.randomUUID(),ownerId:config.ownerId,approvedAt:at,approvalReference:'INVENTED TEST CONTROL ONLY',
   policyBundleHash:await policyBundleHash(),modelManifestHash:digest(JSON.stringify(manifest)),scope:'prospective_model_supported_paper_only',sourceRightsConfirmed:true};
  return {config,manifest,receipt};
@@ -35,6 +38,7 @@ describe('controlled paper activation and durable registered-worker scheduling',
   expect(await activationReasons(c.config,{...c.manifest,verifiedProspectiveFixtures:1},c.receipt,at)).toContain('insufficient_verified_prospective_sample');
   expect(await activationReasons(c.config,c.manifest,{...c.receipt,ownerId:'OTHER'},at)).toContain('activation_owner_hash_or_clock_mismatch');
   expect(await activationReasons(c.config,{...c.manifest,definitionHash:'0'.repeat(64)},c.receipt,at)).toContain('model_definition_hash_mismatch');
+  expect(await activationReasons(c.config,{...c.manifest,readinessReview:null},c.receipt,at)).toContain('multidimensional_baseline_review_missing');
  });
  it('does not call source ports when activation is absent or emergency stop is active',()=>temp(async root=>{
   const c=await controls(),repo=localV6Repository(root,c.config.ownerId);let reads=0;
@@ -42,6 +46,23 @@ describe('controlled paper activation and durable registered-worker scheduling',
   const result=await runControlledWorker(repo,provider,null,c.config,c.manifest,null,{runId:'LOCAL',now:at,clock:()=>at,readControl:async()=>c});
   expect(result.status).toBe('activation_blocked');expect(reads).toBe(0);
   expect((await runControlledWorker(repo,provider,null,{...c.config,killSwitch:true},c.manifest,c.receipt,{runId:'LOCAL',now:at,readControl:async()=>c})).status).toBe('disabled');
+ }));
+ it('authorizes expiring shadow collection separately and never treats it as paper activation',async()=>{
+  const c=await controls(),config={...c.config,mode:'dry_run' as const};
+  const receipt={format:'edgelab.v6-shadow-collection',version:1,ownerId:config.ownerId,approvedAt:at,expiresAt:'2026-11-30T00:00:00Z',approvalReference:'SYNTHETIC TEST ONLY',policyBundleHash:await policyBundleHash(),scope:'zero_cost_read_only_shadow',sourceRightsConfirmed:true,monthlyOddsCeiling:300};
+  expect(await collectionApprovalReasons(config,receipt,at)).toEqual([]);
+  expect(await collectionApprovalReasons(c.config,receipt,at)).not.toEqual([]);
+  expect(await collectionApprovalReasons(config,{...receipt,expiresAt:at},at)).not.toEqual([]);
+  expect(await collectionApprovalReasons(config,{...receipt,ownerId:'OTHER'},at)).not.toEqual([]);
+  expect(await activationReasons(c.config,c.manifest,receipt,at)).toContain('standing_activation_missing_or_invalid');
+ });
+ it('stops an expired shadow approval before source preparation and rechecks expiry at commit',()=>temp(async root=>{
+  const c=await controls(),config={...c.config,mode:'dry_run' as const},expiresAt='2026-11-12T07:00:00Z',receipt={format:'edgelab.v6-shadow-collection',version:1,ownerId:config.ownerId,approvedAt:at,expiresAt,approvalReference:'SYNTHETIC TEST ONLY',policyBundleHash:await policyBundleHash(),scope:'zero_cost_read_only_shadow',sourceRightsConfirmed:true,monthlyOddsCeiling:300};
+  const readControl=async()=>({config,manifest:null,receipt}),repo=localV6Repository(root,config.ownerId);let prepared=0;
+  expect((await runControlledTick(root,{repository:repo,clock:()=>expiresAt,readControl,prepare:async()=>{prepared++;throw new Error('Must not prepare');}},[])).status).toBe('collection_approval_blocked');expect(prepared).toBe(0);
+  const base=await source(),model={modelId:c.manifest.modelId,version:c.manifest.modelVersion,validationManifestHash:'a'.repeat(64),forecast:async()=>base.f};
+  await expect(runControlledWorker(repo,{collectionPermitted:true,collect:async()=>[base.o],grade:async()=>null},model,config,null,receipt,{runId:'LOCAL-EXPIRY',now:at,clock:()=>expiresAt,readControl})).rejects.toThrow(/stop/);
+  expect((await repo.read()).runs).toHaveLength(0);expect((await repo.read()).positions).toHaveLength(0);
  }));
  it('registers every distinct eligible baseline position without count/exposure caps and preserves replay',()=>temp(async root=>{
   const c=await controls(),base=await source(),repo=localV6Repository(root,c.config.ownerId),observations=Array.from({length:102},(_,i)=>({...base.o,id:crypto.randomUUID(),market:{...base.o.market,eventId:'LOCAL-'+i}}));
@@ -83,5 +104,23 @@ describe('controlled paper activation and durable registered-worker scheduling',
   const saved=JSON.parse(await fs.readFile(path.join(root,'scheduler.json'),'utf8'));expect(saved.jobs[0].nextAt).toBe('2026-11-12T06:02:00.000Z');
   expect(await fs.readdir(path.join(root,'alerts'))).toHaveLength(1);now=start;expect((await runControlledTick(root,ports,[])).status).toBe('idle');
   expect(JSON.parse(await fs.readFile(path.join(root,'scheduler.json'),'utf8')).jobs[0].status).toBe('missed');expect((await repo.read()).positions).toHaveLength(0);
+ }));
+ it('completes scheduled discovery → frozen A$50 registration → reconciled final → idempotent P/L after restart',()=>temp(async root=>{
+  // Fake source responses and approvals, never genuine positions or hosted writes.
+  const c=await controls(),base=await source(),e=reconciliationFixture();let now=freeze;
+  const o:Observation={...base.o,rawHash:e.originalOdds.hash,eventStartsAt:e.proof.startsAt,observedAt:freeze,retrievedAt:freeze,sourceUpdatedAt:freeze,sourceUrl:e.originalOdds.sourceUrl,
+   market:{...base.o.market,eventId:'the-odds-api.com:LOCAL',subjectId:e.proof.homeId,termsVersion:e.proof.termsVersion}};
+  const inputs={...base.f.inputs,sourceObservedAt:freeze,team:{...base.f.inputs.team!,homeId:e.proof.homeId,awayId:e.proof.awayId,registryHash:e.registry.hash,safeEventStartsAt:e.proof.earliestStartsAt}};
+  const f:Forecast={...base.f,market:o.market,generatedAt:freeze,inputCutoff:freeze,inputs,inputsHash:digest(JSON.stringify(inputs)),probability:teamEloOnlyProbability(o.market,inputs.team)};
+  const repo=()=>localV6Repository(path.join(root,'state'),c.config.ownerId),model={modelId:f.modelId,version:f.version,validationManifestHash:digest(JSON.stringify(c.manifest)),forecast:async()=>f};
+  let collects=0;const makeJob=(id:string,kind:ScheduledJob['kind'],at:string):ScheduledJob=>({id,kind,dueAt:at,deadline:new Date(Date.parse(at)+3600000).toISOString(),status:'pending',attempts:0,nextAt:at,leaseUntil:null,lastError:null,controlHash:null});
+  const tick=(job:ScheduledJob)=>runControlledTick(root,{repository:repo(),clock:()=>now,readControl:async()=>c,prepare:async j=>({model,provider:{collectionPermitted:true,collect:async()=>{collects++;return j.kind==='results'?[]:[o];},grade:async p=>j.kind==='results'?(await gradeReconciledTeamPosition(p,{...e,at:now},(await repo().read()).grades.at(-1)??null)).grade:null}})},[job]);
+  const discovery=makeJob('LOCAL-SCHEDULE-DISCOVERY','discovery',now);expect((await tick(discovery)).workerInvoked).toBe(true);
+  const saved=(await repo().read()).positions[0];expect(saved).toMatchObject({stakeCents:5000,observation:{odds:1.8},forecast:{probability:f.probability}});
+  const hash=digest(JSON.stringify(saved));expect((await tick(discovery)).status).toBe('idle');expect(collects).toBe(1);
+  now=after;expect((await tick(makeJob('LOCAL-SCHEDULE-RESULT','results',now))).status).toBe('completed');
+  const settled=await repo().read();expect(settled.grades).toHaveLength(1);expect(settled.grades[0].outcome).toBe('won');expect(paperAccounting(settled)).toMatchObject({profitCents:4000,equityCents:504000,pendingCents:0});
+  expect(digest(JSON.stringify(settled.positions[0]))).toBe(hash);
+  await tick(makeJob('LOCAL-SCHEDULE-RESULT-RETRY','results',now));expect((await repo().read()).grades).toHaveLength(1);expect(paperAccounting(await repo().read()).profitCents).toBe(4000);
  }));
 });

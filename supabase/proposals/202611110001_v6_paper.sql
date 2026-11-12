@@ -214,6 +214,7 @@ declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;t jsonb;field te
       then raise exception 'V6 team input/start gate failed';end if;
     home_prob:=0.95/(1+power(10::numeric,-((t->>'homeRating')::numeric-(t->>'awayRating')::numeric+60+(t->>'formAdjustment')::numeric+(t->>'restAdjustment')::numeric)/400))+0.025;
     if m.method='nba_team_elo_only' then
+      if (t->>'safeEventStartsAt')::timestamptz<=clock+interval '60 seconds' then raise exception 'V6 controlled pre-event safety buffer failed';end if;
       home_prob:=1/(1+power(10::numeric,-((t->>'homeRating')::numeric-(t->>'awayRating')::numeric+60)/400));
       if m.payload->>'reviewStatus' is distinct from 'owner_approved' or jsonb_typeof(m.payload->'chronologicalGames') is distinct from 'number'
         or jsonb_typeof(m.payload->'verifiedProspectiveFixtures') is distinct from 'number'
@@ -222,6 +223,22 @@ declare o jsonb;p public.v6_policies;m public.v6_models;f jsonb;t jsonb;field te
         or (m.payload->>'verifiedProspectiveFixtures')::numeric<>trunc((m.payload->>'verifiedProspectiveFixtures')::numeric)
         or jsonb_typeof(m.payload->'teamResultsOnlyAccepted') is distinct from 'boolean'
         or m.payload->>'teamResultsOnlyAccepted' is distinct from 'true'
+        or m.payload#>>'{readinessReview,policyId}' is distinct from 'nba-baseline-readiness-1'
+        or m.payload#>>'{readinessReview,scope}' is distinct from 'limited_paper_baseline_not_proven_sportsbook_edge'
+        or jsonb_typeof(m.payload#>'{readinessReview,chronologicalSeasons}') is distinct from 'number'
+        or jsonb_typeof(m.payload#>'{readinessReview,prospectiveSlates}') is distinct from 'number'
+        or coalesce((m.payload#>>'{readinessReview,chronologicalSeasons}')::numeric,0)<2
+        or coalesce((m.payload#>>'{readinessReview,prospectiveSlates}')::numeric,0)<5
+        or (m.payload#>>'{readinessReview,chronologicalSeasons}')::numeric<>trunc((m.payload#>>'{readinessReview,chronologicalSeasons}')::numeric)
+        or (m.payload#>>'{readinessReview,prospectiveSlates}')::numeric<>trunc((m.payload#>>'{readinessReview,prospectiveSlates}')::numeric)
+        or m.payload#>>'{readinessReview,reportHash}' !~ '^[a-f0-9]{64}$'
+        or m.payload#>>'{readinessReview,reportHash}' is null
+        or m.payload#>'{readinessReview,historicalPublicationGapsDisclosed}' is distinct from 'true'::jsonb
+        or m.payload#>'{readinessReview,calibrationReviewed}' is distinct from 'true'::jsonb
+        or m.payload#>'{readinessReview,bookmakerComparisonReviewed}' is distinct from 'true'::jsonb
+        or m.payload#>>'{readinessReview,uncertaintyMethod}' is distinct from 'fixture_and_slate_cluster'
+        or m.payload#>'{readinessReview,injuryRosterLimitationsAccepted}' is distinct from 'true'::jsonb
+        or m.payload#>>'{readinessReview,reviewConclusion}' is distinct from 'owner_accepted_limited_baseline_no_edge_claim'
         then raise exception 'V6 controlled baseline validation review missing';end if;
     end if;
     calculated:=case when NEW.canonical_market->>'subjectId'=t->>'homeId' then home_prob else 1-home_prob end;
@@ -356,5 +373,69 @@ declare profit bigint;pending bigint;turnover bigint;decisive_profit bigint;begi
 end$$;
 revoke all on function public.v6_sha256(text),public.v6_public_url(text),public.v6_valid_market(jsonb),public.v6_paper_summary(uuid),public.v6_immutable(),public.v6_check_position(),public.v6_register_paper(uuid,jsonb,text),public.v6_check_grade(),public.v6_append_grade(uuid,jsonb,text),public.v6_audit_insert(),public.v6_check_quota(),public.v6_reserve_quota(uuid,integer) from public,anon;
 grant execute on function public.v6_sha256(text),public.v6_public_url(text),public.v6_valid_market(jsonb),public.v6_paper_summary(uuid),public.v6_immutable(),public.v6_check_position(),public.v6_register_paper(uuid,jsonb,text),public.v6_check_grade(),public.v6_append_grade(uuid,jsonb,text),public.v6_audit_insert(),public.v6_check_quota(),public.v6_reserve_quota(uuid,integer) to authenticated,edgelab_v6_worker;
--- JWT issuance/exposed-schema/worker-role membership is deliberately NOT configured here.
+-- Worker RPCs remain unusable by ordinary personal/service/anonymous tokens.
+-- JWT issuance and authenticator role membership require separate provisioning.
+create function public.v6_worker_identity(expected_owner uuid) returns jsonb language plpgsql security invoker set search_path='' as $$
+begin
+  if current_user<>'edgelab_v6_worker' or auth.uid() is null or auth.uid() is distinct from expected_owner then raise exception 'V6 scoped worker identity required';end if;
+  return jsonb_build_object('ownerId',auth.uid(),'role',current_user,'cohort','v6-prospective');
+end$$;
+create function public.v6_load_worker_state(expected_owner uuid) returns jsonb language plpgsql security invoker set search_path='' as $$
+begin
+  perform public.v6_worker_identity(expected_owner);
+  return jsonb_build_object('version',1,'ownerId',auth.uid(),'cohort','v6-prospective',
+    'revision',(select count(*) from public.v6_runs where user_id=auth.uid()),
+    'positions',coalesce((select jsonb_agg(payload order by registered_at,id) from public.v6_positions where user_id=auth.uid()),'[]'::jsonb),
+    'grades',coalesce((select jsonb_agg(payload order by recorded_at,id) from public.v6_grade_revisions where user_id=auth.uid()),'[]'::jsonb),
+    'runs',coalesce((select jsonb_agg(payload->'run' order by created_at,id) from public.v6_runs where user_id=auth.uid()),'[]'::jsonb));
+end$$;
+-- A single PostgreSQL transaction per worker run; never a V5 workspace overwrite.
+create function public.v6_commit_worker_run(expected_owner uuid,expected_revision integer,run_snapshot jsonb,raw_sources jsonb,position_rows jsonb,grade_rows jsonb) returns jsonb language plpgsql security invoker set search_path='' as $$
+declare row jsonb;o jsonb;saved jsonb;existing jsonb;raw text;position_text text;request_hash text;begin
+  perform public.v6_worker_identity(expected_owner);
+  perform pg_advisory_xact_lock(hashtextextended('edgelab-v6:'||auth.uid()::text,0));
+  request_hash:=public.v6_sha256(jsonb_build_object('run',run_snapshot,'raw',raw_sources,'positions',position_rows,'grades',grade_rows)::text);
+  select payload into existing from public.v6_runs where user_id=auth.uid() and run_key=run_snapshot->>'id';
+  if existing is not null then
+    if existing->'run' is distinct from run_snapshot or existing->>'requestHash' is distinct from request_hash then raise exception 'V6 worker replay changed';end if;
+    return public.v6_load_worker_state(expected_owner);
+  end if;
+  if expected_revision is null or expected_revision<>(select count(*) from public.v6_runs where user_id=auth.uid()) then raise exception 'V6 concurrent run revision changed';end if;
+  if jsonb_typeof(run_snapshot) is distinct from 'object' or nullif(run_snapshot->>'id','') is null or coalesce(run_snapshot->>'mode','') not in ('armed','dry_run')
+    or jsonb_typeof(run_snapshot->'observations') is distinct from 'array' or jsonb_typeof(position_rows) is distinct from 'array' or jsonb_typeof(grade_rows) is distinct from 'array'
+    or jsonb_typeof(raw_sources) is distinct from 'object' or nullif(run_snapshot->>'at','') is null or (run_snapshot->>'at')::timestamptz>clock_timestamp()
+    or jsonb_typeof(run_snapshot->'rejections') is distinct from 'array' or jsonb_typeof(run_snapshot->'screened') is distinct from 'number'
+    or jsonb_typeof(run_snapshot->'registered') is distinct from 'number' or (run_snapshot->>'registered')::integer<>jsonb_array_length(position_rows)
+    or (run_snapshot->>'screened')::integer<jsonb_array_length(run_snapshot->'observations')
+    or (run_snapshot->>'mode'='dry_run' and (jsonb_array_length(position_rows)>0 or jsonb_array_length(grade_rows)>0)) then raise exception 'V6 worker batch invalid';end if;
+  -- Controls are rechecked under the database transaction before any insert.
+  if run_snapshot->>'mode'='armed' and not exists(select 1 from public.v6_controls where user_id=auth.uid() and policy_id='v6-uncapped-paper-1' and enabled and not kill_switch) then raise exception 'V6 worker emergency stop';end if;
+  for o in select value from jsonb_array_elements(run_snapshot->'observations') loop
+    raw:=raw_sources->>(o->>'rawHash');
+    if raw is null or public.v6_sha256(raw) is distinct from o->>'rawHash' then raise exception 'V6 worker source missing or changed';end if;
+    select payload into existing from public.v6_observations where user_id=auth.uid() and id=(o->>'id')::uuid;
+    if existing is not null then if existing is distinct from o then raise exception 'V6 observation replay changed';end if;
+    else insert into public.v6_observations(user_id,id,raw_source,payload) values(auth.uid(),(o->>'id')::uuid,raw,o);end if;
+  end loop;
+  for row in select value from jsonb_array_elements(position_rows) loop
+    if row#>>'{position,ownerId}' is distinct from auth.uid()::text or row#>>'{position,cohort}' is distinct from 'v6-prospective'
+      or not exists(select 1 from jsonb_array_elements(run_snapshot->'observations') x where x->>'id'=row#>>'{position,observation,id}') then raise exception 'V6 batch position owner/source invalid';end if;
+    saved:=public.v6_register_paper(expected_owner,row->'position',row->>'originalInputs');
+    if saved->>'id' is distinct from row#>>'{position,id}' then raise exception 'V6 concurrent position changed; reread';end if;
+  end loop;
+  for row in select value from jsonb_array_elements(grade_rows) loop
+    position_text:=row->>'originalPosition';
+    perform public.v6_append_grade(expected_owner,row->'grade',position_text);
+  end loop;
+  insert into public.v6_runs(user_id,id,run_key,payload) values(auth.uid(),gen_random_uuid(),run_snapshot->>'id',jsonb_build_object('run',run_snapshot,'requestHash',request_hash));
+  return public.v6_load_worker_state(expected_owner);
+end$$;
+revoke all on function public.v6_worker_identity(uuid),public.v6_load_worker_state(uuid),public.v6_commit_worker_run(uuid,integer,jsonb,jsonb,jsonb,jsonb) from public,anon,authenticated;
+grant execute on function public.v6_worker_identity(uuid),public.v6_load_worker_state(uuid),public.v6_commit_worker_run(uuid,integer,jsonb,jsonb,jsonb,jsonb) to edgelab_v6_worker;
+-- Serialize owner emergency-stop updates against an in-flight worker batch.
+create function public.v6_control_serialization() returns trigger language plpgsql security invoker set search_path='' as $$
+begin perform pg_advisory_xact_lock(hashtextextended('edgelab-v6:'||NEW.user_id::text,0));return NEW;end$$;
+create trigger v6_control_serialization before insert or update on public.v6_controls for each row execute function public.v6_control_serialization();
+revoke all on function public.v6_control_serialization() from public,anon,edgelab_v6_worker;
+grant execute on function public.v6_control_serialization() to authenticated;
 commit;

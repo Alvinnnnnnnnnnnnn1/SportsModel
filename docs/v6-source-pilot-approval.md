@@ -1,6 +1,8 @@
 # Proposed 14-day source-only NBA pilot
 
-Status: **AWAITING EXPLICIT OWNER APPROVAL. Nothing installed or activated.** This is a separate research-only decision, not Approval A, B or C. All proposal files are ignored/private under .local/v6/source-pilot/proposal. No source request or credential issuance occurred during preparation.
+Status: **OWNER APPROVED AND SOURCE-ONLY LAUNCHAGENT INSTALLED13NOVEMBER2026. Waiting for the14November window; no early research capture.** This is a separate research-only decision, not Approval A, B or C. All proposal files are ignored/private under .local/v6/source-pilot/proposal. No source request or credential issuance occurred during preparation.
+
+Execution record: owner approval recorded at2026-11-12T13:31:50.636Z (13November00:31:50 Melbourne); installed at2026-11-12T13:33:57.141Z. Active config and installed plist exactly match the reviewed bytes. Actual completed approval receipt SHA-256: `c5f236058560271ff86fe4c3f7c042d8a93ced970e171835adfb64c6ded55a16`. This is the expected new hash after completing the reviewed template's approval fields. A/B/C remain unapproved. [Actual installation and pending live acceptance](v6-source-pilot-activation.md). The proposal text below is retained as the reviewed scope; its pre-approval wording is historical.
 
 Tested implementation commit: `7d8275d` on `feature/v6-autonomous-paper`.
 

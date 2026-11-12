@@ -11,3 +11,6 @@ export type SourcePilotPlan=z.infer<typeof sourcePilotPlanSchema>;
 export const pilotReceiptExtension=z.object({plan:sourcePilotPlanSchema,planHash:hash,approvalStatus:z.enum(['pending','approved'])}).strict();
 
 export class SourcePilotBlocked extends Error {}
+
+/** Idle lifecycle states perform no environment/provider access and never shift dates. */
+export function sourcePilotIdleState(plan:SourcePilotPlan,now:string,stopped=false){const t=Date.parse(now);if(!Number.isFinite(t))throw new Error('Invalid source pilot clock');if(stopped)return 'emergency_stopped';return t<Date.parse(plan.startsAt)?'scheduled_waiting':t>=Date.parse(plan.expiresAt)?'window_expired':null;}

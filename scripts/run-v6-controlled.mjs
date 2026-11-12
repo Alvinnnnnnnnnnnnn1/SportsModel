@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';import path from 'node:path';import {createSer
 const ix=process.argv.indexOf('--config');if(ix<0||!process.argv[ix+1])throw new Error('Pass --config PATH and --once, --plan or --health');
 const filename=path.resolve(process.argv[ix+1]),root=path.resolve('.local/v6'),loader=await createServer({configFile:false,envDir:false,appType:'custom',resolve:{alias:{'@':process.cwd()+'/src'}},server:{middlewareMode:true,hmr:false,ws:false,watch:null}});
 try{
- const {sourcePilotPlanSchema}=await loader.ssrLoadModule('/src/lib/v6/source-pilot.ts');
+ const {sourcePilotPlanSchema,sourcePilotIdleState}=await loader.ssrLoadModule('/src/lib/v6/source-pilot.ts');
  const {controlledConfigSchema,collectionReceiptSchema,collectionApprovalReasons}=await loader.ssrLoadModule('/src/lib/v6/controlled-activation.ts');
  const {planControlledJobs,runControlledTick}=await loader.ssrLoadModule('/src/lib/v6/controlled-scheduler.server.ts');
  const {prepareControlledTeamPorts}=await loader.ssrLoadModule('/src/lib/v6/controlled-team-runtime.server.ts');
@@ -25,6 +25,10 @@ try{
   console.log(JSON.stringify({mode:controls.config.mode,killSwitch:controls.config.killSwitch,lastAttempt:health,missedRun:health?Date.now()-Date.parse(health.at)>26*3600000:null,quotas,externalAlertDelivery:false}));
  }else if(process.argv.includes('--plan'))console.log(JSON.stringify({at:clock(),jobs:planControlledJobs(fixtures,clock(),pilot),installed:false}));
  else if(process.argv.includes('--once')){
+  let sourceStopped=false;if(controls.config.sourceOnly)try{await fs.access(path.join(root,'source-pilot/STOP'));sourceStopped=true;}catch(e){if(e.code!=='ENOENT')throw e;}
+  const idle=pilot&&controls.config.sourceOnly&&controls.config.mode==='dry_run'&&!controls.config.killSwitch&&controls.config.sourcesEnabled?sourcePilotIdleState(pilot,clock(),sourceStopped):null;
+  if(idle){if((await collectionApprovalReasons(controls.config,controls.receipt,pilot.startsAt)).length)throw new Error('Source receipt binding is invalid; no idle activation');console.log(JSON.stringify({status:idle,workerInvoked:false,nextJob:idle==='scheduled_waiting'?planControlledJobs([],clock(),pilot).sort((a,b)=>a.dueAt.localeCompare(b.dueAt))[0]?.dueAt:null,v5Access:false,persistence:'local',hostedWritesPossible:false}));}
+  else{
   if(controls.config.sourcesEnabled&&controls.config.mode!=='disabled'&&!controls.config.killSwitch)try{process.loadEnvFile('.env.local');}catch(e){if(e.code!=='ENOENT')throw e;}
   if(controls.config.sourceOnly&&controls.config.mode!=='disabled'&&!controls.config.killSwitch&&(await collectionApprovalReasons(controls.config,controls.receipt,clock())).length)throw new Error('Exact approved source-only receipt required before environment/provider access');
   const remote=controls.config.persistence,active=controls.config.mode!=='disabled'&&!controls.config.killSwitch&&controls.config.sourcesEnabled;
@@ -33,6 +37,6 @@ try{
    ...(remote.kind==='supabase_capability'?{capability:()=>readWorkerFile(remote.workerCredentialFile)}:{accessToken:async()=>{const session=await readWorkerFile(remote.workerTokenFile);if(typeof session.accessToken!=='string')throw new Error('Provisioned scoped worker token required');return session.accessToken;}}),
    rawSource:async hash=>{if(!/^[a-f0-9]{64}$/.test(hash))throw new Error('Invalid source hash');return JSON.parse(await fs.readFile(path.join(root,'evidence',hash+'.json'),'utf8')).raw;}}):localV6Repository(path.join(operational,controls.config.sourceOnly?'source-only-state':'state'),controls.config.ownerId);
   const result=await runControlledTick(operational,{repository,clock,readControl,prepare:async job=>prepareControlledTeamPorts(root,repository,job,await readControl(),{oddsKey:process.env.THE_ODDS_API_KEY,bdlKey:process.env.BALLDONTLIE_API_KEY},clock,readControl)},planControlledJobs(fixtures,clock(),pilot));
-  console.log(JSON.stringify({...result,v5Access:false,persistence:remote&&active?'scoped_supabase':'local',hostedWritesPossible:!!remote&&active}));
+  console.log(JSON.stringify({...result,v5Access:false,persistence:remote&&active?'scoped_supabase':'local',hostedWritesPossible:!!remote&&active}));}
  }else throw new Error('Pass --once, --plan or --health');
 }finally{await loader.close();}

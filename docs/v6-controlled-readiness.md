@@ -1,3 +1,13 @@
+# Installed source-only pilot — 13 November 2026
+
+The exact source-only pilot is now explicitly owner-approved and its reviewed LaunchAgent is installed/loaded. [Actual execution evidence and pending first capture](v6-source-pilot-activation.md). Startup/STOP/resume produced clean exit0; a pre-start CLI gate performs no research/provider work before the approved14November window. Approval A/B/C and paper autonomy remain disabled.
+
+Fresh preinstallation capability checks verified Odds API10used/490remaining at0credit cost and BALLDONTLIE access to the unchanged30team catalogue. They are not research forecasts or proof of the account's billing tier. First actual research capture is still scheduled14November19:00 Melbourne; do not report prospective success before the actual retained responses and immutable slate exist. Model artifact, reviewed private hashes and SQL proposal are unchanged.731 tests/typecheck/lint/build passed. Keep the Mac awake/connected; no daily user prompts are needed for the installed worker.
+
+The remaining sections preserve previous preparation checkpoints.
+
+---
+
 # Current source-only readiness — 13 November 2026
 
 The actual model2 worker integration has been exercised with controlled synthetic providers, including genuine-style future fixture discovery, common cutoff/frozen forecasts, exact Sportsbet market identity, dual-provider results, corrected/idempotent revisions, earliest-valid-quote locking, verified-event request suppression, restart recovery, emergency stop and cumulative credit exhaustion. It is ready for a **bounded approved source experiment**, subject to real provider availability and an awake/connected local host; it is not live-accepted or installed.

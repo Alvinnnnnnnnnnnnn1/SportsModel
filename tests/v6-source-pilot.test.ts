@@ -1,6 +1,6 @@
 /** Synthetic approvals/transports only. These tests authorise no real collection. */
 import {it,expect,vi} from 'vitest';import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
-import {sourcePilotPlanSchema} from '@/lib/v6/source-pilot';
+import {sourcePilotPlanSchema,sourcePilotIdleState} from '@/lib/v6/source-pilot';
 import {controlledConfigSchema,collectionApprovalReasons,activationReasons,policyBundleHash} from '@/lib/v6/controlled-activation';
 import {runControlledTick,planControlledJobs} from '@/lib/v6/controlled-scheduler.server';
 import {localV6Repository} from '@/lib/v6/repository.server';
@@ -27,3 +27,5 @@ it('enforces cumulative local AND observed provider usage, retaining the 100-cre
 }));
 it('checks emergency stop/expiry inside both transport locks before a network request',async()=>temp(async root=>{const fetcher=vi.fn(),authorizeRead=vi.fn(async()=>{throw new Error('SYNTHETIC STOP');}),api=freeSources({root,oddsKey:'SYNTHETIC-KEY',fetcher,authorizeRead}),bdl=teamSources({root,bdlKey:'SYNTHETIC-BDL',fetcher,authorizeRead});await expect(api.read('the-odds-api.com','/v4/sports',{},0)).rejects.toThrow(/STOP/);await expect(bdl.read('balldontlie','/v1/teams')).rejects.toThrow(/STOP/);expect(fetcher).not.toHaveBeenCalled();}));
 it('binds local research namespace to the existing private batch, without an Auth account or credentials',async()=>temp(async root=>{const {plan}=await controls();plan.ownerId=localSourceOwner(plan.historyBatchId);await atomicPrivateJson(path.join(root,'source-pilot/proposal/plan.json'),plan);expect(await pilotResearchOwner(root,plan.historyBatchId,'NORMAL-AUTH-ID')).toBe(plan.ownerId);await expect(pilotResearchOwner(root,crypto.randomUUID(),'OTHER-AUTH-ID')).rejects.toThrow(/binding/);}));
+
+it('waits before the exact approved window and expires without shifting dates or admitting collection',async()=>{const {plan}=await controls();expect(sourcePilotIdleState(plan,'2026-11-12T13:30:00Z')).toBe('scheduled_waiting');expect(sourcePilotIdleState(plan,plan.startsAt)).toBeNull();expect(sourcePilotIdleState(plan,plan.expiresAt)).toBe('window_expired');expect(sourcePilotIdleState(plan,at,true)).toBe('emergency_stopped');expect(()=>sourcePilotIdleState(plan,'invalid')).toThrow();});

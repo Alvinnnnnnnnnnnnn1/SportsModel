@@ -1,5 +1,7 @@
 # Genuine NBA shadow results — 12 November 2026
 
+**Preserved strict-policy checkpoint.** A later [versioned event reconciliation](v6-event-reconciliation.md) verifies all ten fixtures through separate decisions (one strict + nine reconciled), with zero unresolved. This document and its original strict journal remain unchanged in substance; its provisional metrics below describe the earlier policy classification. No historical position or paper P/L was created.
+
 **Strict verification: 1 fixture / 2 selections verified; 9 fixtures / 18 selections unresolved.** Both providers agree on all ten final scores, event/game IDs and teams. Nine Odds API start fields changed by 26–180 seconds after the freeze. The frozen rule requires original clocks, so those discrepancies remain unresolved. No automatic exception or retrospective position registration.
 
 The requested check ran **17:38:55–17:41:05 Australia/Melbourne on 12 November**, after the 17:10 gate. It fetched one completed-score response (two credits) and ten exact-game BALLDONTLIE responses. No funding, paper P/L, financial write, migration or external message.

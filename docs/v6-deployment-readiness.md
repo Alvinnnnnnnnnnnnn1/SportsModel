@@ -1,12 +1,14 @@
 # V6 deployment and rollback readiness
 
-Status: **not deployed, not enabled**. The [12 November result check](v6-shadow-results-20261112.md) retrieved ten source-agreed finals; one fixture passes strict verification and nine have unresolved changed start fields. No qualifying model, registration or genuine paper settlement is claimed. [Controlled activation readiness](v6-controlled-readiness.md) documents the implemented, disabled headless scheduler and proposed Elo-only baseline. Player-prop blockers remain in [earlier evidence](v6-prospective-pilot.md). No existing migration, account or legacy financial record was changed. No cloud service, paid plan, scheduler or external messaging was enabled.
+Status: **not deployed, not enabled**. [Event reconciliation](v6-event-reconciliation.md) now verifies all ten genuine observational fixtures through new decisions, preserving the original strict journal. No qualifying activated model, registration or genuine paper settlement is claimed. The [exact deployment approval package](v6-deployment-approval-package.md) supersedes earlier readiness gaps below: the atomic Supabase adapter/RPC and scoped identity checks are implemented locally, but trusted credential issuance/renewal and hosted acceptance remain open. No migration, legacy record, schedule, paid service or external message was enabled.
 
 ## SQL diff for review
 
 Proposed file: `supabase/proposals/202611110001_v6_paper.sql`, outside `migrations/`. Latest SHA-256:
 
-`bac90244c59afe3624d358b5840dfdae2e23f845b0effa8406bea593a21da5bc`
+`535df727704be74882c97f966466965d3993255bd5d9b09cc5f17257c753ec5c`
+
+Supersedes local `bac90244…`, never deployed. New delta: sixty-second Elo pre-event buffer; typed model-readiness review; worker-only identity/state/atomic-run RPCs; owner control serialization. No additional table or V5 permission. Full scope/authentication/backout and exact commands are in [the approval package](v6-deployment-approval-package.md).
 
 This supersedes local hash `3d6353aadfea1d0ef9fdd026ab6aa44b963e667732c3156aa6beb980f56c54f5`, never deployed. The 12 November delta adds a separate `nba_team_elo_only` method with zero form/rest/shrinkage, exact model ID/version, owner-reviewed registry evidence and minimum 500 chronological/30 strictly verified prospective games. Those proposed validation thresholds require review; they are not paper-volume caps. Local tests reject missing approval, reproduce a valid baseline, and prove late failure rolls back its batch. Exact delta from the last proposal review: `git diff bada5d6 -- supabase/proposals/202611110001_v6_paper.sql`.
 
@@ -26,7 +28,7 @@ Relative to the deployed schema, the proposal creates ten new owner-scoped V6 ta
 
 The worker role can read/write narrowly scoped V6 data but cannot activate policies/models, change controls, call the legacy workspace RPC or access `bets`/funding. Functions use SECURITY INVOKER; owner checks and same-owner composite FKs remain. The one UPDATE-column grant on `v6_positions.registered_at` permits PostgreSQL row locks; the unconditional immutable trigger still rejects all edits. Tests prove ordinary-user isolation, anonymous rejection, revoked V5 access, stale revisions, late-write rollback and uncapped positions. Embedded role simulation is **not hosted worker-auth verification**.
 
-Remaining deployment work: finish model-registry validation governance, shared provider-key quota aggregation across hosts, atomic Supabase V6 repository, scoped JWT/role issuance and private API exposure. The role is non-login and no authenticated-role membership/token broker is installed. A normal personal token or service-role key must not be repurposed as a worker identity with V5 access. Do not request secrets in chat. Current local CLI never imports a Supabase client or financial repository.
+Remaining deployment work: review sufficient model evidence, provision trusted scoped JWT issuance/renewal and role access, and run hosted acceptance. The optional atomic Supabase adapter is now implemented and locally tested; it never imports a V5/financial repository. Source quotas remain single-host; multi-host aggregation is unsupported. The worker role is non-login and no authenticator membership/token broker is installed. A normal personal token or service-role key is rejected. Do not request secrets in chat.
 
 ## Approval and failure/rollback plan
 
@@ -38,7 +40,7 @@ Remaining deployment work: finish model-registry validation governance, shared p
 
 ## Local worker, scheduler and emergency stop
 
-The current concrete entry point is `scripts/run-v6-controlled.mjs`, with disabled controls in `ops/v6-controlled.config.example.json`. Its **uninstalled** `ops/com.edgelab.v6-controlled.plist.example` runs a one-minute tick selecting Melbourne discovery/result and pre-start jobs. It calls the actual registered worker, uses exact owner/model/policy receipts, durable leases/retries and the atomic commit latch. It currently has one verified prospective fixture against a proposed minimum of thirty, so arming is blocked. The source adapter and local queue exist; live armed execution, hosted persistence and delivered alerts remain unverified. See [the current command and operations guide](v6-controlled-readiness.md). Older disabled worker/template instructions below remain valid smoke tests, not the new schedule.
+The current concrete entry point is `scripts/run-v6-controlled.mjs`, with disabled controls in `ops/v6-controlled.config.example.json`. Its **uninstalled** one-minute launchd template calls the actual worker with durable jobs, leases, retries and commit latch. Ten verified observational fixtures on one slate still fail the proposed multidimensional model-readiness gate. A separate expiring source-only receipt can authorise dry-run research without positions. Live armed operation, hosted persistence and delivered alerts remain unverified. See [current operations](v6-controlled-readiness.md); older disabled template instructions below remain historical smoke-test guidance.
 
 The worker uses Node and the installed npm/Vite runtime directly; **no `npm run dev` or Next HTTP server is needed**. A full existing `npm ci` installs the development runtime used by scripts; an `--omit=dev` worker distribution is not prepared. Example safe smoke test:
 

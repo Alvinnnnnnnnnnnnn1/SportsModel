@@ -25,6 +25,22 @@ export async function validateHistoryPage(e:RawEvidence,season:number,cursor:num
  return parsed;
 }
 
+/** Acquisition-only exception. The original exact-time validator and model
+ * admission remain unchanged. A civil date is never converted into a start. */
+export async function classifyHistoryPage(e:RawEvidence,season:number,cursor:number|null,previousIds:Set<string>,seenCursors:Set<number>,fixtureKeys:Set<string>){
+ const parsed=await inspectHistoryPage(e,season,cursor,previousIds,seenCursors),raw=JSON.parse(e.raw);
+ const quarantined:{version:1;status:'DATE_ONLY_QUARANTINED';sourceGameId:string;season:number;sourceDate:string;startsAt:null;retrievedAt:string;receiptId:string;rawHash:string}[]=[],keys:string[]=[];
+ for(const g of parsed.games){
+  if(!g.final||!g.compatibleTraining||g.homeScore===null||g.awayScore===null||g.homeScore===g.awayScore||g.home.id===null||g.away.id===null)throw new Error('Historical identity/final-score/competition abnormality');
+  const source=raw.data.find((r:{id:number})=>String(r.id)===g.sourceGameId),date=source.date;
+  const civil=typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)&&Number.isFinite(Date.parse(date+'T00:00:00Z'))&&new Date(date+'T00:00:00Z').toISOString().slice(0,10)===date;
+  if(!g.startsAt){if(source.datetime!=null||!civil)throw new Error('Missing valid source calendar date for quarantine');quarantined.push({version:1,status:'DATE_ONLY_QUARANTINED',sourceGameId:g.sourceGameId,season,sourceDate:date,startsAt:null,retrievedAt:g.retrievedAt,receiptId:g.receiptId,rawHash:g.rawHash});}
+  const key=JSON.stringify([season,g.home.id,g.away.id,civil?'source-date:'+date:'UTC-date:'+g.startsAt!.slice(0,10)]);
+  if(fixtureKeys.has(key)||keys.includes(key))throw new Error('Ambiguous duplicate historical fixture');keys.push(key);
+ }
+ return {...parsed,quarantined,fixtureKeys:keys,exactTime:parsed.games.filter(g=>g.startsAt!==null)};
+}
+
 /** Explicit matching policy; day-level discrepancies are reported, never used
  * to rewrite a source-issued start or join ambiguous repeated fixtures. */
 export function reconcileHistoricalGames(original:TeamGame[],recovered:TeamGame[]){

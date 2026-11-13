@@ -1,5 +1,7 @@
 # EdgeLab project instructions
 
+- Fresh owner approval c53cca8e permitted acquisition-only timestamp quarantine; continuation COMPLETED13November2026:35 new/39 total BDL requests,13 pages and1230 raw records per season. Do not replay pages or spend the unused3 calls. Original report e86b6a… and5082-game journal remain unchanged.11 date-only finals stay out of fitting; separate5069-game BDL dataset b00cae6f… yields candidate artifact44edd804… reproduced independently, NOT approved or installed. One24-hour source-time discrepancy,12 intraday differences and2 Cup coverage differences remain explicit.233-reference archive is a candidate, not current pinned runner readiness; no storage/cloud/model/PAPER/host approval exists. See docs/v6-cloud-history-recovery.md. Earlier acquisition-stop/no-history bullets are historical.
+
 - Bounded BDL recovery was approved13November2026 and stopped after4 genuine games requests on11 missing exact timestamps (2022 page4). Do not retry/resume around this coverage stop without fresh approval. Original journal/artifact/pilot remain unchanged. Separate BDL-only partial inputs have1,779 eligible games, not complete2022–2024 coverage; no replacement artifact or cloud provisioning clearance exists. Keep nullable starts and true new retrieval times. See docs/v6-cloud-history-recovery.md; the acquisition CLI's existing-report guard must remain intact.
 
 ## V6 owner-requested exception — 11 November 2026

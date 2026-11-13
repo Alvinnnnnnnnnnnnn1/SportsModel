@@ -1,4 +1,108 @@
-# BDL historical recovery — 13 November 2026
+# Completed BDL continuation and separate candidate — 13 November 2026
+
+**Approved acquisition completed; no hosted upload or model activation.** The fresh owner instruction `c53cca8e-c5d5-4467-b826-6e641eb92ca8` explicitly permits continuing despite valid date-only finals, with quarantine confined to historical acquisition. The original strict timestamp validator, live forecast availability rules and chronological fitting protocol are unchanged. The original stopped acquisition below is retained as an earlier checkpoint.
+
+## Actual source execution
+
+Fresh approval first recorded **2026-11-13T10:24:24.422Z /21:24:24.422 Melbourne**; the unavailable chat-message timestamp was not invented. New requests ran **10:24:35.139Z–10:31:47.887Z**, completing within eight minutes. No request began at page1 again. Original report SHA `e86b6a775fee9ece5c9677dd5c853a2ea220c297419a28b1215d11d16dd455e7` and all four prior IDs/raw hashes/receipt times/cursors were verified before transport. The first new request used cursor **857754**, page5 of2022. The original report remains byte-identical.
+
+**35 additional BDL requests /39 total acquisition requests**, all HTTP200. Each season ended legitimately on page13, below the14-page cap. No extra request was spent checking final pagination or account tier. Additional-request minimum start spacing was **12,706ms**, within5/minute; minimum across all39 starts was12,678ms. Source quota receipts account for every reservation1–39 without gaps, resets or refunds. Shared UTC13November application allowance is **39/60 used,21 remaining**. The unused three requests under this acquisition's maximum were not repurposed.
+
+The current [BDL documentation](https://docs.balldontlie.io/) still lists games on Free and5/minute. Actual responses demonstrate historical games access on the existing key for all three requested seasons. Billing tier remains owner-attested; no billing endpoint, key change, trial, upgrade or other endpoint was used. The Odds API consumed **zero additional credits**; its global retained journal remains10 reserved/used and490 remaining. No other sports data API was called.
+
+| Season | Original eligible fixtures | Retained BDL records | Exact-time eligible | Date-only quarantine | Pages / completed |
+| --- | ---: | ---: | ---: | ---: | --- |
+|2022|1,230|1,230|1,219|11|13 / yes|
+|2023|1,231|1,230|1,230|0|13 / yes|
+|2024|1,231|1,230|1,230|0|13 / yes|
+|Total|3,692|3,690|3,679|11|39 / yes|
+
+All eleven missing timestamps occur on **the same provider calendar date,2022-12-02:11 of11 returned games for that date**. This is systematic date-block missingness, not a random sample. It represents0.8943% of the2022 regular-season records and0.2981% of this three-season acquisition. The quarantine stores native IDs857680–857690, genuine scores, source dates, `startsAt:null`, receipt IDs, raw hashes and actual retrieval times. No midnight/noon, timezone, borrowed provider time or historical availability was assigned. Other exclusions in the acquired pages:0. Neither quarantine nor source-count summaries become qualified forecasts.
+
+## Reconciliation and remaining source limitations
+
+The strict policy finds **3,678 exact home/away/season/UTC-date correspondences**,0 ambiguous correspondences,0 score disagreements and12 intraday timestamp disagreements (12–50minutes). Original and BDL times remain separate. The detailed report has14 unmatched original rows and1 unmatched exact-time BDL row; those counts are decomposed rather than presented as14 absent games:
+
+1. **11 date-only records** each have a unique original team/score/near-calendar-date correspondence. These are labelled suggestions, not proof of an exact start or permission to fill the null field.
+2. **One cross-date discrepancy:** Detroit–Portland,104–110. API-NBA ID12026 reports2023-03-08 00:00Z; BDL ID858332 reports2023-03-07 00:00Z. Same teams/score/season support a correspondence suggestion, but the24-hour source disagreement remains **REQUIRES_SOURCE_TIME_REVIEW**, without automatic merging or changing either time. The candidate uses the BDL-issued claim; its chronology is conditional on that unresolved source field.
+3. **Two competition-coverage differences:** the original contains Lakers–Indiana123–109 (ID13779,10December2023 UTC) and Oklahoma City–Milwaukee81–97 (ID15347,18December2024 UTC). Neither fixture appears in the completed BDL regular-season chains. They are the two Cup championship fixtures previously identified; the [NBA format explainer](https://www.nba.com/news/2024-emirates-nba-cup-tracker) excludes the championship from regular-season statistics. No Cup endpoint was queried, no BDL Cup IDs/results were invented, and the original inclusion policy was not changed.
+
+Thus3692 original entries are accounted for as3678 strict matches +11 date-only suggestions +1 date-disagreement suggestion +2 outside regular-season coverage. This accounting does not upgrade the suggestions into verified exact-time inputs. The full source/raw reports retain every field and limitation.
+
+## Separate model reconstruction
+
+The original5,082-game dataset and frozen artifact5bfe… remain unchanged. A **new BDL-only journal has5,103 latest source rows,5,069 eligible finals**:3,679 new eligible historical games plus the previously retained1,390. The11 quarantines and23 nonfinal source fixtures remain outside fitting. No original API-NBA coefficient, timestamp or missing game is copied into this candidate.
+
+The unchanged protocol now fits successfully:2022 training (911 scored games after warmup),2023 tuning/refit (1,230),2024 calibration (1,230),2025 later evaluation (1,230),2026 monitoring (160). Model parameters were not tuned on the ten frozen fixtures. Selected margin parameters remainK20/home40/season retention0.75; feature lambda0.001. The new artifact has `productionApproved:false` and separately versioned source provenance. Exact-time coverage is **not** complete because the11 quarantines are excluded; successful fitting is not clearance of missingness or the cross-date disagreement.
+
+On the **same1,230-game2025 evaluation cohort**, using the existing date-block methodology:
+
+| Model | Original Brier | Reconstructed Brier | Reconstructed log loss | Reconstructed calibration ECE |
+| --- | ---: | ---: | ---: | ---: |
+|Elo-only|0.20946131|0.20943896|0.60752729|0.02439157|
+|Margin Elo|0.20644506|0.20642811|0.60041801|0.03872590|
+|Feature strength|0.20745151|0.20764727|0.60324560|0.03446016|
+|Elo calibrated|0.20922849|0.20918785|0.60653561|0.02842193|
+|Margin calibrated|0.20653048|0.20648885|0.60046270|0.03985379|
+|Features calibrated|0.20736973|0.20750910|0.60289195|0.02953295|
+|Form/rest challenger|0.20885698|0.20883723|0.60572364|0.02258017|
+|Win-rate benchmark|0.24120154|0.24116197|0.67520180|0.05869606|
+
+The candidate report retains all calibration bins, monitoring/per-season scores, tuning trials, uncertainty intervals and existing limitations. These are retrospective, previously inspected historical cohorts. No historical Sportsbet prices support a bookmaker-relative backtest or profit/edge claim. Better compatibility or a small score difference does not promote a model; the feature model worsened on this cohort.
+
+Eight fresh credential-free/network-disabled Node processes checked portable inputs: two cutoff-aware runs, two independent artifact refits, two post-hoc diagnostics, original control, original diagnostic. Both refits regenerate the candidate hash exactly; both reconstructed diagnostics agree exactly. **All20 original-input frozen selection probabilities still reproduce exactly, max difference0.**
+
+The reconstructed counterpart of every frozen selection is retained as **RETROSPECTIVE_RECONSTRUCTION_DIAGNOSTIC**, never a forecast registered before the result. Its maximum difference from the actual original selection is **0.0421707494 percentage points**. New retrieval clocks are preserved and those new results remain unavailable at the original forecast cutoffs. The older cutoff-aware diagnostic therefore still has the previously observed partial-history discrepancy; do not mix that with the new post-hoc comparison.
+
+| Model2 comparison,10 fixtures | Maximum absolute reconstructed-vs-original difference (percentage points) |
+| --- | ---: |
+|Elo-only|0.05162506|
+|Form/rest challenger|0.04423862|
+|Win-rate|0.17451925|
+|Margin Elo|0.04153217|
+|Features|0.43922112|
+|Elo calibrated|0.09351601|
+|Margin calibrated|0.10219602|
+|Features calibrated|0.36216141|
+
+These are date-block **post-hoc input/model comparisons**, distinct from the original legacy selection formula above. They demonstrate non-equivalence, not new genuine prospective performance. All eight candidate model variants can execute offline from the BDL-only inputs/artifact. None has been installed into the live pilot or qualified for paper registration.
+
+## Exact private package and gates
+
+Continuation root: `.local/v6/history-continuation/2026-11-13T10-24-24.422Z/`. Its separate approval, immutable four-request parent hash, report, quota evidence and `verification.json` are retained. `latest-audit.json` points to `audit-2026-11-13T10-32-21.915Z/`. Candidate data/artifact/evaluation, all source receipts, quarantines and a BDL-only registry enter the private archive. Original-provider comparison outputs remain local review metadata outside that archive. All previous exports/reports remain intact.
+
+| Binding | SHA-256 |
+| --- | --- |
+|New eligible canonical dataset|`b00cae6f0fafcd2eb1572f281353f448755179f784b3f54fb9524013da5afcac`|
+|New candidate artifact|`44edd804bb3aa0802d80928aa61f764adc2f18ae86982a83cab55dc2659a87e7`|
+|Snapshot manifest|`b23e4af9724ef6fac2e22b4c249625cfe88e056ce5514bbb2a22180ee4526ed1`|
+|Retention inventory|`ac7b25bf5bc1b0a5acf8f05d6e075fb5d1f87b270ff68a31614e153c7fdcdf4c`|
+|Retention review|`a7b331fceb83e414d3b1867f13b0db20bbadeeae86de9a14607841bcade6ac00`|
+|Dependency manifest|`f3629798695eb03f2409544dee2ecf333b19c4fb3de068c870dde91a8ed11aaf`|
+|Model readiness/comparison report|`915bede0ba2c8e64918b6372b6846052e382616c55df199fd312d4f00dae22ba`|
+
+**233 references /194 distinct objects /21,790,899 object bytes**. Every included typed parent resolves to permitted BDL/Odds lineage or software definitions; the original mixed-provider artifact/identity/forecasts remain withheld. A local restore reproduces the candidate dataset hash. Existing offline inventory/provisioning validation passes while truthfully reporting `fullRunnerReady:false`. Private source terms remain reviewed for bounded research retention, not raw-feed redistribution. No upload approval is inferred.
+
+A **reproducible candidate input archive** now exists. A complete package for the **currently approved cloud runner does not**: that runner/plan still pins artifact5bfe… and the old identity bridge. Its write gate correctly refuses this non-equivalent reconstruction; it was not relaxed to make the archive deployable. The candidate's missing date block, source-time disagreement and competition scope also need explicit methodological review. No stopped Supabase provisioning approval is requested at this stage.
+
+The smallest next action is an offline owner/model review of artifact44edd…, the explicit exclusions and time discrepancy, followed by a versioned compatible candidate plan/identity/readiness review. Do not fetch more historical pages merely to spend the remaining allowance. Any subsequent storage-only approval must bind the exact compatible plan, dataset/artifact, snapshot/inventory/review/dependency/reproducibility hashes, intended project and stopped/no-credential/no-host-transfer state. New model use by the pilot, credentials, cloud transfer/activation and PAPER A/B/C remain separate approvals. No new SQL is proposed or applied here.
+
+## Verification and preservation
+
+**785/785 tests in71 files**, including23 recovery/diagnostic cases;70 core +77 historical +15 source SQL checks;13 fresh-process cloud simulation groups; eight genuine-input model subprocesses; TypeScript; lint; production build; local bundle/restore validation; original/continuation replay rejection and five private-file/secret/disabled-state checks passed. Source-quota receipts verify39 successful reservations without duplicates. SQL ownership/rollback and worker recovery/result/quota/stop checks remain local/synthetic; no fresh hosted normal-owner/two-user persistence or genuine cloud execution was attempted.
+
+Mac LaunchAgent remains loaded at60-second intervals, exit0 between waiting ticks, with original config/receipt/artifact/schedule unchanged. First result job14November18:00 and first odds capture19:00 Melbourne remain intact. No hosted writes, source credentials, Actions activation, Vercel release, PAPER positions/settlements, funding or V5 changes occurred. No closed-browser delivery or actual new future-fixture forecast is claimed.
+
+Repeat **offline** analysis only:
+
+```sh
+node scripts/audit-v6-bdl-history.mjs --acquisition-dir .local/v6/history-continuation/2026-11-13T10-24-24.422Z
+node scripts/provision-v6-cloud-state.mjs --bundle <new-private-candidate-archive>
+```
+
+Re-auditing creates a new review version and bundle hashes. Both acquisition CLIs reject existing reports; claims survive failure. Do not delete those guards, replay spent pages or modify the old stopped report.
+
+# Previous stopped BDL acquisition — 13 November 2026
 
 **Stopped on incomplete source metadata. Cloud forecasting and stopped provisioning remain blocked.** Four approved Free games requests succeeded; page4 contains11 finals without an exact `datetime`. The collector stopped without retrying, skipping the page or requesting another season. No hosted write, Odds request, model promotion, schedule change, credential issuance, migration or paper activity occurred.
 

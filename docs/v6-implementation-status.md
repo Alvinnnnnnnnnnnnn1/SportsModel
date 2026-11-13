@@ -1,3 +1,13 @@
+# Fresh approved BDL recovery completed — 13 November 2026
+
+35 additional genuine Free games requests from cursor857754;39 total,21/60 local daily slots remain,0 additional Odds requests. All3 seasons completed13 pages,1230 records each. Acquisition-only quarantine retains11 date-only finals from all11 games on provider date2022-12-02. Strict validator/live availability/model admission remain unchanged; no prior page replay, fake time, refunded reservation or original-report change.
+
+New5069-game BDL-only canonical hash`b00cae6f…`; reconstructed artifact`44edd804…` refits identically in2 independent processes. Eight genuine-input subprocesses verify original20 probabilities exactly and compare every reconstructed selection post-hoc (max0.04217075pp). New artifact fits2023 tuning/2024 calibration and retains later Brier/logloss/calibration/uncertainty reports; no model promotion or bookmaker advantage claim. Strict reconciliation3678 matches/0 score conflicts,12 intraday time differences;11 nullable correspondence suggestions,1 unresolved24-hour Detroit–Portland difference and2 absent Cup finals remain explicit.
+
+Private candidate archive233 references/194 objects/21,790,899bytes; snapshot`b23e4af9…`, inventory`ac7b25bf…`. Typed parents, local restore and offline validator pass. **Current approved runner/provisioning remains blocked** by different pinned artifact/identity and methodological review of exclusions/time uncertainty. No gate was weakened, no upload/storage approval requested, no hosted/API-key/Actions/Vercel/Mac/PAPER/V5 change. Next task: review the separate candidate and compatible versioned plan, then prepare exact stopped-only provisioning approval if acceptable. [Full recovery and exact hashes](v6-cloud-history-recovery.md).
+
+Validation:785/785 tests in71 files;162 local SQL checks;13 isolated cloud simulation groups;8 genuine-input model processes; replay/quota/restore/secret checks; TypeScript, lint and production build pass. Positive hosted source acceptance remains untested. Earlier stopped-acquisition statements are historical.
+
 # Approved BDL history acquisition stopped safely — 13 November 2026
 
 Actual approved collection:4 HTTP200 BDL games requests, minimum12,678ms spacing,4/60 local daily slots used (56 remain),0 Odds requests.400 genuine2022 rows retained. Page4 contains11 finals with `datetime:null`; collection stopped without retry/skip/additional-season calls.389 exact-time fixtures match original identities/scores;2 start fields differ by15minutes, both retained.2023/2024 not fetched. No hosted, Mac, model-policy, Actions, Vercel, credential or PAPER change.

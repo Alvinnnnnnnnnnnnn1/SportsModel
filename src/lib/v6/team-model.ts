@@ -48,6 +48,17 @@ export async function forecastTeamGame(rows:TeamGame[],input:{home:string;away:s
   historySnapshot:fitted.games,forecast:{model:TEAM_MODEL,generatedAt:input.at,inputCutoff:input.at,inputs,inputsHash:await sha256(JSON.stringify(inputs)),probabilityHome:features.challenger,probabilityAway:1-features.challenger,
    eloOnlyHome:features.eloOnly,historicalWinRateHome:features.historicalWinRate,sampleSize:fitted.games.length,evidenceTier:'team_results_only',validation:'experimental'}};
 }
+/** Post-hoc input comparison ONLY. Does not return a registrable forecast,
+ * change availability clocks or bypass forecastTeamGame's live cutoff. */
+export function diagnoseHistoricalTeamState(rows:TeamGame[],input:{home:string;away:string;season:number;startsAt:string;originalCutoff:string;completeRegularSeasons:number[];sameDateBlock:boolean}){
+ if(!Number.isFinite(Date.parse(input.originalCutoff))||!Number.isFinite(Date.parse(input.startsAt))||Date.parse(input.originalCutoff)>=Date.parse(input.startsAt)||input.home===input.away)throw new Error('Invalid historical diagnostic fixture/cutoff');
+ const selected=input.sameDateBlock?rows.filter(g=>g.startsAt!==null&&g.startsAt.slice(0,10)<input.originalCutoff.slice(0,10)):rows;
+ const fitted=build(selected,input.originalCutoff,true),home=fitted.teams.get(input.home),away=fitted.teams.get(input.away);
+ if(fitted.conflicts.length||!home||!away||home.played<20||away.played<20)throw new Error('Insufficient/conflicting historical diagnostic inputs');
+ regress(home,input.season);regress(away,input.season);
+ return {classification:'RETROSPECTIVE_RECONSTRUCTION_DIAGNOSTIC' as const,registrationAllowed:false as const,originalCutoff:input.originalCutoff,actualLatestRetrieval:fitted.games.map(g=>g.retrievedAt).sort().at(-1)??null,
+  sourceAvailableAtOriginalCutoff:fitted.games.every(g=>Date.parse(g.retrievedAt)<=Date.parse(input.originalCutoff)),features:snapshot(home,away,input.startsAt,input.completeRegularSeasons.includes(input.season)),history:fitted.games};
+}
 /** Time ordered, one binary home-win label per game; never two independent labels
  * for both market sides. Post-target games cannot update the target prediction.
  */

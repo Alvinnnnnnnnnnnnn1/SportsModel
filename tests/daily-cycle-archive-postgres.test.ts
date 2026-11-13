@@ -1,3 +1,4 @@
+import {applyLocalMigration} from '../scripts/lib/local-migration.mjs';
 /** Disposable local PostgreSQL only; invented source fixtures, never hosted research. */
 import { createRequire } from 'node:module';
 import { readFile, readdir } from 'node:fs/promises';
@@ -17,7 +18,7 @@ describe.skipIf(!runtime)('private Daily Cycle / existing PostgreSQL transaction
     const save=(h:HistoricalWorkspace,revision:number,id=owner)=>db.query('select public.edgelab_save_history($1::jsonb,$2::bigint,$3::uuid)',[JSON.stringify(h),revision,id]);
     try {
       await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid stable language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;");
-      for(const file of(await readdir('supabase/migrations')).filter(f=>f.endsWith('.sql')).sort())await db.exec((await readFile('supabase/migrations/'+file,'utf8')).replace('create extension if not exists pgcrypto;','-- builtin UUIDs'));
+      for(const file of(await readdir('supabase/migrations')).filter(f=>f.endsWith('.sql')).sort())await applyLocalMigration(db, file, (await readFile('supabase/migrations/'+file,'utf8')).replace('create extension if not exists pgcrypto;','-- builtin UUIDs'));
       await db.query('insert into auth.users(id) values($1),($2)',[owner,other]);await login(owner);
       const cycle=localCycle(),text=JSON.stringify(cycle),prepared=await archiveDailyCycle(emptyHistoricalWorkspace(),text,'supabase');
       const invalid=structuredClone(prepared.history); invalid.notifications.push({id:crypto.randomUUID(),recordId:crypto.randomUUID(),dedupeKey:'invalid',title:'LOCAL TEST',message:'LOCAL TEST',createdAt:new Date().toISOString(),readAt:null,dismissedAt:null});

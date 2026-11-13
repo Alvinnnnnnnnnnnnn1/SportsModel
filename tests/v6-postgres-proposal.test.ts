@@ -1,3 +1,4 @@
+import {applyLocalMigration} from '../scripts/lib/local-migration.mjs';
 /** Proposal-only embedded PostgreSQL. No hosted schema/user/records are touched. */
 import { createRequire } from 'node:module';
 import { readFile,readdir } from 'node:fs/promises';
@@ -19,7 +20,7 @@ describe.skipIf(!runtime)('V6 isolated SQL proposal',()=>{
   const login=async(id:string,role='authenticated')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role '+role);};
   try{
    await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid stable language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;");
-   for(const f of(await readdir('supabase/migrations')).filter(f=>f.endsWith('.sql')).sort())await db.exec((await readFile('supabase/migrations/'+f,'utf8')).replace('create extension if not exists pgcrypto;','-- builtin UUIDs'));
+   for(const f of(await readdir('supabase/migrations')).filter(f=>f.endsWith('.sql')).sort())await applyLocalMigration(db, f, (await readFile('supabase/migrations/'+f,'utf8')).replace('create extension if not exists pgcrypto;','-- builtin UUIDs'));
    await db.exec(await readFile('supabase/proposals/202611110001_v6_paper.sql','utf8'));
    await db.query('insert into auth.users(id) values($1),($2)',[owner,other]);await login(owner);
    const at=new Date().toISOString(),activated=new Date(Date.now()-10000).toISOString(),raw='SYNTHETIC LOCAL SQL TEST ONLY; no actual quote or empirical model validation';

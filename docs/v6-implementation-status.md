@@ -1,3 +1,11 @@
+# Approved ACL correction deployed — 13 November 2026
+
+Exact source03 hash`f694b79c…` deployed to`ilgoswfckkzpoktabbfi` at04:10:23Z /15:10:23 Melbourne after separate explicit approval and successful backup-currency/catalog/hash/native-role/single-file dry-run checks. Hosted25 catalog/ACL checks +10 anonymous HTTP checks pass. PUBLIC RPC EXECUTE and anon owner EXECUTE are removed; every other grant,5 function definitions,7 forced-RLS tables and all20 legacy row fingerprints remain unchanged. Remote history contains the original3 +source02 +ACL03 only.
+
+**Current local verification:**754/754 tests (68 files),147 core/history SQL checks,15 source-schema coexistence checks,10 catalog drift groups,18 native exact-role correction checks, TypeScript, lint, production build and5 offline safety groups pass.
+
+Source7 tables remain empty; no source provisioning, credential, cloud activation, Mac transfer, Vercel release or PAPER A/B/C action occurred. Positive normal-owner source persistence and two-user source acceptance remain untested. Next is separately reviewed stopped source provisioning/acceptance, with71 withheld source/model dependencies still blocking full cloud handover. [Exact execution, corrected role assumption and evidence](v6-source-acl-deployment.md). Older blocked states below are retained as dated checkpoints.
+
 # Approval S deployed; hosted acceptance blocked — 13 November 2026
 
 Owner gave fresh schema-only approval. Exact source02 hash`0b80c5a2…` applied to`ilgoswfckkzpoktabbfi` at03:41:49Z /14:41:49 Melbourne; remote history has four versions.7 forced-RLS source tables,13 policies +anchor policy,5 functions,34 constraints,13 indexes and3 triggers exist; all source tables empty and all20 legacy table fingerprints unchanged.

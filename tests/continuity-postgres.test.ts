@@ -1,3 +1,4 @@
+import {applyLocalMigration} from '../scripts/lib/local-migration.mjs';
 /** Optional ephemeral PostgreSQL only; synthetic identities and owner attestations, never hosted data or .env. */
 import {describe,it,expect} from 'vitest';import {createRequire} from 'node:module';import {readFile,readdir} from 'node:fs/promises';import path from 'node:path';
 import {prepareExperimentContextV2Preview,PROPOSED_EXPERIMENT_METHODOLOGY,buildResearchHandoff} from '@/lib/handoff';
@@ -12,7 +13,7 @@ describe.skipIf(!runtime)('versioned methodology / existing PostgreSQL compatibi
  const save=async(h:HistoricalWorkspace)=>{await db.query('select public.edgelab_save_history($1::jsonb,$2::bigint,$3::uuid)',[JSON.stringify(h),h.revision-1,owner]);return load();};
  try{
  await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid stable language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;");
- for(const name of(await readdir('supabase/migrations')).filter(n=>n.endsWith('.sql')).sort())await db.exec((await readFile('supabase/migrations/'+name,'utf8')).replace('create extension if not exists pgcrypto;','-- builtin UUIDs'));
+ for(const name of(await readdir('supabase/migrations')).filter(n=>n.endsWith('.sql')).sort())await applyLocalMigration(db, name, (await readFile('supabase/migrations/'+name,'utf8')).replace('create extension if not exists pgcrypto;','-- builtin UUIDs'));
  await db.query('insert into auth.users(id) values($1),($2)',[owner,other]);await login(owner);
  const policy={...structuredClone(PROPOSED_EXPERIMENT_METHODOLOGY),title:'SYNTHETIC TEST methodology',sourceReferences:['SYNTHETIC LOCAL ONLY test attestation; never a hosted approval']};
  const p=await prepareExperimentContextV2Preview({ownerReportedDay:6,sourceConfirmedCompletedDay:null,sourceConfirmedDayReference:null,researchCreationDate:'2026-11-05',eventDate:null,methodology:policy,methodologyApprovalConfirmed:true,sourceReference:'SYNTHETIC LOCAL context',verification:'user_confirmed',confirmed:true});

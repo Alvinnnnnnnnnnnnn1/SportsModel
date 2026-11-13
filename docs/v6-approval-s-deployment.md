@@ -1,5 +1,7 @@
 # Approval S deployment — 13 November 2026
 
+> **Subsequent correction:** the owner separately approved exact ACL03; it deployed13 November04:10:23Z and passed hosted ACL/catalog/anonymous acceptance. Source remains empty and unprovisioned. [Current evidence and remaining limits](v6-source-acl-deployment.md). The earlier checkpoint below is preserved.
+
 **The approved schema deployed. Hosted security acceptance is blocked by an RPC ACL discrepancy. No corrective hosted SQL has been applied.** Source uploads, credentials, cloud scheduling, host transfer, Vercel releases and PAPER A/B/C remain unapproved.
 
 ## Actual deployment

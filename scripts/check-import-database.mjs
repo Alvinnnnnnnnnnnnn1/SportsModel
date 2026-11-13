@@ -1,3 +1,4 @@
+import {applyLocalMigration} from './lib/local-migration.mjs';
 /** Local embedded PostgreSQL checks only. No environment files or hosted APIs are read. */
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
@@ -50,9 +51,9 @@ try {
   await db.exec("create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid stable language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;");
   const directory = new URL('../supabase/migrations/', import.meta.url);
   const files = (await fs.readdir(directory)).filter(name => /^\d+_.+\.sql$/.test(name)).sort();
-  for (const file of files) await db.exec((await fs.readFile(new URL(file, directory), 'utf8')).replace('create extension if not exists pgcrypto;', '-- gen_random_uuid is built in'));
-  assert.deepEqual(files, ['202611030001_edgelab.sql', '202611030002_harden_workspace_integrity.sql', '202611040001_historical_import.sql','202611130002_v6_source_cloud_compatible.sql']);
-  pass('all four deployed migrations apply in order without hosted access');
+  for (const file of files) await applyLocalMigration(db, file, (await fs.readFile(new URL(file, directory), 'utf8')).replace('create extension if not exists pgcrypto;', '-- gen_random_uuid is built in'));
+  assert.deepEqual(files, ['202611030001_edgelab.sql', '202611030002_harden_workspace_integrity.sql', '202611040001_historical_import.sql','202611130002_v6_source_cloud_compatible.sql','202611130003_v6_source_rpc_acl.sql']);
+  pass('all five deployed migrations apply in order without hosted access');
   await db.query('insert into auth.users(id) values($1),($2)', [owner, other]);
   await login(owner);
   assert.equal((await db.query('select current_user role')).rows[0].role, 'authenticated');

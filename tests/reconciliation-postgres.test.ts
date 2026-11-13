@@ -1,3 +1,4 @@
+import {applyLocalMigration} from '../scripts/lib/local-migration.mjs';
 /** Ephemeral SQL with invented fixtures only. No credentials or hosted transport. */
 import { createRequire } from 'node:module';
 import { readFile, readdir } from 'node:fs/promises';
@@ -26,7 +27,7 @@ describe.skipIf(!runtime)('reconciliation / deployed SQL compatibility (local)',
     const load = async (id = owner) => (await db.query<{ result: HistoricalWorkspace }>('select public.edgelab_load_history($1::uuid) result', [id])).rows[0].result;
     try {
       await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid stable language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;");
-      for (const name of (await readdir('supabase/migrations')).filter(n => n.endsWith('.sql')).sort()) await db.exec((await readFile(`supabase/migrations/${name}`, 'utf8')).replace('create extension if not exists pgcrypto;', '-- builtin UUIDs'));
+      for (const name of (await readdir('supabase/migrations')).filter(n => n.endsWith('.sql')).sort()) await applyLocalMigration(db, name, (await readFile(`supabase/migrations/${name}`, 'utf8')).replace('create extension if not exists pgcrypto;', '-- builtin UUIDs'));
       await db.query('insert into auth.users(id) values($1),($2)', [owner, other]);
       await login(owner);
       const manual = { id: owner, placedAt: '2026-11-11T00:00:00Z', confirmedAt: '2026-11-11T00:01:00Z',

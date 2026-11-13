@@ -1,5 +1,7 @@
 # Approval S final checks — 13 November 2026
 
+> **Subsequent correction:** the owner separately approved exact ACL03; it deployed13 November04:10:23Z and passed hosted ACL/catalog/anonymous acceptance. Source remains empty and unprovisioned. [Current evidence and remaining limits](v6-source-acl-deployment.md). The earlier checkpoint below is preserved.
+
 > **Subsequent deployment:** fresh schema-only approval was received and exact source02 applied on13 November at03:41:49Z. Hosted acceptance stopped on an RPC ACL discrepancy; no additional SQL/provisioning was applied. [Actual deployment and proposed unapproved correction](v6-approval-s-deployment.md). The pre-deployment evidence below is retained as its dated checkpoint.
 
 **All documented application-level pre-deployment checks passed. Fresh owner approval is required; no hosted migration was executed.** The earlier conditional approval did not override the backup gate. The owner subsequently requested final checks only and expressly excluded deployment.

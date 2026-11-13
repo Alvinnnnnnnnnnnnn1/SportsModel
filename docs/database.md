@@ -1,4 +1,5 @@
-> **V6 source-only schema:** migration`202611130002` deployed on13 November2026 after fresh Approval S. All seven tables are empty; hosted acceptance is blocked on an RPC ACL mismatch. Correction03 is a proposal only. PAPER is still undeployed. [Deployment/security evidence](v6-approval-s-deployment.md).
+> **Current13 November status:** separately approved source ACL03 deployed; hosted ACL/catalog acceptance passed. Source storage is empty/unprovisioned and cloud/PAPER remain disabled. Positive source persistence/two-user acceptance still requires separate approval. [Actual correction evidence](v6-source-acl-deployment.md). Earlier blocked source statements are historical.
+
 
 # Supabase persistence
 

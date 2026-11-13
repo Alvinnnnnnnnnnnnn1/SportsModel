@@ -1,3 +1,4 @@
+import {applyLocalMigration} from './lib/local-migration.mjs';
 import { createRequire } from "node:module";
 import path from "node:path";
 const runtimeFlag = process.argv.indexOf("--runtime");
@@ -20,7 +21,7 @@ await db.exec(
 const migrationFiles = (await fs.readdir(migrationDirectory)).filter(name => /^\d+_.+\.sql$/.test(name)).sort();
 for (const migrationName of migrationFiles) {
   const migration = await fs.readFile(new URL(migrationName, migrationDirectory), "utf8");
-  await db.exec(migration.replace("create extension if not exists pgcrypto;", "-- builtin gen_random_uuid() available"));
+  await applyLocalMigration(db, migrationName, migration.replace("create extension if not exists pgcrypto;", "-- builtin gen_random_uuid() available"));
 }
 let checks = 0;
 const pass = (label) => {
@@ -491,7 +492,7 @@ await legacyDb.query('insert into auth.users(id) values($1)',[owner]);
 await legacyDb.query('insert into public.experiment_settings(user_id,funding_cap) values($1,0)',[owner]);
 const legacySnapshot={...workspace.bets[0],legs:undefined,odds:1.912345};
 await legacyDb.query('insert into public.bets(id,user_id,payload,placed_at,confirmed_at) values($1,$2,$3::jsonb,$4,$4)',[legacySnapshot.id,owner,JSON.stringify(legacySnapshot),stamp]);
-for(const migrationName of migrationFiles.slice(1)) await legacyDb.exec(await fs.readFile(new URL(migrationName,migrationDirectory),'utf8'));
+for(const migrationName of migrationFiles.slice(1)) await applyLocalMigration(legacyDb,migrationName,await fs.readFile(new URL(migrationName,migrationDirectory),'utf8'));
 assert.equal(Number((await legacyDb.query('select funding_cap from public.experiment_settings')).rows[0].funding_cap),0);
 assert.deepEqual((await legacyDb.query('select payload from public.bets')).rows[0].payload,JSON.parse(JSON.stringify(legacySnapshot)));
 pass('additive migration retains existing settings and ledger payloads unchanged');

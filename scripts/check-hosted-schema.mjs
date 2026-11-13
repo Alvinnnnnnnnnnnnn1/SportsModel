@@ -7,6 +7,7 @@
  * node scripts/check-hosted-schema.mjs --runtime /tmp/edgelab-db-test
  * node scripts/check-hosted-schema.mjs --runtime /tmp/edgelab-db-test --write-sql scripts/check-hosted-schema.sql
  */
+import {applyLocalMigration} from './lib/local-migration.mjs';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
@@ -37,7 +38,7 @@ await db.exec('alter default privileges in schema public grant execute on functi
 for (const name of migrationNames) {
   const contents = await fs.readFile(new URL(name, directory), 'utf8');
   expectedFiles[name] = createHash('sha256').update(contents).digest('hex');
-  await db.exec(contents.replace('create extension if not exists pgcrypto;', '-- PostgreSQL builtin UUID generation in the local test runtime'));
+  await applyLocalMigration(db, name, contents.replace('create extension if not exists pgcrypto;', '-- PostgreSQL builtin UUID generation in the local test runtime'));
 }
 const tableNames = [
   'audit_history','bet_legs','bets','events','experiment_settings','financial_transactions','model_versions',

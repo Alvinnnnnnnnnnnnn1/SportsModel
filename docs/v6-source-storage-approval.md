@@ -1,6 +1,6 @@
 # Approval S — corrected source-only schema, 13 November 2026
 
-**READY FOR OWNER SCHEMA REVIEW; NOT APPROVED OR DEPLOYED.** This replaces the failing source proposal for any future deployment. It does not approve data upload, credentials, cloud scheduling, Mac handover, Production release or PAPER A/B/C. A verified backup and final remote preflight remain mandatory before execution.
+**FINAL PRE-DEPLOYMENT CHECKS PASSED; FRESH APPROVAL REQUIRED; NOT DEPLOYED.** The owner gave conditional schema approval, then required a Docker-free backup route and a fresh decision after verification. The application backup/isolated native restore,22 native migration checks,18 remote checks and exact single-file dry-run now pass. [Full evidence and precise backup scope](v6-approval-s-final-checks.md). This does not authorise data upload, credentials, cloud scheduling, Mac handover, Production release or PAPER A/B/C.
 
 ## Exact approval target
 
@@ -49,7 +49,7 @@ These are local PostgreSQL assertions, not hosted deployment, production concurr
 
 Read-only catalog/history checks on 13 November confirm project identity, PostgreSQL17.11, the three original deployed migrations only, no source/PAPER role or tables, approximately13.34MiB database, empty `createrole_self_grant`, required builtin UUID/SHA functions, existing anchor composite key/RLS and the observed Auth ACL dependency. The CLI inspection role has BYPASSRLS: this establishes catalogs only, never user isolation. No hosted DDL was attempted.
 
-Before approved deployment: secure a current schema/data backup and owner experiment export; validate restoration on disposable PostgreSQL; verify exact new file hash, project, actual migration execution role's CREATEROLE/schema-grant authority, Auth UID EXECUTE dependency, absence of source-object collisions, no PUBLIC schema CREATE, no competing deployment and free capacity. No new backup/restore of the real database has been performed here. Do not print/store passwords in source or rely on a paid backup product.
+Before approved deployment: recheck current schema/data fingerprints, exact file hash, project, migration role permissions, Auth dependency, collision checks and pending list. The verified application backup/restore is retained privately; its scope excludes full managed Auth/Storage recovery and is adequate for this additive application-only change as explained in the final-checks record. Refresh if intervening changes make it stale. Do not print/store passwords in source or rely on a paid backup product.
 
 After explicit S approval and prerequisites, stage only this corrected file as migration202611130002, inspect remote history and show `db push --dry-run --remote` containing only that file, no seed/vault/role synchronization. Apply only that reviewed transaction. Any unexpected collision/permission/history error stops deployment. Do not stage the original source or PAPER proposals, use reset/include-all, silently repair migration history or create a role membership workaround.
 

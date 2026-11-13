@@ -1,5 +1,7 @@
 # V6 deployment and rollback readiness
 
+> This page covers the separate PAPER proposal, which is still undeployed/disabled. Source-only02 deployed under fresh Approval S; its hosted acceptance is blocked on RPC ACLs, with no provisioning or cloud activation. [Current source status](v6-approval-s-deployment.md).
+
 Status: **not deployed, not enabled**. The [final SQL/security preflight](v6-security-preflight.md) and [current A/B/C approval package](v6-deployment-approval-package.md) supersede earlier checkpoints below. Owner-issued hashed, revocable capabilities close the external JWT-issuer gap without a signing/service key or new account. The [experimental paper policy](v6-experimental-paper-policy.proposed.md) is separately proposed; no approval, genuine position, schedule or hosted change. All ten genuine observations and V5 history remain unchanged.
 
 ## SQL diff for review

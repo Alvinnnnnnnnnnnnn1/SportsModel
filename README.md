@@ -1,3 +1,5 @@
+> **13 November Approval S:** exact source-only migration02 is deployed; hosted acceptance is blocked by an RPC EXECUTE ACL discrepancy. Source tables are empty, V5 unchanged, and no cloud worker is active. The ACL-only correction03 is local/unapproved. [Actual deployment, checks and next approval](docs/v6-approval-s-deployment.md).
+
 > V6 cloud migration is prepared locally, not deployed: secure authenticated HTTPS dashboard access, private source-only SQL proposal, durable adapters and disabled GitHub Actions runner. The approved Mac pilot remains active; no host transfer or PAPER activation occurred. See [exact deployment, security evidence and pending approvals](docs/v6-cloud-deployment.md).
 
 # EdgeLab

@@ -12,7 +12,7 @@ export async function prepareSourceMigrationRole(db:V6TestDB){
  await db.exec(`
   reset role;
   create role approval_s_auth_admin nologin;
-  create role ${SOURCE_MIGRATOR} createrole nosuperuser nobypassrls;
+  create role ${SOURCE_MIGRATOR} createrole nosuperuser nobypassrls noinherit;
   do $$begin
    if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role;end if;
    if not exists(select 1 from pg_roles where rolname='authenticator') then create role authenticator;end if;

@@ -17,7 +17,7 @@ async function legacySnapshot(db:V6TestDB){
  return result;
 }
 async function legacyFixture(){
- const db=await v6TestDatabase(),owner=crypto.randomUUID(),other=crypto.randomUUID();
+ const db=await v6TestDatabase({beforeSourceMigration:true}),owner=crypto.randomUUID(),other=crypto.randomUUID();
  await db.query('insert into auth.users(id) values($1),($2)',[owner,other]);
  await v6Login(db,owner);
  const prepared=await archiveDailyCycle(emptyHistoricalWorkspace(),JSON.stringify(localCycle()),'supabase');

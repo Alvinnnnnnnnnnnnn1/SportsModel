@@ -1,5 +1,7 @@
 # Approval S — corrected source-only schema, 13 November 2026
 
+> **Subsequent deployment:** fresh schema-only approval was received and exact source02 applied on13 November at03:41:49Z. Hosted acceptance stopped on an RPC ACL discrepancy; no additional SQL/provisioning was applied. [Actual deployment and proposed unapproved correction](v6-approval-s-deployment.md). The pre-deployment evidence below is retained as its dated checkpoint.
+
 **FINAL PRE-DEPLOYMENT CHECKS PASSED; FRESH APPROVAL REQUIRED; NOT DEPLOYED.** The owner gave conditional schema approval, then required a Docker-free backup route and a fresh decision after verification. The application backup/isolated native restore,22 native migration checks,18 remote checks and exact single-file dry-run now pass. [Full evidence and precise backup scope](v6-approval-s-final-checks.md). This does not authorise data upload, credentials, cloud scheduling, Mac handover, Production release or PAPER A/B/C.
 
 ## Exact approval target

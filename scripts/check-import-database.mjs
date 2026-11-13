@@ -51,8 +51,8 @@ try {
   const directory = new URL('../supabase/migrations/', import.meta.url);
   const files = (await fs.readdir(directory)).filter(name => /^\d+_.+\.sql$/.test(name)).sort();
   for (const file of files) await db.exec((await fs.readFile(new URL(file, directory), 'utf8')).replace('create extension if not exists pgcrypto;', '-- gen_random_uuid is built in'));
-  assert.deepEqual(files, ['202611030001_edgelab.sql', '202611030002_harden_workspace_integrity.sql', '202611040001_historical_import.sql']);
-  pass('all three local migrations apply in order without hosted access');
+  assert.deepEqual(files, ['202611030001_edgelab.sql', '202611030002_harden_workspace_integrity.sql', '202611040001_historical_import.sql','202611130002_v6_source_cloud_compatible.sql']);
+  pass('all four deployed migrations apply in order without hosted access');
   await db.query('insert into auth.users(id) values($1),($2)', [owner, other]);
   await login(owner);
   assert.equal((await db.query('select current_user role')).rows[0].role, 'authenticated');

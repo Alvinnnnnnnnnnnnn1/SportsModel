@@ -1,3 +1,13 @@
+# Approval S deployed; hosted acceptance blocked — 13 November 2026
+
+Owner gave fresh schema-only approval. Exact source02 hash`0b80c5a2…` applied to`ilgoswfckkzpoktabbfi` at03:41:49Z /14:41:49 Melbourne; remote history has four versions.7 forced-RLS source tables,13 policies +anchor policy,5 functions,34 constraints,13 indexes and3 triggers exist; all source tables empty and all20 legacy table fingerprints unchanged.
+
+**Verification:**754/754 unit/embedded SQL tests,147 core/history SQL checks,12 schema coexistence checks,18 native ACL-correction/rollback checks,41 mocked browser groups, TypeScript, lint, build and5 safety groups passed. Native correction03 is LOCAL ONLY.
+
+**STOP:** final hosted ACLs retain PUBLIC EXECUTE on both RPCs and anon owner-control EXECUTE. Actual anonymous guards reject both calls;7 direct table reads reject. The NOINHERIT/grantor revocation gap is reproduced locally. No corrective hosted SQL or provisioning followed. ACL-only correction03 hash`f694b79c…` is a separately reviewed LOCAL proposal, not approved/deployed. Positive normal-owner source persistence and hosted two-user acceptance remain untested. [Deployment receipts, precise findings and next approval boundary](v6-approval-s-deployment.md).
+
+Mac source pilot, quotas, datasets/models, V5, Vercel releases and cloud-disabled state remain protected. The following dated entries record earlier states.
+
 # Approval S final verification — 13 November 2026
 
 **Checks complete; not deployed; fresh owner approval required.** Docker-free native PostgreSQL17.12 restored the existing application backup from17.11: all20 public tables plus migration history, exact counts/content fingerprints and checked schema/ACL/RLS/function/constraint/index/trigger manifests. Archive SHA `9fcb723b14643493e0b4fe6475569f070f845f18803426b49d85dab416817f27`; artifacts remain mode0600 in ignored storage. Full managed Auth/Storage recovery is excluded; application-level adequacy for this exact additive SQL is documented.

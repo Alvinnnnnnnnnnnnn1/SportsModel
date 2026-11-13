@@ -26,7 +26,7 @@ describe.skipIf(!runtime)('exact V6 SQL review, non-V6 preservation and transact
   const reviewed=execFileSync('git',['show','2c94865:supabase/proposals/202611110001_v6_paper.sql'],{encoding:'utf8'});expect(digest(reviewed)).toBe(reviewedHash);
   const report:Record<string,unknown>={reviewedHash};
   for(const [label,sql]of [['reviewed',reviewed],['candidate',await readFile('supabase/proposals/202611110001_v6_paper.sql','utf8')]]){
-   const db=await v6TestDatabase();try{
+   const db=await v6TestDatabase({beforeSourceMigration:true});try{
     await seed(db);const before=await legacyFingerprint(db);
     // Reproduce Supabase's possible permissive new-function default ACLs.
     await db.exec('alter default privileges in schema public grant execute on functions to anon,authenticated,service_role');
@@ -45,13 +45,13 @@ describe.skipIf(!runtime)('exact V6 SQL review, non-V6 preservation and transact
  },60000);
  it('rolls back every DDL object, role and grant on late failure, and rejects existing-role collisions without altering them',async()=>{
   const reviewed=execFileSync('git',['show','2c94865:supabase/proposals/202611110001_v6_paper.sql'],{encoding:'utf8'}),candidate=await readFile('supabase/proposals/202611110001_v6_paper.sql','utf8');
-  for(const sql of [reviewed,candidate]){const db=await v6TestDatabase();try{
+  for(const sql of [reviewed,candidate]){const db=await v6TestDatabase({beforeSourceMigration:true});try{
    await seed(db);const before=await legacyFingerprint(db);
    await expect(db.exec(sql.replace(/commit;\s*$/,'select 1/0;\ncommit;'))).rejects.toThrow();await db.exec('rollback');
    expect(await legacyFingerprint(db)).toBe(before);expect((await db.query("select count(*)::int n from pg_tables where tablename like 'v6_%'")).rows[0].n).toBe(0);
    expect((await db.query("select count(*)::int n from pg_roles where rolname='edgelab_v6_worker'")).rows[0].n).toBe(0);
    await db.exec(sql);expect(await legacyFingerprint(db)).toBe(before);expect((await db.query("select count(*)::int n from pg_tables where tablename like 'v6_%'")).rows[0].n).toBeGreaterThan(0);
   }finally{await db.close();}}
-  const db=await v6TestDatabase();try{await db.exec('create role edgelab_v6_worker login');await expect(db.exec(candidate)).rejects.toThrow(/collision/);await db.exec('rollback');expect((await db.query("select rolcanlogin from pg_roles where rolname='edgelab_v6_worker'")).rows[0].rolcanlogin).toBe(true);}finally{await db.close();}
+  const db=await v6TestDatabase({beforeSourceMigration:true});try{await db.exec('create role edgelab_v6_worker login');await expect(db.exec(candidate)).rejects.toThrow(/collision/);await db.exec('rollback');expect((await db.query("select rolcanlogin from pg_roles where rolname='edgelab_v6_worker'")).rows[0].rolcanlogin).toBe(true);}finally{await db.close();}
  },60000);
 });

@@ -1,5 +1,7 @@
 # Approval S final checks — 13 November 2026
 
+> **Subsequent deployment:** fresh schema-only approval was received and exact source02 applied on13 November at03:41:49Z. Hosted acceptance stopped on an RPC ACL discrepancy; no additional SQL/provisioning was applied. [Actual deployment and proposed unapproved correction](v6-approval-s-deployment.md). The pre-deployment evidence below is retained as its dated checkpoint.
+
 **All documented application-level pre-deployment checks passed. Fresh owner approval is required; no hosted migration was executed.** The earlier conditional approval did not override the backup gate. The owner subsequently requested final checks only and expressly excluded deployment.
 
 ## Exact decision target

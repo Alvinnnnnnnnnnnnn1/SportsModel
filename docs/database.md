@@ -1,3 +1,5 @@
+> **V6 source-only schema:** migration`202611130002` deployed on13 November2026 after fresh Approval S. All seven tables are empty; hosted acceptance is blocked on an RPC ACL mismatch. Correction03 is a proposal only. PAPER is still undeployed. [Deployment/security evidence](v6-approval-s-deployment.md).
+
 # Supabase persistence
 
 The default synthetic workspace stays in browser local storage under `edgelab:demo:v1`. Without Supabase credentials it makes no Supabase requests. When credentials are configured, the optional Auth client may refresh an existing session even while Demo is visible; demo records are never sent to that client. Switching to the authenticated workspace loads a separate database and never uploads demo history. A new authenticated account starts empty; there is no migration of ChatGPT history or browser fixtures.

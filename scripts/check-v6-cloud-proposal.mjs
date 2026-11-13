@@ -10,7 +10,8 @@ try{
  check('all deployed-schema migrations apply locally',true);
  const paper=await fs.readFile('supabase/proposals/202611110001_v6_paper.sql','utf8');check('PAPER proposal hash unchanged',createHash('sha256').update(paper).digest('hex')==='c3a0d368ddbda1b50f3dab13aeec7cb3a939e423bce894aa1d55cfe9f13a3dff');
  check('original source proposal hash unchanged',createHash('sha256').update(await fs.readFile('supabase/proposals/202611130001_v6_source_cloud.sql')).digest('hex')==='7a03d765f78b5c1939900d1ddb50809238987104e5399ed772cb900692caf451');
- await db.exec(paper);await db.exec(await fs.readFile('supabase/proposals/202611130002_v6_source_cloud_compatible.sql','utf8'));check('corrected source proposal coexists with deployed schema and local PAPER proposal',true);
+ check('deployed source migration matches reviewed proposal',createHash('sha256').update(await fs.readFile('supabase/migrations/202611130002_v6_source_cloud_compatible.sql')).digest('hex')==='0b80c5a2412c7a3d10348a75823ae4ad6696e552a29ddc73ccc755108b026a59');
+ await db.exec(paper);check('deployed source schema coexists with local PAPER proposal',true);
  const rows=async sql=>(await db.query(sql)).rows;
  check('seven source tables have enabled and forced RLS',(await rows("select count(*)::int n from pg_class where relnamespace='public'::regnamespace and relname like 'v6_source_%' and relkind='r' and relrowsecurity and relforcerowsecurity"))[0].n===7);
  check('thirteen source-table RLS policies are present',(await rows("select count(*)::int n from pg_policies where schemaname='public' and tablename like 'v6_source_%'"))[0].n===13);

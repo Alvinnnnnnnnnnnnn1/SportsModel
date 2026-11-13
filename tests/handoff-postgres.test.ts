@@ -49,7 +49,7 @@ describe.skipIf(!runtimePrefix)('optional actual-domain / embedded PostgreSQL co
       await db.exec("create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid stable language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;");
       const directory = path.resolve('supabase/migrations');
       const names = (await readdir(directory)).filter(name => /^\d+_.+\.sql$/.test(name)).sort();
-      expect(names).toEqual(['202611030001_edgelab.sql','202611030002_harden_workspace_integrity.sql','202611040001_historical_import.sql']);
+      expect(names).toEqual(['202611030001_edgelab.sql','202611030002_harden_workspace_integrity.sql','202611040001_historical_import.sql','202611130002_v6_source_cloud_compatible.sql']);
       for (const name of names) await db.exec((await readFile(path.join(directory, name), 'utf8')).replace('create extension if not exists pgcrypto;', '-- builtin UUID generation is available in embedded PostgreSQL'));
       await db.query('insert into auth.users(id) values($1),($2)', [owner, other]);
       await login(owner);

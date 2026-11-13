@@ -26,6 +26,7 @@ const through = option('--migration-through');
 if (through && !/^\d{12}$/.test(through)) throw new Error('--migration-through must be a 12-digit migration version.');
 const migrationNames = (await fs.readdir(directory)).filter(name => /^\d+_.+\.sql$/.test(name) && (!through || name.split('_')[0] <= through)).sort();
 const hasHistory = migrationNames.some(name => name.startsWith('202611040001_'));
+const hasSource = migrationNames.some(name => name.startsWith('202611130002_'));
 const expectedFiles = {};
 await db.exec("create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid stable language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;");
 // Hosted catalog inspection confirmed postgres-owned PUBLIC-schema default
@@ -75,7 +76,9 @@ select jsonb_build_object(
 `;
 const expected = (await db.query(snapshotSql)).rows[0].catalog_snapshot;
 assert.equal(Object.keys(expected.tables).length,hasHistory ? 20 : 14);
-assert.equal(Object.keys(expected.policies).length,hasHistory ? 20 : 14);
+// Source02 adds an explicitly reviewed SELECT policy to the existing history
+// anchor; this generator still inventories V5 tables, not the seven source tables.
+assert.equal(Object.keys(expected.policies).length,hasSource ? 21 : hasHistory ? 20 : 14);
 assert.equal(Object.keys(expected.functions).length,hasHistory ? 46 : 24);
 assert.equal(Object.keys(expected.triggers).length,hasHistory ? 42 : 24);
 assert.equal(Object.keys(expected.explicitFunctionGrants).length,hasHistory ? 60 : 38);

@@ -1,3 +1,5 @@
+> **Cloud input readiness:** original forecasts reproduce exactly, but the permitted BDL history cannot reproduce the full model. A private partial bundle and stopped-provisioning tests are prepared; uploads and host transfer remain blocked. [Exact dependency/replay results and next decision](docs/v6-cloud-data-readiness.md).
+
 > **Current13 November status:** separately approved source ACL03 deployed; hosted ACL/catalog acceptance passed. Source storage is empty/unprovisioned and cloud/PAPER remain disabled. Positive source persistence/two-user acceptance still requires separate approval. [Actual correction evidence](docs/v6-source-acl-deployment.md). Earlier blocked source statements are historical.
 
 

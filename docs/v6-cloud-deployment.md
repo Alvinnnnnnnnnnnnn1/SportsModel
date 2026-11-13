@@ -1,4 +1,6 @@
-> **Latest input audit:** the111-object reconstruction is a partial source archive, not a usable full-runner package. Missing2022–2024 permitted history, pinned-model lineage and original identity dependencies remain blockers. No provisioning/credential/host activation occurred. [Exact four-part readiness report](v6-cloud-data-readiness.md).
+> **Latest historical recovery — 13 November 2026:** four approved BDL requests succeeded, then stopped on11 missing exact timestamps. The source-verified partial package now has125 references/121 objects, but no complete reconstructed artifact. No upload, cloud activation or Mac change occurred. [Exact recovery, quota, hashes and next decision](v6-cloud-history-recovery.md). Earlier checkpoints below are retained as history.
+
+> **Previous input audit:** the111-object reconstruction is a partial source archive, not a usable full-runner package. Missing2022–2024 permitted history, pinned-model lineage and original identity dependencies remain blockers. No provisioning/credential/host activation occurred. [Exact four-part readiness report](v6-cloud-data-readiness.md).
 
 > **Current13 November status:** separately approved source ACL03 deployed; hosted ACL/catalog acceptance passed. Source storage is empty/unprovisioned and cloud/PAPER remain disabled. Positive source persistence/two-user acceptance still requires separate approval. [Actual correction evidence](v6-source-acl-deployment.md). Earlier blocked source statements are historical.
 

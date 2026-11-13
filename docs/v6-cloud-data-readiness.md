@@ -1,5 +1,7 @@
 # Cloud data and stopped provisioning readiness — 13 November 2026
 
+**Later approved acquisition checkpoint:** four BDL Free games requests succeeded, then stopped on11 missing exact timestamps in2022 page4.400 rows retained/389 newly eligible; separate BDL-only history now1,779 eligible games.2023/2024 remain unacquired; the unchanged chronological fitting protocol rejects incomplete tuning data. No new artifact or complete provisioning package exists. Partial archive125 references/121 objects/9,149,396bytes; no upload, model switch, worker change or Odds request.775 tests,162 local SQL checks,13 cloud simulation groups, three real-history subprocesses, typecheck/lint/build and safety checks passed. **The older no-acquisition/1,390-game checkpoint below is retained as history.** [Exact recovery, hashes, quota and next decision](v6-cloud-history-recovery.md).
+
 **Full forecasting handover remains blocked. No upload approval is requested.** The original frozen model and20 selections are reproducible from their original inputs, but not from the retained BDL-only subset. This work made no sports-provider request, hosted write, migration, credential issuance, model promotion, Vercel release or worker change.
 
 Starting local/remote feature commit: `9d560197a3063f641a7514b99c594d330743c872`; main remains `7814a1ed9a851d0cf2e6b62e9e3976046ae5bbca`. The working Preview remains the previously accepted2cd0 application; none of these offline tools require redeploying it.

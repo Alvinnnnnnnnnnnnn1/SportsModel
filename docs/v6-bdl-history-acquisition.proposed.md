@@ -1,6 +1,6 @@
 # Proposed additional source use — retained BDL NBA history
 
-**Not approved or executed. No API request has been made under this proposal.** This is a bounded source-use request to resolve the identified missing2022–2024 game outcomes; it is not cloud provisioning or a worker/model activation request.
+**Approved and partially executed13 November2026:**4 requests succeeded, then collection stopped on11 missing exact timestamps in2022 page4. No retry or additional season request occurred. The proposal below is retained as the reviewed original scope; it is **not** ongoing permission to bypass the coverage stop. [Actual results and fresh-decision boundary](v6-cloud-history-recovery.md). No cloud provisioning or worker/model activation was included.
 
 Proposed provider: existing **BALLDONTLIE permanent Free** account, `GET https://api.balldontlie.io/v1/games` only. Parameters: `seasons[]=2022`, then2023 and2024; `season_type=regular`, `per_page=100`, and only the exact cursor returned by the preceding retained page. No stats, injuries, odds, player props, trials, account creation or payment details. The [official tier table](https://docs.balldontlie.io/#account-tiers) lists games as Free and5 requests/minute; [pagination documentation](https://docs.balldontlie.io/#pagination) caps page size at100. The provider's current server response must still establish actual coverage; do not assume older seasons are accessible because an endpoint is documented.
 

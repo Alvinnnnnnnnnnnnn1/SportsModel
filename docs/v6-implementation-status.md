@@ -1,3 +1,11 @@
+# V6 UI simplification — 14 November 2026
+
+UI-only branch `feature/v6-ui-simplification`, based on `f686b1d630e235961e6a1435ce5a6dad27eaeac9`. One sidebar, four primary destinations, secondary System Status, auto-expanded Legacy V5 and one Account settings utility. Overview separates unavailable owner ledger values from nominal paper reference; compact research rows retain exclusions and original evidence. Missing attributable quotes withhold bookmaker/EV claims. Status technical details remain available; no activation control was added.
+
+793/793 tests (74 files, optional disposable PostgreSQL enabled), 162 local SQL checks, 15 intercepted UI browser groups, TypeScript, lint and production build pass. Desktop 1440px, mobile 390px and model-chart screenshots were visually reviewed. Browser identities and transports are synthetic; this is not new hosted owner acceptance. No provider calls, hosted writes/migrations, deployments, model/PAPER changes, V5 changes or service changes were performed by this task. Automatic Vercel deployments are also disabled for this UI branch. Manual Preview needs separate approval; do not infer hosted deployment from the PR. [Changed files, commands, screenshots and boundaries](v6-ui-simplification.md).
+
+The P0 operational checkpoint below remains unchanged; this UI task neither bridges the local paper journal nor activates hosted autonomy.
+
 # Actual P0 forecasts and bounded local PAPER execution — 14 November 2026
 
 Executed `node scripts/execute-v6-local-paper.mjs --execute` at12:47–12:48 AEDT. Three genuine Free BDL reads +one Sportsbet h2h odds credit (plus0-credit catalogue); sharedOdds11/60 used,489 provider credits remain; BDL3/60 today. Five Sunday15November NBA fixtures forecast causally at12:48:05.347, using original5bfe… control and experimental44edd… challenger. Fresh-process replay reproduces all80 model probabilities exactly. No retrospective results/new prices were invented.

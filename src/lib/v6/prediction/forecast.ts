@@ -29,6 +29,15 @@ export async function forecastDevelopmentModels(rows:TeamGame[],artifact:Predict
  return {probabilities,reasons:['experimental_shadow_only','injury_roster_information_unavailable','model_agreement_is_correlated'],features:{...features,homeGames:h.played,awayGames:a.played,homeRating:h.rating,awayRating:a.rating,
   sensitivity:{marginHomeCourtMinus20:marginProbability(h.rating,a.rating,artifact.marginParameters.homeCourt-20),marginHomeCourtPlus20:marginProbability(h.rating,a.rating,artifact.marginParameters.homeCourt+20),featuresWithoutRecentForm:featureProbability(noRecent,artifact.coefficients)},protocolId:PREDICTION_PROTOCOL.id,featureNames:FEATURE_NAMES},history};
 }
+/** Numerical pre-event RESEARCH with current available finals. Unfinished
+ * fixtures remain explicit uncertainty and forbid registration. This does not
+ * change the strict forecast/worker path or manufacture their future outcomes. */
+export async function forecastResearchModels(rows:TeamGame[],artifact:PredictionArtifact,input:Parameters<typeof forecastDevelopmentModels>[2]){
+ const pending=rows.filter(g=>!g.final&&g.startsAt&&Date.parse(g.retrievedAt)<=Date.parse(input.at)&&Date.parse(g.startsAt)<Date.parse(input.startsAt)&&[g.home.name,g.away.name].some(n=>[input.home,input.away].includes(n)));
+ let result=await forecastDevelopmentModels(rows,artifact,input);
+ if(!result.probabilities&&result.reasons.includes('intervening_unfinished_fixture'))result=await forecastDevelopmentModels(rows.filter(g=>g.final),artifact,input);
+ return {...result,registrationAllowed:false as const,provisional:pending.length>0,pendingFixtureIds:pending.map(g=>g.sourceGameId),reasons:[...result.reasons,...(pending.length?['unresolved_intervening_fixture_research_only']:[])]};
+}
 /** Uses the unchanged production-quality thresholds descriptively; never authorises a position. */
 export function researchTwoPass(input:{probability:number|null;odds:number;marketProbability:number;baseline:number|null;sourceReasons:string[];adverseProbability?:number}){
  z.object({probability:z.number().min(0).max(1).nullable(),odds:z.number().min(1.0001).max(10000),marketProbability:z.number().min(0).max(1),baseline:z.number().min(0).max(1).nullable(),sourceReasons:z.array(z.string()),adverseProbability:z.number().min(0).max(1).optional()}).parse(input);

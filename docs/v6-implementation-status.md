@@ -1,3 +1,13 @@
+# Actual P0 forecasts and bounded local PAPER execution — 14 November 2026
+
+Executed `node scripts/execute-v6-local-paper.mjs --execute` at12:47–12:48 AEDT. Three genuine Free BDL reads +one Sportsbet h2h odds credit (plus0-credit catalogue); sharedOdds11/60 used,489 provider credits remain; BDL3/60 today. Five Sunday15November NBA fixtures forecast causally at12:48:05.347, using original5bfe… control and experimental44edd… challenger. Fresh-process replay reproduces all80 model probabilities exactly. No retrospective results/new prices were invented.
+
+**Actual PAPER positions0:** Sportsbet supplied Saturday markets only; all five Sunday fixtures lack exact quote evidence and involve unfinished intervening games. Nominal equityA$5000, stakeA$50 if eligible, pending exposure/P&LA$0, ROI unavailable. Initialized append-only hash-linked local ledger at `.local/v6/local-paper/p0-20261114/ledger/`, head`b546f3ac…`; sealed initial forecasts remain observations. This user's local execution request does not approve global/hosted PAPER A/B/C.
+
+Existing Mac source-only schedule/model/config unchanged; no second source worker. After the existing19:00 capture, an offline/keyless bounded consumer may register qualifying control selections for only the same5 native fixture IDs before its24-hour expiry; no additional API calls or challenger registration. Passive settlement consumes the existing worker's independently verified retained results; Sunday15November18:00 is the next result job after these games. The future live outcome remains unverified. Local/global STOP and original evidence/quote/price rules remain enforced.
+
+793 tests in74 files,162 local SQL checks,13 cross-process regression groups, source/ledger replay, typecheck/lint/build and safety checks passed. Positive registration→independent final verification→restart/idempotent settlement is verified with synthetic disposable fixtures; no genuine future settlement is claimed. Hosted PAPER still needs schema/provisioning/activation approval, compatible cloud inputs and single-host transfer. [Actual probabilities, command, hashes, limits and triggers](v6-local-paper-execution-20261114.md). Earlier checkpoints follow.
+
 # Fresh approved BDL recovery completed — 13 November 2026
 
 35 additional genuine Free games requests from cursor857754;39 total,21/60 local daily slots remain,0 additional Odds requests. All3 seasons completed13 pages,1230 records each. Acquisition-only quarantine retains11 date-only finals from all11 games on provider date2022-12-02. Strict validator/live availability/model admission remain unchanged; no prior page replay, fake time, refunded reservation or original-report change.

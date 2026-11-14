@@ -1,5 +1,6 @@
 /** Independent headless registered-worker tick. No Next HTTP server or V5 access. */
 import fs from 'node:fs/promises';import path from 'node:path';import {createServer} from 'vite';
+import {execFileSync} from 'node:child_process';
 const ix=process.argv.indexOf('--config');if(ix<0||!process.argv[ix+1])throw new Error('Pass --config PATH and --once, --plan or --health');
 const filename=path.resolve(process.argv[ix+1]),root=path.resolve('.local/v6'),loader=await createServer({configFile:false,envDir:false,appType:'custom',resolve:{alias:{'@':process.cwd()+'/src'}},server:{middlewareMode:true,hmr:false,ws:false,watch:null}});
 try{
@@ -37,6 +38,15 @@ try{
    ...(remote.kind==='supabase_capability'?{capability:()=>readWorkerFile(remote.workerCredentialFile)}:{accessToken:async()=>{const session=await readWorkerFile(remote.workerTokenFile);if(typeof session.accessToken!=='string')throw new Error('Provisioned scoped worker token required');return session.accessToken;}}),
    rawSource:async hash=>{if(!/^[a-f0-9]{64}$/.test(hash))throw new Error('Invalid source hash');return JSON.parse(await fs.readFile(path.join(root,'evidence',hash+'.json'),'utf8')).raw;}}):localV6Repository(path.join(operational,controls.config.sourceOnly?'source-only-state':'state'),controls.config.ownerId);
   const result=await runControlledTick(operational,{repository,clock,readControl,prepare:async job=>prepareControlledTeamPorts(root,repository,job,await readControl(),{oddsKey:process.env.THE_ODDS_API_KEY,bdlKey:process.env.BALLDONTLIE_API_KEY},clock,readControl)},planControlledJobs(fixtures,clock(),pilot));
-  console.log(JSON.stringify({...result,v5Access:false,persistence:remote&&active?'scoped_supabase':'local',hostedWritesPossible:!!remote&&active}));}
+  console.log(JSON.stringify({...result,v5Access:false,persistence:remote&&active?'scoped_supabase':'local',hostedWritesPossible:!!remote&&active}));
+  // Owner's bounded P0 local batch consumes this scheduled capture offline.
+  // It is not another source worker and receives no source keys or env file.
+  if(result.status==='completed'&&result.job?.startsWith('discovery:')){
+   let permitted=false;try{const p=JSON.parse(await fs.readFile(path.join(root,'local-paper/p0-20261114/approval.json'),'utf8'));permitted=p.approved===true&&p.paperOnly===true&&p.hosted===false&&Date.now()-Date.parse(p.recordedAt)<24*3600000;}catch(e){if(e.code!=='ENOENT')throw e;}
+   if(permitted)try{const output=execFileSync(process.execPath,['scripts/execute-v6-local-paper.mjs','--consume-retained'],{cwd:process.cwd(),env:{PATH:process.env.PATH,TMPDIR:process.env.TMPDIR},encoding:'utf8',timeout:120000,maxBuffer:1024*1024,stdio:['ignore','pipe','pipe']});console.log(output.trim());}catch{console.error('Bounded local paper consumer stopped; retain journal/context and inspect before retry. No extra source requests.');}
+  }}
  }else throw new Error('Pass --once, --plan or --health');
+ // Passive PAPER result consumption shares this existing tick. It performs no
+ // provider reads and cannot register entries or change source-only controls.
+ if(process.argv.includes('--once')){const {settleLocalPaperFromRetainedSources}=await loader.ssrLoadModule('/src/lib/v6/local-paper-results.server.ts');const paper=await settleLocalPaperFromRetainedSources(root);if(paper.status!=='no_local_paper_context')console.log(JSON.stringify({localPaperResultConsumer:paper}));}
 }finally{await loader.close();}

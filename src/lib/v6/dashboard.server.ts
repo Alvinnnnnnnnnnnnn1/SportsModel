@@ -11,6 +11,7 @@ import {evaluateModel2Slates} from './prediction/shadow.server';
 import {developmentSummary,model2ProspectiveSummarySchema} from './prediction/report';
 import type {ModelDevelopmentReport} from './prediction/evaluation';
 import type { V6Dashboard } from './dashboard';
+import {loadLocalPaperView} from './local-paper-view.server';
 const text=z.string().max(250),stamp=z.string().datetime({offset:true}),prob=z.number().min(0).max(1),count=z.number().int().nonnegative(),hash=z.string().regex(/^[a-f0-9]{64}$/);
 const metric=z.object({brier:z.number().finite().nonnegative(),logLoss:z.number().finite().nonnegative(),calibration:z.array(z.object({count,meanProbability:prob.nullable(),observedRate:prob.nullable()})).max(20)});
 const shadowId='204dd518-19e2-4250-ad80-b6218430d838';
@@ -62,6 +63,10 @@ export async function loadV6Dashboard(root:string,ownerId:string,now=new Date().
  if(state.ownerId!==ownerId||state.cohort!=='v6-prospective'||state.grades.some(g=>g.sourceClass!=='prospective'))throw new Error('Owner/cohort');const a=paperAccounting(state);data.ledger={available:true,registered:state.positions.length,pendingCents:a.pendingCents,profitCents:a.profitCents,equityCents:a.equityCents,roi:a.roi,positions:state.positions.map(p=>{const g=state.grades.filter(g=>g.positionId===p.id).sort((a,b)=>b.revision-a.revision)[0];return {id:p.id,fixture:p.observation.market.eventId,market:`${p.observation.market.statistic} ${p.observation.market.operator} ${p.observation.market.threshold??''} · ${p.observation.market.period} · ${p.observation.market.termsVersion}`,selection:p.observation.market.subjectId,odds:p.observation.odds,probability:p.forecast?.probability??null,stakeCents:p.stakeCents,registeredAt:p.registeredAt,quoteAt:p.observation.sourceUpdatedAt,forecastAt:p.forecast?.generatedAt??null,outcome:g?.outcome??'pending',profitCents:g?hypotheticalProfit(p,g.outcome):null,tier:p.researchTier??'legacy_unclassified'};})};
  });
  // Absence is not evidence of a hosted zero balance. Only the nominal reference is known.
+ await status('Bounded local PAPER journal',()=>loadLocalPaperView(root,researchOwnerId,now),local=>{
+  if(data.ledger.available&&data.ledger.registered>0)throw new Error('Multiple ledgers require explicit selection');
+  data.localPaper=local.localPaper;data.ledger=local.ledger;data.selections.push(...local.selections);
+ },()=>data.localPaper?.integrity.lastCommitAt??null);
 
  await status('Worker scheduler',async()=>z.object({jobs:z.array(z.object({kind:text,dueAt:stamp,status:text,attempts:count,lastError:text.nullable()}))}).parse(await read(root,`${researchOperational}/scheduler.json`)),s=>{data.health.jobs=s.jobs.map(j=>({kind:j.kind,dueAt:j.dueAt,status:j.status,attempts:j.attempts,error:j.lastError?'Worker error retained locally; inspect private diagnostics':null}));});
  await status('Last worker execution',async()=>z.object({at:stamp,status:text,workerInvoked:z.boolean()}).parse(await read(root,`${researchOperational}/health.json`)),h=>{if(h.workerInvoked)data.health.lastRun=h.at;},()=>data.health.lastRun);

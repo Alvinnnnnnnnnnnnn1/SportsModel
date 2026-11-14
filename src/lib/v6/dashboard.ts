@@ -2,8 +2,8 @@ import type {ModelDevelopmentSummary,Model2ProspectiveSummary} from './predictio
 /** Public shape of the private read-only V6 view. Never includes raw sources or credentials. */
 export type V6Section = 'overview'|'research'|'models'|'positions'|'health';
 export const v6Sections: {id:V6Section;label:string;href:string}[] = [
- {id:'overview',label:'V6 Overview',href:'/v6'}, {id:'research',label:'Autonomous Research',href:'/v6/research'},
- {id:'models',label:'Model Intelligence',href:'/v6/models'}, {id:'positions',label:'Paper Position Ledger',href:'/v6/positions'}, {id:'health',label:'Automation Health',href:'/v6/health'},
+ {id:'overview',label:'Dashboard',href:'/v6'}, {id:'research',label:'Research',href:'/v6/research'},
+ {id:'models',label:'Model Analytics',href:'/v6/models'}, {id:'positions',label:'Paper Ledger',href:'/v6/positions'}, {id:'health',label:'System Status',href:'/v6/health'},
 ];
 export interface V6Metric {brier:number;logLoss:number;calibration:{count:number;meanProbability:number|null;observedRate:number|null}[];}
 export interface V6Selection {deVigProbability?:number;verification?:string;sourceClass?:string;models?:{name:string;version:string;probability:number|null;ev:number|null;firstPass:string[];secondPass:string[];decision:string}[];key:string;eventId:string;fixture:string;sport:string;selection:string;market:string;odds:number|null;breakEven:number|null;probability:number|null;eloProbability:number|null;ev:number|null;startsAt:string;quoteAt:string|null;capturedAt:string;forecastAt:string|null;frozenAt:string;pass1:string[];pass2:string[];limitations:string[];outcome:string;homeScore:number|null;awayScore:number|null;decision:string;}

@@ -1,0 +1,56 @@
+{
+  "format": "edgelab.v61.activation-review",
+  "version": 1,
+  "status": "not_approved",
+  "runtimeConfiguration": false,
+  "activationEnabled": false,
+  "ownerApproval": null,
+  "prospectiveWindow": { "startsAt": null, "expiresAt": null },
+  "scope": {
+    "sport": "NBA",
+    "bookmaker": "sportsbet",
+    "market": "full_game_moneyline_overtime_included",
+    "fixtureUniverse": "new_exactly_attributed_pre_event_fixtures_only",
+    "extendsExistingFiveFixturePermit": false
+  },
+  "paperPolicy": {
+    "currency": "AUD",
+    "openingReferenceCents": 500000,
+    "stakeCents": 5000,
+    "dailyPositionCap": null,
+    "aggregateExposureCapCents": null,
+    "availableBalanceAdmissionGate": false,
+    "realMoneyCapability": false,
+    "perPositionApprovalAfterStandingActivation": false
+  },
+  "model": {
+    "registrationModelId": "nba-team-elo-only",
+    "version": "candidate-1",
+    "controlArtifactHash": "5bfe98cb8fec70db371dd61b037e75f927de3348da524a9bca19790661e0a6b4",
+    "selectionPolicy": "nba-moneyline-two-pass-1",
+    "challengerForResearchOnly": true,
+    "modelPromotionApproved": false
+  },
+  "sourceExecution": {
+    "existingSingleSourceWorkerOnly": true,
+    "newSourceRequestsApprovedByThisDocument": false,
+    "preserveReviewedQuotaAndReserve": true,
+    "currentSourcePilotExpiresAt": "2026-11-27T13:00:00.000Z"
+  },
+  "approvals": {
+    "broaderLocalStandingPolicy": null,
+    "paperSchemaA": null,
+    "experimentalModelB": null,
+    "workerActivationC": null,
+    "cloudProvisioning": null,
+    "singleHostTransfer": null,
+    "vercelRelease": null
+  },
+  "notifications": { "externalDeliveryEnabled": false },
+  "notes": [
+    "Review artifact only. No runtime reads or activates this file.",
+    "Missing window, authority, source evidence or approvals is a NO-GO.",
+    "The original five-fixture permit is unchanged and expires independently.",
+    "Provider budgets are operational limits, never paper-volume admission caps."
+  ]
+}

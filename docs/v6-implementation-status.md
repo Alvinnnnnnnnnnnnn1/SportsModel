@@ -1,3 +1,13 @@
+# V6.1 local PAPER lifecycle and dashboard — 14 November 2026
+
+Dedicated branch `feature/v6-1-local-paper-dashboard` starts at UI037d8b7; preserves PR #1 and targets its UI branch as a stacked change. The new fixed-path read-only projection validates the bounded permit/seals/source receipts/journal, qualification and independent grades behind existing normal Auth/RLS ownership. It never fetches providers or writes records. Cloud mode refuses the local journal; hosted PAPER remains unconnected and disabled. Forecasts, exact prices/times/cutoffs/models, exposure/returns/equity, fixture-unit model metrics, permission expiry and next retained operation are integrated into all five existing V6 pages.
+
+Actual offline audit14November14:11 AEDT: existing LaunchAgent loaded/60-second ticks/exit0; scheduled18:00 results and19:00 capture not executed yet. Original5 fixtures/80 outputs reproduce exactly; journal revision1/headb546f3ac… unchanged. Genuine qualifying/registered/settled positions0; hypothetical referenceA$5000/exposure0/PL0, ROI unavailable. No source request or paper/financial write. Retained quotas11 Odds/489 remaining, BDL3 UTCtoday. Read-only remote history confirms the five deployed versions including source02/ACL03; PAPER remains absent.
+
+Implemented commit-time expiry/source-stop recheck and a distinct exact-byte seal for future bounded cycles; no initial evidence/permit/source plan was changed. **808 tests (75 files),162 local SQL checks,19 browser groups, TypeScript/lint/build pass.** Synthetic positive lifecycle/replay and intercepted browser displays are not genuine settlement or hosted acceptance. Reviewed desktop/mobile screenshots render actual retained P0 data with intercepted authentication. Broader local daily approval, source provisioning/compatibility, PAPER A/B/C, scoped credentials/host transfer and hosted positive acceptance remain outstanding. The disabled review artifact is not executable authority. No service/LaunchAgent/migration/deployment/credential/paid-service/external-message change occurred. [Complete evidence, boundaries and next executable milestone](v61-local-paper-lifecycle.md).
+
+Earlier checkpoints below retain their original date/scope.
+
 # V6 UI simplification — 14 November 2026
 
 UI-only branch `feature/v6-ui-simplification`, based on `f686b1d630e235961e6a1435ce5a6dad27eaeac9`. One sidebar, four primary destinations, secondary System Status, auto-expanded Legacy V5 and one Account settings utility. Overview separates unavailable owner ledger values from nominal paper reference; compact research rows retain exclusions and original evidence. Missing attributable quotes withhold bookmaker/EV claims. Status technical details remain available; no activation control was added.

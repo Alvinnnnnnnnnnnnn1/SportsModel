@@ -1,0 +1,21 @@
+import fs from 'node:fs/promises';import path from 'node:path';import {z} from 'zod';
+import {digest} from './evidence.server';
+import type {FreeSourceOptions} from './free-sources.server';
+const hash=z.string().regex(/^[a-f0-9]{64}$/),stamp=z.string().datetime({offset:true});
+export const DAILY_EXTENSION_CODE=['src/lib/v6/daily-source-extension.server.ts','src/lib/v6/controlled-team-runtime.server.ts','src/lib/v6/free-sources.server.ts','src/lib/v6/daily-forecasts.server.ts','src/lib/v6/forecast-journal.server.ts','src/lib/v6/score-distribution.ts','src/lib/v6/team-pilot.ts','src/lib/v6/team-reconciliation.ts','scripts/run-v6-controlled.mjs','src/lib/v6/team-model.ts','src/lib/v6/models.ts','src/lib/v6/team-games.ts','src/lib/v6/team-identity.ts','src/lib/v6/evidence.server.ts','src/lib/v6/feature-pages.server.ts','src/lib/v6/team-sources.server.ts','src/lib/v6/controlled-scheduler.server.ts','src/lib/v6/controlled-activation.ts','src/lib/v6/market-normalization.ts','src/lib/v6/research-identity.ts','src/lib/v6/job-source-cache.server.ts'].sort();
+export async function extensionCodeHash(){const rows=[];for(const file of DAILY_EXTENSION_CODE)rows.push({file,hash:digest(await fs.readFile(file,'utf8'))});return digest(JSON.stringify(rows));}
+export const sourceExtensionPlanSchema=z.object({format:z.literal('edgelab.v63-source-extension'),version:z.literal(1),sourceReceiptHash:hash,codeHash:hash,scoreProtocolHash:hash,eloDefinitionHash:hash,
+ startsAt:stamp,expiresAt:stamp,dates:z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).max(3),markets:z.tuple([z.literal('h2h'),z.literal('spreads'),z.literal('totals')]),sport:z.literal('basketball_nba'),bookmaker:z.literal('sportsbet'),discoveryHour:z.literal(19),maximumCostPerRead:z.literal(3),monthlyCeiling:z.literal(60),providerReserve:z.literal(100),replacesExistingRead:z.literal(true),paperRegistration:z.literal(false)}).strict();
+export const sourceExtensionApprovalSchema=z.object({plan:sourceExtensionPlanSchema,planHash:hash,approved:z.literal(true),recordedAt:stamp,approvalReference:z.string().min(1),ownerId:z.string()}).strict();
+/** Absent approval means unchanged h2h. There is no automatic installation,
+ * schedule change or default consent from the checked-in pending proposal. */
+export async function approvedSourceExtension(root:string,input:{ownerId:string;sourceReceiptHash:string;jobDueAt:string;at:string;currentCodeHash?:string;scoreProtocolHash:string;eloDefinitionHash:string}){
+ const file=path.join(root,'source-pilot/market-extension-approval.json');let raw;try{raw=JSON.parse(await fs.readFile(file,'utf8'));}catch(e){if((e as NodeJS.ErrnoException).code==='ENOENT')return null;throw e;}
+ const approval=sourceExtensionApprovalSchema.parse(raw),p=approval.plan;
+ if(digest(JSON.stringify(p))!==approval.planHash||approval.ownerId!==input.ownerId||p.sourceReceiptHash!==input.sourceReceiptHash||p.codeHash!==(input.currentCodeHash??await extensionCodeHash())||p.scoreProtocolHash!==input.scoreProtocolHash||p.eloDefinitionHash!==input.eloDefinitionHash||new Set(p.dates).size!==p.dates.length||Date.parse(approval.recordedAt)>Date.parse(input.at)||Date.parse(approval.recordedAt)>=Date.parse(p.startsAt))throw new Error('Exact future source-extension approval binding failed');
+ const local=(time:string)=>new Intl.DateTimeFormat('en-CA',{timeZone:'Australia/Melbourne',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(time)),day=local(input.jobDueAt);
+ if(Date.parse(input.at)<Date.parse(p.startsAt)||Date.parse(input.at)>=Date.parse(p.expiresAt)||!p.dates.includes(day))return null;
+ if(Date.parse(input.jobDueAt)<Date.parse(p.startsAt)||Date.parse(input.jobDueAt)>=Date.parse(p.expiresAt)||new Intl.DateTimeFormat('en-GB',{timeZone:'Australia/Melbourne',hour:'2-digit',hourCycle:'h23'}).format(new Date(input.jobDueAt))!=='19')throw new Error('Source extension requires the existing 19:00 discovery');
+ const receipt={status:'owner_approved' as const,scope:'source_only_multimarket' as const,approvedAt:approval.recordedAt,expiresAt:p.expiresAt,markets:[...p.markets],sports:[p.sport],bookmaker:p.bookmaker};
+ const transport:FreeSourceOptions['expandedMarkets']={approvedHash:digest(JSON.stringify(receipt)),receipt};return {transport,planHash:approval.planHash};
+}

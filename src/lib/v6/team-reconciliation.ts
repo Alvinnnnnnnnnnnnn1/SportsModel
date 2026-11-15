@@ -30,7 +30,7 @@ export async function reconcileTeamEvent(i:ReconciliationInput){
  for(const e of [i.originalOdds,i.originalFixtures,i.scores,i.secondary])if(await sha256(e.raw)!==e.hash)return fail('source_hash_mismatch');
  const {hash:registryHash,...registryData}=r;if(await sha256(JSON.stringify(registryData))!==registryHash)return fail('registry_hash_mismatch');
  const u=new URL(i.originalOdds.sourceUrl);
- if(u.origin!=='https://api.the-odds-api.com'||u.pathname!=='/v4/sports/basketball_nba/odds'||u.searchParams.get('markets')!=='h2h'||u.searchParams.get('bookmakers')!=='sportsbet')return fail('original_exact_market_scope_missing');
+ if(u.origin!=='https://api.the-odds-api.com'||u.pathname!=='/v4/sports/basketball_nba/odds'||!['h2h','h2h,spreads,totals'].includes(u.searchParams.get('markets')??'')||u.searchParams.get('bookmakers')!=='sportsbet')return fail('original_exact_market_scope_missing');
  if(!p.statsGameId||!p.statsStartsAt||r.hash!==p.registryHash||Date.parse(r.recordedAt)>Date.parse(i.frozenAt))return fail('frozen_bridge_missing');
  if(new URL(i.secondary.sourceUrl).pathname!=='/v1/games/'+p.statsGameId)return fail('independent_exact_game_endpoint_mismatch');
  if([i.originalOdds,i.originalFixtures].some(e=>Date.parse(e.retrievedAt)>Date.parse(i.frozenAt))||[i.scores,i.secondary].some(e=>Date.parse(e.retrievedAt)>Date.parse(i.at)||Date.parse(e.retrievedAt)<Date.parse(p.earliestStartsAt)))return fail('evidence_clock_invalid');

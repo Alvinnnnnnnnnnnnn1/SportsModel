@@ -17,7 +17,7 @@ export const TEAM_FIXTURE_MATCH=Object.freeze({version:'nba-team-scheduled-time-
 export interface TeamFixtureProof {eventId:string;homeName:string;awayName:string;statsHomeName:string;statsAwayName:string;homeId:string;awayId:string;startsAt:string;statsStartsAt:string|null;earliestStartsAt:string;clockDifferenceSeconds:number|null;statsGameId:string|null;registryHash:string;termsVersion:string;}
 export async function screenTeamSlate(source:RawEvidence,rows:TeamGame[],registry:TeamRegistry,completeSeasons:number[],at:string,modelChoice:'challenger'|'elo_only'='challenger'){
  stamp.parse(at);const url=new URL(source.sourceUrl);
- if(source.provider!=='the-odds-api.com'||await sha256(source.raw)!==source.hash||url.origin!=='https://api.the-odds-api.com'||url.pathname!=='/v4/sports/basketball_nba/odds'||url.searchParams.get('bookmakers')!=='sportsbet'||url.searchParams.get('markets')!=='h2h'||Date.parse(source.retrievedAt)>Date.parse(at))throw new Error('Invalid exact Sportsbet team source');
+ if(source.provider!=='the-odds-api.com'||await sha256(source.raw)!==source.hash||url.origin!=='https://api.the-odds-api.com'||url.pathname!=='/v4/sports/basketball_nba/odds'||url.searchParams.get('bookmakers')!=='sportsbet'||!['h2h','h2h,spreads,totals'].includes(url.searchParams.get('markets')??'')||Date.parse(source.retrievedAt)>Date.parse(at))throw new Error('Invalid exact Sportsbet team source');
  if(Date.parse(registry.recordedAt)>Date.parse(at))throw new Error('Future team registry');
  const events=z.array(eventSchema).parse(JSON.parse(source.raw)),seen=new Set<string>(),candidates=[],snapshots:Record<string,TeamGame[]>={};
  for(const e of events){

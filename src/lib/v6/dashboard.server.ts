@@ -12,6 +12,8 @@ import {developmentSummary,model2ProspectiveSummarySchema} from './prediction/re
 import type {ModelDevelopmentReport} from './prediction/evaluation';
 import type { V6Dashboard } from './dashboard';
 import {multiMarketView} from './multimarket-view.server';
+import {dailyForecastView} from './forecast-view.server';
+import {dailyPaperView} from './daily-paper-view.server';
 import {loadLocalPaperView} from './local-paper-view.server';
 const text=z.string().max(250),stamp=z.string().datetime({offset:true}),prob=z.number().min(0).max(1),count=z.number().int().nonnegative(),hash=z.string().regex(/^[a-f0-9]{64}$/);
 const metric=z.object({brier:z.number().finite().nonnegative(),logLoss:z.number().finite().nonnegative(),calibration:z.array(z.object({count,meanProbability:prob.nullable(),observedRate:prob.nullable()})).max(20)});
@@ -80,5 +82,7 @@ export async function loadV6Dashboard(root:string,ownerId:string,now=new Date().
  await status('Shared odds quota',async()=>z.object({used:count,remaining:count,period:text,lastRequest:z.number().finite()}).parse(await read(root,'odds-shared-budget.json')),q=>{data.health.quota.push({provider:'The Odds API · retained monthly quota',used:q.used,remaining:q.remaining,asOf:new Date(q.lastRequest).toISOString()});});
  await status('BALLDONTLIE quota',async()=>z.object({day:text,requests:count}).parse(await read(root,'balldontlie-team-budget.json')),q=>{data.health.quota.push({provider:'BALLDONTLIE · retained requests on '+q.day,used:q.requests,remaining:null,asOf:null});});
  if(researchOwnerId!==ownerId)try{await fs.access(path.join(root,'source-pilot/STOP'));data.health.killSwitch=true;data.health.blockers.push('Source emergency stop is engaged');}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
+ await status('Prospective daily forecast journal',()=>dailyForecastView(root,researchOwnerId,now),r=>{data.dailyForecasts=r.summary;data.selections.push(...r.selections);},()=>data.dailyForecasts?.lastFreezeAt??null);
+ await status('Bounded daily PAPER policy',async()=>{try{return await dailyPaperView(root,researchOwnerId,now);}catch(e){data.ledger.available=false;throw e;}},r=>{if(r){if(data.ledger.positions.length){data.ledger.available=false;throw new Error('Separate nonempty PAPER journals cannot be combined');}data.dailyPaper=r.approval;data.ledger=r.ledger;data.selections.push(...r.selections);}});
  return data;
 }

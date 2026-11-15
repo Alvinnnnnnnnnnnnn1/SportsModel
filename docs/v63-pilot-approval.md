@@ -25,9 +25,9 @@ This is experimental research; it asserts no profitability, calibration, injury 
 | Binding | SHA-256 |
 | --- | --- |
 |Source plan|`748e5615be985fe4af8186211be1b2f69ef345b5db113fb0e66de51db53a1ce9`|
-|Source code manifest|`f289f1b8c15f188dce9d8be2b7af90f1255b995521739f636f9686a436b5e4d7`|
+|Source code manifest|`032eb8dec2ae3d952bb304703e50ad4659239406d055c599bb8a9e9c0326290f`|
 |PAPER policy|`98ca96b831922e48b4e3ac1f87279f27228b3808b66023dc5fcfc624d8b7c31d`|
-|PAPER code manifest|`dc4a28d819e3a0787b806763b9ce62f9d8cb119c8d4a7a866db03cc3812579a2`|
+|PAPER code manifest|`c1e84353a25d7bffdedf5efce13e4bb7c416f7a0fea2fb19424e100b8998e617`|
 
 The JSON additionally binds the unchanged source receipt, Elo definition, score protocol, original pinned source-model artifact and every listed code-file hash. Dynamic forecast input/artifact snapshots are individually recorded and reproducible under the frozen methods; they are not model promotion.
 

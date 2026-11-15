@@ -3,9 +3,10 @@ import path from 'node:path';
 import { z } from 'zod';
 import { atomicPrivateJson,digest,exclusive,retainEvidence,type RawEvidence } from './evidence.server';
 import type {SourceQuotaJournal} from './cloud/client.server';
+import {retainTransportFailure} from './source-diagnostics.server';
 
 const budgetSchema=z.object({period:z.string(),reserved:z.number().int().nonnegative(),remaining:z.number().int().nonnegative().nullable(),used:z.number().int().nonnegative().nullable(),lastRequest:z.number().nonnegative(),uncertain:z.boolean(),freeConfirmed:z.boolean().default(false)}).strict();
-export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number;oddsPilot?:'team-moneyline-v1';controlledQuota?:{monthlyCeiling:number;approvalHash:string};authorizeRead?:()=>Promise<void>;quotaJournal?:SourceQuotaJournal; }
+export interface FreeSourceOptions { root:string;oddsKey?:string;nbaKey?:string;fetcher?:typeof fetch;clock?:()=>number;oddsPilot?:'team-moneyline-v1';controlledQuota?:{monthlyCeiling:number;approvalHash:string};authorizeRead?:()=>Promise<void>;quotaJournal?:SourceQuotaJournal;expandedMarkets?:{approvedHash:string;receipt:{status:'owner_approved';scope:'source_only_multimarket';approvedAt:string;expiresAt:string;markets:string[];sports:string[];bookmaker:'sportsbet'}}; }
 /** Explicit read-only transport. Every V6 collector/worker shares this on-disk quota.
  * Uncertain reservations are never silently refunded after transport failure.
  */
@@ -16,13 +17,18 @@ export function freeSources(options:FreeSourceOptions) {
     if(Object.keys(parameters).some(k=>/key|token|secret|password/i.test(k)))throw new Error('Credentials are transport configuration only');
     const odds=provider==='the-odds-api.com',basketball=provider==='api-basketball',secret=odds?options.oddsKey:options.nbaKey;
     if(!secret)throw new Error('Optional server-only source key is not configured');
-    if(odds ? !/^\/v4\/sports(?:\/basketball_nba\/(?:events(?:\/[a-zA-Z0-9_-]+\/odds)?|odds|participants|scores))?$/.test(endpoint)
+    if(odds ? !/^\/v4\/sports(?:\/(?:basketball_nba|basketball_nbl|tennis_(?:atp|wta)_[a-z0-9_]+)\/(?:events(?:\/[a-zA-Z0-9_-]+\/odds)?|odds|participants|scores))?$/.test(endpoint)
       : !(basketball?['/status','/leagues','/seasons','/games','/games/statistics/players','/players','/teams']:['/status','/games','/players','/players/statistics','/teams']).includes(endpoint))throw new Error('Unapproved read endpoint');
     const scores=odds&&endpoint.endsWith('/scores');
     if(scores&&(options.oddsPilot!=='team-moneyline-v1'||parameters.daysFrom!==undefined&&!['1','2','3'].includes(parameters.daysFrom)))throw new Error('Completed scores require the bounded team pilot and daysFrom 1–3');
-    const expectedCost=odds&&endpoint.endsWith('/odds')?1:scores?parameters.daysFrom?2:1:0;
-    if(oddsCost!==expectedCost)throw new Error('Unexpected credit cost; only one-market NBA reads are supported');
-    if(odds&&expectedCost&&!scores&&(parameters.markets!=='player_points'&&parameters.markets!=='h2h'||parameters.bookmakers!=='sportsbet'))throw new Error('Only one Sportsbet market per request is permitted');
+    const markets=(parameters.markets??'').split(',').filter(Boolean),sport=endpoint.split('/')[3],legacy=sport==='basketball_nba'&&(markets.length===1&&['h2h','player_points'].includes(markets[0])||!endpoint.endsWith('/odds')&&!scores);
+    const expanded=options.expandedMarkets,now=clock();
+    if(odds&&endpoint!=='/v4/sports'&&!legacy&&!scores){const r=expanded?.receipt;if(!r||!options.authorizeRead||r.status!=='owner_approved'||r.scope!=='source_only_multimarket'||digest(JSON.stringify(r))!==expanded?.approvedHash||r.bookmaker!=='sportsbet'||!r.sports.includes(sport)||!Number.isFinite(Date.parse(r.approvedAt))||Date.parse(r.approvedAt)>now||!Number.isFinite(Date.parse(r.expiresAt))||Date.parse(r.expiresAt)<=now||!markets.length||new Set(markets).size!==markets.length||markets.some(m=>!r.markets.includes(m)))throw new Error('Separate exact multi-market source approval required; no request sent');}
+    if(odds&&endpoint.endsWith('/odds')&&!endpoint.includes('/events/')&&markets.some(m=>!['h2h','spreads','totals'].includes(m)))throw new Error('Additional markets require exact event-level access');
+    const expectedCost=odds&&endpoint.endsWith('/odds')?markets.length:scores?parameters.daysFrom?2:1:odds&&endpoint.endsWith('/participants')?1:0;
+    if(oddsCost!==expectedCost)throw new Error('Unexpected provider market credit cost');
+    if(odds&&endpoint.endsWith('/odds')&&(parameters.bookmakers!=='sportsbet'||parameters.regions!==undefined))throw new Error('Exact Sportsbet single-bookmaker scope required');
+    if(scores&&sport!=='basketball_nba')throw new Error('Only approved NBA result scope is enabled');
     const url=new URL(endpoint,odds?'https://api.the-odds-api.com':basketball?'https://v1.basketball.api-sports.io':'https://v2.nba.api-sports.io');
     for(const [key,value]of Object.entries(parameters))url.searchParams.set(key,value);
     const sourceUrl=url.toString(),file=path.join(options.root,odds?'odds-shared-budget.json':basketball?'basketball-pilot-budget.json':'nba-pilot-budget.json');
@@ -53,7 +59,8 @@ export function freeSources(options:FreeSourceOptions) {
       const headers:Record<string,string>={Accept:'application/json'};
       if(odds)url.searchParams.set('apiKey',secret);else headers['x-apisports-key']=secret;
       let response:Response;
-      try{await options.authorizeRead?.();response=await fetcher(url,{method:'GET',headers,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(12000)});}catch{throw new Error('Source transport failed; reservation retained, no retry');}
+      await options.authorizeRead?.();const startedAt=clock();
+      try{response=await fetcher(url,{method:'GET',headers,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(12000)});}catch(error){await retainTransportFailure(options.root,provider,endpoint,error,startedAt,clock());throw new Error('Source transport failed; reservation retained, no retry');}
       const numberHeader=(key:string)=>{const n=response.headers.get(key);return n!==null&&/^\d+$/.test(n)&&Number.isSafeInteger(Number(n))?Number(n):null;};
       const remaining=numberHeader(odds?'x-requests-remaining':'x-ratelimit-requests-remaining');
       const used=numberHeader('x-requests-used');
@@ -67,7 +74,8 @@ export function freeSources(options:FreeSourceOptions) {
       // Never persist a response that echoes a private key.
       if(raw.includes(secret))throw new Error('Source echoed credentials; body discarded');
       let value:Record<string,unknown>;try{value=JSON.parse(raw);}catch{throw new Error('Malformed source JSON; reservation retained');}
-      const quotaKnown=odds?remaining!==null&&used!==null&&remaining+used===500:remaining!==null;
+      const lastCost=numberHeader('x-requests-last');
+      const quotaKnown=odds?remaining!==null&&used!==null&&remaining+used===500&&(legacy||scores||cost===0||lastCost!==null&&lastCost<=cost):remaining!==null;
       await atomicPrivateJson(path.join(options.root,'source-quota-receipts',crypto.randomUUID()+'.json'),{
         provider,sourceUrl,status:response.status,observedAt:new Date(clock()).toISOString(),requestedCost:cost,remaining,used,
         lastCost:numberHeader('x-requests-last'),quotaKnown});

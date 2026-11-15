@@ -4,7 +4,8 @@
     "deploymentEnabled": {
       "feature/v6-autonomous-paper": false,
       "feature/v6-ui-simplification": false,
-      "feature/v6-1-local-paper-dashboard": false
+      "feature/v6-1-local-paper-dashboard": false,
+      "feature/v6-2-multimarket-research": false
     }
   }
 }

@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import {collectFeaturePages} from './feature-pages.server';
 import path from 'node:path';
 import { atomicPrivateJson,digest,type RawEvidence } from './evidence.server';
 import { freeSources } from './free-sources.server';
@@ -12,7 +13,7 @@ import { screenTeamSlate,type TeamFixtureProof } from './team-pilot';
 import { gradeReconciledTeamPosition } from './reconciled-grading';
 import type { TeamRegistry } from './team-identity';
 import { activationReasons,collectionApprovalReasons,collectionReceiptSchema,modelManifestSchema,type ControlledConfig } from './controlled-activation';
-import type { ScheduledJob } from './controlled-scheduler.server';
+import type { ScheduledJob,ScheduledExecution } from './controlled-scheduler.server';
 import type { V6Repository } from './repository.server';
 import type { Forecast } from './types';
 import {SourcePilotBlocked} from './source-pilot';
@@ -21,13 +22,13 @@ import { loadModel2ShadowConfig,freezeModel2Slate,pendingModel2Slates,pendingMod
 /** Concrete read-only ports for the registered worker. Never loads a shadow as
  * a new candidate, modifies the preserved dataset, or imports a V5 repository.
  */
-export async function prepareControlledTeamPorts(root:string,repository:V6Repository,job:ScheduledJob,controls:{config:ControlledConfig;manifest:unknown;receipt:unknown},keys:{oddsKey?:string;bdlKey?:string},clock:()=>string,readControl?:()=>Promise<{config:ControlledConfig;manifest:unknown;receipt:unknown}>,quotaJournal?:SourceQuotaJournal){
+export async function prepareControlledTeamPorts(root:string,repository:V6Repository,job:ScheduledJob,controls:{config:ControlledConfig;manifest:unknown;receipt:unknown},keys:{oddsKey?:string;bdlKey?:string},clock:()=>string,readControl?:()=>Promise<{config:ControlledConfig;manifest:unknown;receipt:unknown}>,quotaJournal?:SourceQuotaJournal,execution?:ScheduledExecution){
  const {config,manifest,receipt}=controls,at=clock(),liveRoot=path.join(root,'controlled'),approved=(await activationReasons(config,manifest,receipt,at)).length===0;
  if(!config.sourcesEnabled||config.killSwitch||config.mode==='disabled'||config.mode==='armed'&&!approved)throw new Error('Controlled source gate is closed');
  const collectionApproved=(await collectionApprovalReasons(config,receipt,at)).length===0;
  if(!approved&&!collectionApproved)throw new Error('Exact source collection receipt required before preparing provider access');
  const expected=digest(JSON.stringify(controls));
- const authorizeRead=async()=>{const latest=readControl?await readControl():controls,now=clock();if(digest(JSON.stringify(latest))!==expected)throw new SourcePilotBlocked('Source controls changed; stop before next request');
+ const authorizeRead=async()=>{if(Date.parse(clock())>=Date.parse(job.deadline))throw new SourcePilotBlocked('Scheduled job deadline elapsed; no request sent');await execution?.assertActive();const latest=readControl?await readControl():controls,now=clock();if(digest(JSON.stringify(latest))!==expected)throw new SourcePilotBlocked('Source controls changed; stop before next request');
   if(latest.config.killSwitch||latest.config.mode==='disabled'||!latest.config.sourcesEnabled)throw new SourcePilotBlocked('Source emergency stop');
   if(latest.config.sourceOnly&&latest.config.mode!=='dry_run')throw new SourcePilotBlocked('Source-only cannot arm');
   const isCollection=(await collectionApprovalReasons(latest.config,latest.receipt,now)).length===0,isPaper=(await activationReasons(latest.config,latest.manifest,latest.receipt,now)).length===0;
@@ -40,12 +41,12 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
  const readBdl=(endpoint:string,params:Record<string,string>={})=>{
   const request=bdlQueue.then(async()=>{
   let delay=0;try{const b=JSON.parse(await fs.readFile(path.join(root,'balldontlie-team-budget.json'),'utf8'));delay=Math.max(0,b.lastAt+12600-Date.parse(clock()));}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
-  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();return secondary.read('balldontlie',endpoint,params);
+  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();const value=await secondary.read('balldontlie',endpoint,params);await execution?.stage('provider_capture',1);return value;
   });bdlQueue=request.then(()=>undefined,()=>undefined);return request;
  };
  const readOdds=async(endpoint:string,params:Record<string,string>,cost:number)=>{
   let delay=0;try{const b=JSON.parse(await fs.readFile(path.join(root,'odds-shared-budget.json'),'utf8'));delay=Math.max(0,b.lastRequest+1100-Date.parse(clock()));}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
-  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();return api.read('the-odds-api.com',endpoint,params,cost);
+  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();const value=await api.read('the-odds-api.com',endpoint,params,cost);await execution?.stage('provider_capture',1);return value;
  };
  const forecasts=new Map<string,Forecast>(),current=await repository.read();
  const model2Config=await loadModel2ShadowConfig(root,config.ownerId,at);
@@ -65,14 +66,8 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   const cache=path.join(liveRoot,'features.json');let featureReceipts:RawEvidence[]=[];
   try{const saved=JSON.parse(await fs.readFile(cache,'utf8'));if(saved.through===clock().slice(0,10)&&Date.parse(clock())-Date.parse(saved.at)<4*3600000)featureReceipts=saved.receipts;}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
   if(!featureReceipts.length){
-   const season=Number(clock().slice(0,4))-(Number(clock().slice(5,7))<7?1:0),seen=new Set<number>();let cursor:number|null=null;
-   for(let page=0;page<16;page++){
-    const params:Record<string,string>={'seasons[]':String(season),season_type:'regular',per_page:'100',end_date:clock().slice(0,10)};if(cursor!==null)params.cursor=String(cursor);
-    const e=await readBdl('/v1/games',params);featureReceipts.push(e);const body=JSON.parse(e.raw),next=body.meta?.next_cursor;
-    if(next===null||next===undefined&&body.meta?.per_page===100&&body.data.length<100)break;
-    if(!Number.isSafeInteger(next)||seen.has(next))throw new Error('Current feature pagination invalid');seen.add(next);cursor=next;
-    if(page===15)throw new Error('Current feature scope incomplete');
-   }
+   const season=Number(clock().slice(0,4))-(Number(clock().slice(5,7))<7?1:0);
+   featureReceipts=await collectFeaturePages(root,{'seasons[]':String(season),season_type:'regular',per_page:'100',end_date:clock().slice(0,10)},params=>readBdl('/v1/games',params),clock);
    await atomicPrivateJson(cache,{at:clock(),through:clock().slice(0,10),receipts:featureReceipts});
   }
   const base=latestTeamGames(await loadTeamDataset(root)),replacement=new Map(base.map(g=>[g.provider+':'+g.sourceGameId,g]));
@@ -90,6 +85,7 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   const season=Number(new URL(featureReceipts[0].sourceUrl).searchParams.get('seasons[]')),coverage=await regularSeasonCoverage(featureReceipts,season,clock());
   await atomicPrivateJson(path.join(liveRoot,'discovered-fixtures.json'),{at:clock(),fixtures:rows.filter(g=>!g.final&&g.startsAt&&Date.parse(g.startsAt)>Date.parse(clock())).map(g=>({id:g.provider+':'+g.sourceGameId,startsAt:g.startsAt}))});
   await readOdds('/v4/sports',{},0);const odds=await readOdds('/v4/sports/basketball_nba/odds',{bookmakers:'sportsbet',markets:'h2h',oddsFormat:'decimal',dateFormat:'iso',includeSids:'true'},1);
+  await execution?.stage('fixtures_discovered',rows.filter(g=>!g.final).length);
   const screen=await screenTeamSlate(odds,rows,registry,coverage.complete?[season]:[],clock(),'elo_only');
   for(const [hash,history]of Object.entries(screen.snapshots))await atomicPrivateJson(path.join(liveRoot,'histories',hash+'.json'),history);
   for(const c of screen.candidates)if(c.observation&&c.forecast&&c.proof){
@@ -101,6 +97,7 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   }
   await atomicPrivateJson(path.join(liveRoot,'screens',odds.id+'.json'),{screen,modelApprovalApplied:approved,financialWrites:0});
   if(model2Config){const saved=await freezeModel2Slate(root,{ownerId:config.ownerId,source:odds,rows,registry,completeSeasons:coverage.complete?[season]:[],originalFixtures:fixtureReceipts,at:clock(),sourceCollectionApproved:approved||collectionApproved,clock,beforeCommit:authorizeRead,latestEventStart:pilot?new Date(Date.parse(pilot.plan.expiresAt)-8*3600000).toISOString():undefined});if(pilot&&(!saved||saved.record.fixtures.every(f=>!f.homeProbabilities)))throw new SourcePilotBlocked('No supported prospective forecasts; retained empty/blocked screen is not successful collection');}
+  await execution?.stage('research_frozen',screen.candidates.length);
   if(config.sourceOnly)return [];
   return screen.candidates.flatMap(c=>c.observation?[c.observation]:[]);
  },grade:async(position:typeof current.positions[number])=>{

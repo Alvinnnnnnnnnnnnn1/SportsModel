@@ -137,4 +137,19 @@ describe('controlled paper activation and durable registered-worker scheduling',
   expect(digest(JSON.stringify(settled.positions[0]))).toBe(hash);
   await tick(makeJob('LOCAL-SCHEDULE-RESULT-RETRY','results',now));expect((await repo().read()).grades).toHaveLength(1);expect(paperAccounting(await repo().read()).profitCents).toBe(4000);
  }));
+ it('retains the transport error after a missed deadline and preserves the last actual successful run',()=>temp(async root=>{
+  const c=await controls(),repo=localV6Repository(root,c.config.ownerId);let now=at;
+  const make=(id:string):ScheduledJob=>({id,kind:'discovery',dueAt:at,deadline:'2026-11-12T08:00:00Z',status:'pending',attempts:0,nextAt:at,leaseUntil:null,lastError:null,controlHash:null});
+  const ports={repository:repo,clock:()=>now,readControl:async()=>c,prepare:async(j:ScheduledJob)=>{if(j.id==='FAIL')throw new Error('Team source transport failed; reservation retained, no retry');return {model:{modelId:c.manifest.modelId,version:c.manifest.modelVersion,validationManifestHash:digest(JSON.stringify(c.manifest)),forecast:async()=>null},provider:{collectionPermitted:true,collect:async()=>[],grade:async()=>null}};}};
+  await runControlledTick(root,ports,[make('OK')]);await runControlledTick(root,ports,[make('FAIL')]);now='2026-11-12T09:00:00Z';await runControlledTick(root,ports,[]);
+  const state=JSON.parse(await fs.readFile(path.join(root,'scheduler.json'),'utf8')),health=JSON.parse(await fs.readFile(path.join(root,'health.json'),'utf8'));
+  expect(state.jobs.find((j:ScheduledJob)=>j.id==='FAIL').status).toBe('missed');expect(state.attempts.some((a:{detail:string})=>a.detail?.includes('Team source transport failed'))).toBe(true);expect(health.lastSuccessfulWorkerAt).toBe(at);expect(health.workerInvoked).toBe(false);
+ }));
+ it('stops a suspended/expired attempt before another provider read or worker commit',()=>temp(async root=>{
+  const c=await controls(),repo=localV6Repository(root,c.config.ownerId);let now=at,reads=0;
+  const job:ScheduledJob={id:'SLEEP',kind:'discovery',dueAt:at,deadline:'2026-11-12T08:00:00Z',status:'pending',attempts:0,nextAt:at,leaseUntil:null,lastError:null,controlHash:null};
+  const result=await runControlledTick(root,{repository:repo,clock:()=>now,readControl:async()=>c,prepare:async(_j,execution)=>{now='2026-11-12T07:00:00Z';await execution!.stage('provider_capture',1);await execution!.assertActive();reads++;throw new Error('Must not reach provider');}},[job]);
+  expect(result.workerInvoked).toBe(false);expect(reads).toBe(0);expect((await repo.read()).runs).toHaveLength(0);expect(JSON.parse(await fs.readFile(path.join(root,'scheduler.json'),'utf8')).attempts.some((a:{status:string})=>a.status==='late_stage:provider_capture')).toBe(true);
+ }));
+
 });

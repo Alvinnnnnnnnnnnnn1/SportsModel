@@ -3,6 +3,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { atomicPrivateJson,digest,exclusive,retainEvidence,type RawEvidence } from './evidence.server';
 import type {SourceQuotaJournal} from './cloud/client.server';
+import {retainTransportFailure} from './source-diagnostics.server';
 const budgetSchema=z.object({day:z.string(),requests:z.number().int().nonnegative(),lastAt:z.number().nonnegative(),blockedUntil:z.number().nonnegative(),starts:z.array(z.number().nonnegative())}).strict();
 /** Only documented permanent-free team/game paths. No player stats, trials,
  * accounts, mutable HTTP, redirects, automatic retry or implicit collection.
@@ -26,7 +27,8 @@ export function teamSources(options:{root:string;bdlKey?:string;fetcher?:typeof 
    budget.requests++;budget.lastAt=now;budget.starts.push(now);await atomicPrivateJson(file,budget);
    const cloudReservation=options.quotaJournal?await options.quotaJournal.reserve('bdl',endpoint,parameters,1):null;
    const headers:Record<string,string>={Accept:'application/json'};if(bdl)headers.Authorization=options.bdlKey!;
-   let response:Response;try{await options.authorizeRead?.();response=await fetcher(url,{method:'GET',headers,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});}catch{throw new Error('Team source transport failed; reservation retained, no retry');}
+   await options.authorizeRead?.();const startedAt=clock();
+   let response:Response;try{response=await fetcher(url,{method:'GET',headers,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});}catch(error){await retainTransportFailure(options.root,provider,endpoint,error,startedAt,clock());throw new Error('Team source transport failed; reservation retained, no retry');}
    const retry=response.headers.get('retry-after'),seconds=retry&&/^\d+$/.test(retry)?Number(retry):null;
    if(response.status===429){const date=retry?Date.parse(retry):NaN;budget.blockedUntil=Math.max(now+60000,seconds!==null?now+seconds*1000:Number.isFinite(date)?date:0);await atomicPrivateJson(file,budget);}
    if(cloudReservation)await options.quotaJournal!.complete(cloudReservation,{used:null,remaining:null,blockedUntil:budget.blockedUntil?new Date(budget.blockedUntil).toISOString():null});

@@ -344,3 +344,13 @@ Real-source observation → qualifying forecast → automatic pre-event registra
 4. Run a real-source prospective shadow pilot from registration through final grading. Only after those gates may scheduling be activated. UI hosting, managed availability, Hermes/iMessage/outbox delivery remain later explicit deployment/permission gates. No UI cosmetics are prioritised.
 
 Resume: read the latest section first, AGENTS and V6 specifications; inspect current diff/commits; do not repeat account activation or unnecessary source reads. Continue from the last tested milestone and record actual results, never an implied successful prospective lifecycle.
+# V6.2 multi-market research — 15 November 2026
+
+Missed discovery: original BDL next-page transport failure and Mac maintenance sleep are retained; exact low-level network cause was discarded by the old catch and remains unknown. The earlier 18:00 source-only results worker **did succeed**. New health/audit distinguish that success from the later failure. Deadline/lease guards, page checkpoints and redacted transport/stage diagnostics are implemented without job replay, quota reset or service changes.
+
+Independent NBA spread/total score model evaluated on the unchanged 5,082 unique games; serialized artifact `12eff7a1…` reproduces. Later-block Brier/log loss beat a simple league-score baseline; historical Sportsbet market benchmarks/EV/CLV remain unavailable. Player prototype is stale and underperforms. NBL/tennis and other props remain data/validation blocked. Exact-market normalizers, source-scoped adapter preparation, observational grading and per-family capability registry are implemented; new collection/registration remain disabled. Existing UI exposes filters, fixture grouping, actual evaluation and honest blockers through private read-only DTOs.
+
+**834/834 tests (79 files), 162 local SQL checks, 21 intercepted browser groups, TypeScript, lint and production build pass.** Actual read-only audit15Nov16:33 AEDT: one loaded Mac LaunchAgent, 1,151 invocations/exit0, Odds13/487, next18:00 results and19:00 discovery pending. P0permit expired12:47; original journalrevision1/zero entries and protected evidence unchanged. No provider calls, hosted/V5/financial/LaunchAgent changes, activation or deployment. Next: an awake-host scheduled run, then a separately reviewed dated featured-market source plan under the existing allowance. [Concise execution report and exact evidence](v62-execution-report.md).
+
+Earlier checkpoints below retain their original date/scope.
+

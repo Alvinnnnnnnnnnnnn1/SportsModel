@@ -10,6 +10,7 @@ import {runControlledTick, type ScheduledJob} from '@/lib/v6/controlled-schedule
 import {prepareControlledTeamPorts} from '@/lib/v6/controlled-team-runtime.server';
 import {localV6Repository} from '@/lib/v6/repository.server';
 import {evaluateModel2Slates} from '@/lib/v6/prediction/shadow.server';
+import {forecastJournal} from '@/lib/v6/forecast-journal.server';
 const transport=vi.hoisted(()=>({read:vi.fn()}));
 vi.mock('@/lib/v6/free-sources.server',()=>({freeSources:(options:{root:string})=>({read:(provider:string,endpoint:string,params:Record<string,string>,cost:number)=>transport.read(options.root,provider,endpoint,params,cost)})}));
 vi.mock('@/lib/v6/team-sources.server',()=>({teamSources:(options:{root:string})=>({read:(provider:string,endpoint:string,params:Record<string,string>)=>transport.read(options.root,provider,endpoint,params,0)})}));
@@ -28,8 +29,8 @@ it('runs existing scheduled discovery and results through source-only approvals;
    let result:RawEvidence;
    if(endpoint==='/v1/games'&&params.start_date){const body=JSON.parse(data.originalFixtures.raw);for(const g of body.data){g.home_team.abbreviation='H';g.visitor_team.abbreviation='A';}result=evidence(provider,'https://api.balldontlie.io/v1/games?'+new URLSearchParams(params),{...body,meta:{per_page:100,next_cursor:null}});}
    else if(endpoint==='/v1/games')result=evidence(provider,'https://api.balldontlie.io/v1/games?'+new URLSearchParams(params),{data:[],meta:{per_page:100,next_cursor:null}});
-   else if(endpoint==='/v4/sports/basketball_nba/odds')result=data.originalOdds;
-   else if(endpoint==='/v4/sports/basketball_nba/scores')result=data.scores;
+   else if(endpoint==='/v4/sports/basketball_nba/odds')result=evidence(provider,'https://api.the-odds-api.com'+endpoint+'?'+new URLSearchParams(params),JSON.parse(data.originalOdds.raw));
+   else if(endpoint==='/v4/sports/basketball_nba/scores')result=evidence(provider,'https://api.the-odds-api.com'+endpoint+'?'+new URLSearchParams(params),JSON.parse(data.scores.raw));
    else if(endpoint==='/v1/games/7')result=data.secondary;
    else if(endpoint==='/v4/sports')result=evidence(provider,'https://api.the-odds-api.com/v4/sports',[]);
    else throw new Error('Unexpected synthetic provider endpoint');
@@ -42,6 +43,7 @@ it('runs existing scheduled discovery and results through source-only approvals;
   const calls=transport.read.mock.calls;expect(calls.some(c=>c[2]==='/v1/games'&&c[3].start_date===freeze.slice(0,10))).toBe(true);
   expect((await repository.read()).positions).toEqual([]);const files=await fs.readdir(path.join(root,'model-development/slates'));expect(files).toHaveLength(1);
   now=after;expect((await runControlledTick(path.join(root,'scheduler'),ports,[job('TEST-RESULTS','results')])).status).toBe('completed');
+  const daily=await forecastJournal(root,config.ownerId).read();expect(new Set(daily.forecasts.map(f=>f.family))).toEqual(new Set(['moneyline','spread','total']));expect(daily.forecasts.every(f=>!f.paperRegistration)).toBe(true);expect(daily.results.some(r=>r.status==='verified')).toBe(true);
   const report=await evaluateModel2Slates(root,config.ownerId);expect(report.fixtures).toBe(1);expect(report.models).toHaveLength(9);expect((await repository.read()).positions).toEqual([]);expect((await repository.read()).grades).toEqual([]);const resultCalls=transport.read.mock.calls.length;expect((await runControlledTick(path.join(root,'scheduler'),ports,[job('TEST-RESULTS-REPEAT','results')])).status).toBe('completed');expect(transport.read.mock.calls.length).toBe(resultCalls);
   const before=transport.read.mock.calls.length;await fs.mkdir(path.join(root,'source-pilot'),{recursive:true});await fs.writeFile(path.join(root,'source-pilot/STOP'),'SYNTHETIC TEST STOP');expect((await runControlledTick(path.join(root,'scheduler'),ports,[job('TEST-EMERGENCY','discovery')])).status).toBe('blocked');expect(transport.read.mock.calls.length).toBe(before);await fs.unlink(path.join(root,'source-pilot/STOP'));config.mode='disabled';expect((await runControlledTick(path.join(root,'scheduler'),ports,[job('TEST-OFF','discovery')])).status).toBe('disabled');expect(transport.read.mock.calls.length).toBe(before);
  }finally{await fs.rm(root,{recursive:true,force:true});}

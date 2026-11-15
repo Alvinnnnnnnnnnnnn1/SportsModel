@@ -1,3 +1,19 @@
+# V6.3 local pilot approval installed — 15 November 23:04 AEDT
+
+Owner explicitly approved BOTH parts of exact package 9625d48d…. Offline hashes/controls/evidence, future window and single-worker gates passed; live zero-credit catalogue confirmed 16 used/reserved / 484 remaining. Installed private receipts: source 6ac07053…, PAPER b3f05a99…; recorded actual 2026-11-15T12:04:38.270Z. Status waiting until 16 Nov 00:00, scope ends 22 Nov 00:00. Same Mac worker/schedule; no application code or original controls were changed.
+
+Next: 16 Nov 18:00 results / 19:00 first expanded capture and possible fresh qualifying Elo-moneyline PAPER registrations; 17 Nov 18:00 next results. Fresh verification passed 853 tests, 162 local SQL checks, typecheck, lint and production build; 20 targeted tests also passed. Existing 168 forecasts remain immutable/forecast-only, genuine PAPER 0/0. No hosted A/B/C, spread/total PAPER, model promotion, paid service, credentials, V5 changes, extra worker or deployment. [Exact receipts, checks, limits and operational instructions](v63-pilot-activation.md). Older unapproved/pending statements below are historical checkpoints.
+
+# V6.3 operational prospective forecasts — 15 November 2026
+
+Genuine keyless retained-data execution at20:43 AEDT froze168 numerical outputs across12 future NBA fixtures, retaining140 excluded rows across10 more fixtures. Original pre-event clocks, sources and model/input snapshots are preserved in a separate append-only owner-scoped forecast ledger. Fresh replay appended0 and retained heade8946f46…; read-only inspection reproduces original probabilities. Actual independent outcomes and PAPER settlements remain0/unverified.
+
+The existing single Mac scheduler now freezes no-price Elo and score-model forecasts, shares results reads/quotas, checkpoints successful per-job sources and reconciles exact two-provider finals. New prospective per-family metrics/statuses appear on existing V6 pages. Optional bounded future PAPER uses the original Elo/two-pass engine with code/policy/source/time bindings; no receipt was created and the P0permit remains expired. Source h2h scope is unchanged until the separately reviewed three-capture extension is approved.
+
+853 tests/82 files,162 local SQL checks,22 isolated production-browser groups, typecheck/lint/build and four cloud-safety groups passed. Mac audit21:09: sole loaded agent/1,420 invocations/exit0; Odds16/484 and BDL4 UTCtoday unchanged. Next16Nov18:00 results/19:00 forecasts, not yet executed under V6.3. No task source requests, V5/hosted/financial/service/power/credential/deployment changes. [Actual execution and limitations](v63-forecast-pilot.md) · [Exact pending local approval package](v63-pilot-approval.md).
+
+Earlier checkpoints below retain their dates and scope.
+
 # V6.2 multi-market research — 15 November 2026
 
 Missed discovery: original BDL next-page transport failure and Mac maintenance sleep are retained; exact low-level network cause was discarded by the old catch and remains unknown. The earlier 18:00 source-only results worker **did succeed**. New health/audit distinguish that success from the later failure. Deadline/lease guards, page checkpoints and redacted transport/stage diagnostics are implemented without job replay, quota reset or service changes.

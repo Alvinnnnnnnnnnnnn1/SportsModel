@@ -39,6 +39,7 @@ try{
    rawSource:async hash=>{if(!/^[a-f0-9]{64}$/.test(hash))throw new Error('Invalid source hash');return JSON.parse(await fs.readFile(path.join(root,'evidence',hash+'.json'),'utf8')).raw;}}):localV6Repository(path.join(operational,controls.config.sourceOnly?'source-only-state':'state'),controls.config.ownerId);
   const result=await runControlledTick(operational,{repository,clock,readControl,prepare:async(job,execution)=>prepareControlledTeamPorts(root,repository,job,await readControl(),{oddsKey:process.env.THE_ODDS_API_KEY,bdlKey:process.env.BALLDONTLIE_API_KEY},clock,readControl,undefined,execution)},planControlledJobs(fixtures,clock(),pilot));
   console.log(JSON.stringify({...result,v5Access:false,persistence:remote&&active?'scoped_supabase':'local',hostedWritesPossible:!!remote&&active}));
+  if(controls.config.sourceOnly&&result.status==='completed'){const {runDailyPaperFromRetained}=await loader.ssrLoadModule('/src/lib/v6/daily-paper-pilot.server.ts');console.log(JSON.stringify({boundedDailyPaper:await runDailyPaperFromRetained(root,controls.config.ownerId,digest(JSON.stringify(controls.receipt)),clock)}));}
   // Owner's bounded P0 local batch consumes this scheduled capture offline.
   // It is not another source worker and receives no source keys or env file.
   if(result.status==='completed'&&result.job?.startsWith('discovery:')){

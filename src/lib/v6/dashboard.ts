@@ -1,5 +1,6 @@
 import type {ModelDevelopmentSummary,Model2ProspectiveSummary} from './prediction/report';
 import type {MarketCapability,MarketFamily} from './market-capabilities';
+import type {DailyForecastSummary} from './forecast-view.server';
 /** Public shape of the private read-only V6 view. Never includes raw sources or credentials. */
 export type V6Section = 'overview'|'research'|'models'|'positions'|'health';
 export const v6Sections: {id:V6Section;label:string;href:string}[] = [
@@ -9,6 +10,8 @@ export const v6Sections: {id:V6Section;label:string;href:string}[] = [
 export interface V6Metric {brier:number;logLoss:number;calibration:{count:number;meanProbability:number|null;observedRate:number|null}[];}
 export interface V6Selection {marketFamily?:MarketFamily;inputCutoff?:string|null;statsEventId?:string;deVigProbability?:number;verification?:string;sourceClass?:string;models?:{name:string;version:string;probability:number|null;ev:number|null;firstPass:string[];secondPass:string[];decision:string}[];key:string;eventId:string;fixture:string;sport:string;selection:string;market:string;odds:number|null;breakEven:number|null;probability:number|null;eloProbability:number|null;ev:number|null;startsAt:string;quoteAt:string|null;capturedAt:string;forecastAt:string|null;frozenAt:string;pass1:string[];pass2:string[];limitations:string[];outcome:string;homeScore:number|null;awayScore:number|null;decision:string;}
 export interface V6Dashboard {
+ dailyForecasts?:DailyForecastSummary;
+ dailyPaper?:{status:string;startsAt:string;expiresAt:string};
  multiMarket?:{at:string;capabilities:MarketCapability[];artifactHash:string|null;datasetGames:number;summaries:{period:string;family:string;fixtures:number;modelBrier:number|null;baselineBrier:number|null;modelLogLoss:number|null;baselineLogLoss:number|null;bookmaker:null}[];player:{rows:number;latest:string|null;uniqueGames:number;modelBrier:number|null;baselineBrier:number|null};limitations:string[]};
  localPaper?:{kind:'bounded_local';integrity:{revision:number;headHash:string|null;files:number;lastCommitAt:string|null};registration:'bounded_active'|'expired'|'stopped'|'disabled';expiresAt:string;fixtureIds:string[];settlement:'retained_results_only'|'stopped';forecastFixtures:number;probabilityOutputs:number;lastCaptureAt:string;lastSettlementAt:string|null;qualifiedSelections:number;modelHashes:{control:string;challenger:string};metrics:{sport:'NBA';market:'moneyline';model:string;games:number;brier:number|null;logLoss:number|null;calibration:V6Metric['calibration']}[]};
  storage?:'local'|'cloud';

@@ -1,5 +1,11 @@
 import fs from 'node:fs/promises';
 import {collectFeaturePages} from './feature-pages.server';
+import {freezeDailyForecasts,freezeQuotedForecasts,forecastIdentityMatcher,reconcileDailyForecasts} from './daily-forecasts.server';
+import {approvedSourceExtension} from './daily-source-extension.server';
+import {SCORE_PROTOCOL} from './score-distribution';
+import {ELO_ONLY_DEFINITION} from './team-model';
+import {forecastJournal} from './forecast-journal.server';
+import {jobSourceRead} from './job-source-cache.server';
 import path from 'node:path';
 import { atomicPrivateJson,digest,type RawEvidence } from './evidence.server';
 import { freeSources } from './free-sources.server';
@@ -35,32 +41,41 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   if(!isCollection&&!isPaper)throw new SourcePilotBlocked('Source receipt expired or scope invalid');
   try{await fs.access(path.join(root,'source-pilot/STOP'));throw new SourcePilotBlocked('Source STOP file engaged');}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
  };
- const api=freeSources({root,authorizeRead,quotaJournal,clock:()=>Date.parse(clock()),oddsKey:keys.oddsKey,oddsPilot:'team-moneyline-v1',controlledQuota:approved||collectionApproved?{monthlyCeiling:config.monthlyOddsCeiling,approvalHash:digest(JSON.stringify(receipt))}:undefined});
+ const extensionInput={ownerId:config.ownerId,sourceReceiptHash:digest(JSON.stringify(receipt)),jobDueAt:job.dueAt,at,scoreProtocolHash:digest(JSON.stringify(SCORE_PROTOCOL)),eloDefinitionHash:digest(JSON.stringify(ELO_ONLY_DEFINITION))};
+ const extension=config.sourceOnly&&job.kind==='discovery'?await approvedSourceExtension(root,extensionInput):null;
+ const authorizeOdds=async()=>{await authorizeRead();if(extension&&(await approvedSourceExtension(root,{...extensionInput,at:clock()}))?.planHash!==extension.planHash)throw new SourcePilotBlocked('Source extension changed/expired before read');};
+ const api=freeSources({root,authorizeRead:authorizeOdds,expandedMarkets:extension?.transport,quotaJournal,clock:()=>Date.parse(clock()),oddsKey:keys.oddsKey,oddsPilot:'team-moneyline-v1',controlledQuota:approved||collectionApproved?{monthlyCeiling:config.monthlyOddsCeiling,approvalHash:digest(JSON.stringify(receipt))}:undefined});
  const secondary=teamSources({root,authorizeRead,quotaJournal,clock:()=>Date.parse(clock()),bdlKey:keys.bdlKey});
  let bdlQueue:Promise<unknown>=Promise.resolve();
  const readBdl=(endpoint:string,params:Record<string,string>={})=>{
   const request=bdlQueue.then(async()=>{
   let delay=0;try{const b=JSON.parse(await fs.readFile(path.join(root,'balldontlie-team-budget.json'),'utf8'));delay=Math.max(0,b.lastAt+12600-Date.parse(clock()));}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
-  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();const value=await secondary.read('balldontlie',endpoint,params);await execution?.stage('provider_capture',1);return value;
+  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();let fetched=false;const value=await jobSourceRead(root,job.id,'balldontlie',endpoint,params,4*3600000,clock,async()=>{fetched=true;return secondary.read('balldontlie',endpoint,params);});await execution?.stage(fetched?'provider_capture':'provider_cache_reused',1);return value;
   });bdlQueue=request.then(()=>undefined,()=>undefined);return request;
  };
  const readOdds=async(endpoint:string,params:Record<string,string>,cost:number)=>{
   let delay=0;try{const b=JSON.parse(await fs.readFile(path.join(root,'odds-shared-budget.json'),'utf8'));delay=Math.max(0,b.lastRequest+1100-Date.parse(clock()));}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
-  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();const value=await api.read('the-odds-api.com',endpoint,params,cost);await execution?.stage('provider_capture',1);return value;
+  if(delay)await new Promise(r=>setTimeout(r,delay));await authorizeRead();let fetched=false;const value=cost?await jobSourceRead(root,job.id,'the-odds-api.com',endpoint,params,300000,clock,async()=>{fetched=true;return api.read('the-odds-api.com',endpoint,params,cost);}):await api.read('the-odds-api.com',endpoint,params,cost);await execution?.stage(cost&&!fetched?'provider_cache_reused':'provider_capture',1);return value;
  };
  const forecasts=new Map<string,Forecast>(),current=await repository.read();
  const model2Config=await loadModel2ShadowConfig(root,config.ownerId,at);
  const pilot=collectionReceiptSchema.safeParse(receipt).data?.pilot;
  if(pilot&&(!model2Config||model2Config.artifactHash!==pilot.plan.artifactHash))throw new SourcePilotBlocked('Exact pilot model artifact configuration missing');
  const model2Pending=model2Config&&job.kind==='results'&&(approved||collectionApproved)?await pendingModel2Slates(root,config.ownerId,at):[];
+ const dailyState=config.sourceOnly&&pilot&&job.kind==='results'?await forecastJournal(root,config.ownerId,clock).read():null;
+ const dailyPending=dailyState?[...new Map(dailyState.forecasts.filter(f=>f.probability!==null&&Date.parse(f.startsAt)<=Date.parse(at)&&Date.parse(at)-Date.parse(f.startsAt)<3*86400000&&dailyState.results.filter(r=>r.fixtureId===f.fixtureId).at(-1)?.status!=='verified').map(f=>[f.fixtureId,f])).values()]:[];
  let scorePromise:Promise<RawEvidence>|null=null;const secondaryResults=new Map<string,Promise<RawEvidence>>();
  const readSecondary=(proof:TeamFixtureProof)=>{if(!proof.statsGameId)throw new Error('Exact statistics fixture required');let result=secondaryResults.get(proof.statsGameId);if(!result){result=readBdl('/v1/games/'+proof.statsGameId);secondaryResults.set(proof.statsGameId,result);}return result;};
  const withinRetention=current.positions.filter(p=>Date.parse(p.observation.eventStartsAt)<=Date.parse(at)&&Date.parse(at)-Date.parse(p.observation.eventStartsAt)<3*86400000);
  const provider={collectionPermitted:true,collect:async()=>{
   if(job.kind==='results'){
-   if(model2Pending.length){const ids=[...new Set([...withinRetention.map(p=>p.observation.market.eventId.replace(/^the-odds-api\.com:/,'')),...(await Promise.all(model2Pending.map(s=>pendingModel2Events(root,s,clock())))).flat()])];
-    if(ids.length){scorePromise=(async()=>{await readOdds('/v4/sports',{},0);return readOdds('/v4/sports/basketball_nba/scores',{daysFrom:'3',eventIds:ids.join(','),dateFormat:'iso'},2);})();const scores=await scorePromise;
-     for(const slate of model2Pending)await recordModel2Results(root,slate,{scores,secondary:readSecondary,at:clock(),clock,eventIds:await pendingModel2Events(root,slate,clock()),beforeCommit:authorizeRead});}}
+   if(model2Pending.length||dailyPending.length){const ids=[...new Set([...withinRetention.map(p=>p.observation.market.eventId.replace(/^the-odds-api\.com:/,'')),...(await Promise.all(model2Pending.map(s=>pendingModel2Events(root,s,clock())))).flat()])];
+    if(ids.length||dailyPending.length){scorePromise=(async()=>{await readOdds('/v4/sports',{},0);return readOdds('/v4/sports/basketball_nba/scores',{daysFrom:'3',...(!dailyPending.length?{eventIds:ids.join(',')}:{}),dateFormat:'iso'},2);})();const scores=await scorePromise;
+     for(const slate of model2Pending)await recordModel2Results(root,slate,{scores,secondary:readSecondary,at:clock(),clock,eventIds:await pendingModel2Events(root,slate,clock()),beforeCommit:authorizeRead});
+     const primary=await teamGames(scores);
+     for(const f of dailyPending){const identity=await forecastIdentityMatcher(root,f),matches=primary.filter(g=>g.final&&identity.matches(g));if(matches.length!==1)continue;const id=f.fixtureId.replace(/^balldontlie:/,'');let result=secondaryResults.get(id);if(!result){result=readBdl('/v1/games/'+id);secondaryResults.set(id,result);}await result;}
+    }}
+   if(config.sourceOnly&&pilot){const names=await fs.readdir(path.join(root,'evidence-receipts'));const retained:RawEvidence[]=await Promise.all(names.filter(n=>/^[a-f0-9-]{36}\.json$/.test(n)).map(async n=>JSON.parse(await fs.readFile(path.join(root,'evidence-receipts',n),'utf8'))));await reconcileDailyForecasts(root,config.ownerId,retained,clock(),clock,authorizeRead);}
    return [];
   }
   const cache=path.join(liveRoot,'features.json');let featureReceipts:RawEvidence[]=[];
@@ -83,9 +98,11 @@ export async function prepareControlledTeamPorts(root:string,repository:V6Reposi
   const catalog=await currentTeamCatalogue(priorCatalog,clock(),()=>readBdl('/v1/teams'));
   const registry=await teamRegistry(catalog,all,clock()),rows=canonicalTeamRows(all,registry).matched;
   const season=Number(new URL(featureReceipts[0].sourceUrl).searchParams.get('seasons[]')),coverage=await regularSeasonCoverage(featureReceipts,season,clock());
+  if(config.sourceOnly&&pilot){const frozen=await freezeDailyForecasts(root,{ownerId:config.ownerId,runId:job.id,rows,registry,fixtureReceipts:[future],completeSeasons:coverage.complete?[season]:[],at:clock(),latestStart:new Date(Date.parse(pilot.plan.expiresAt)-8*3600000).toISOString(),clock,beforeCommit:authorizeRead});await execution?.stage('forecasts_frozen',frozen.appended);}
   await atomicPrivateJson(path.join(liveRoot,'discovered-fixtures.json'),{at:clock(),fixtures:rows.filter(g=>!g.final&&g.startsAt&&Date.parse(g.startsAt)>Date.parse(clock())).map(g=>({id:g.provider+':'+g.sourceGameId,startsAt:g.startsAt}))});
-  await readOdds('/v4/sports',{},0);const odds=await readOdds('/v4/sports/basketball_nba/odds',{bookmakers:'sportsbet',markets:'h2h',oddsFormat:'decimal',dateFormat:'iso',includeSids:'true'},1);
+  await readOdds('/v4/sports',{},0);const odds=await readOdds('/v4/sports/basketball_nba/odds',{bookmakers:'sportsbet',markets:extension?'h2h,spreads,totals':'h2h',oddsFormat:'decimal',dateFormat:'iso',includeSids:'true'},extension?3:1);
   await execution?.stage('fixtures_discovered',rows.filter(g=>!g.final).length);
+  if(config.sourceOnly&&pilot)await freezeQuotedForecasts(root,config.ownerId,odds,rows,registry,clock(),clock,authorizeRead);
   const screen=await screenTeamSlate(odds,rows,registry,coverage.complete?[season]:[],clock(),'elo_only');
   for(const [hash,history]of Object.entries(screen.snapshots))await atomicPrivateJson(path.join(liveRoot,'histories',hash+'.json'),history);
   for(const c of screen.candidates)if(c.observation&&c.forecast&&c.proof){

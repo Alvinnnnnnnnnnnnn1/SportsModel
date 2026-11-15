@@ -32,7 +32,7 @@ export interface ScheduledPorts {
  readControl():Promise<{config:ControlledConfig;manifest:unknown;receipt:unknown}>;
  clock():string;
 }
-export interface ScheduledExecution {assertActive():Promise<void>;stage(name:'provider_capture'|'fixtures_discovered'|'research_frozen',count:number):Promise<void>;}
+export interface ScheduledExecution {assertActive():Promise<void>;stage(name:'provider_capture'|'provider_cache_reused'|'fixtures_discovered'|'research_frozen'|'forecasts_frozen',count:number):Promise<void>;}
 /** A tick executes the registered V6 worker, never a chat message. Source work
  * precedes the worker's atomic commit/latch. One operation can register all
  * qualifying positions; the scheduler does not impose position/exposure limits.

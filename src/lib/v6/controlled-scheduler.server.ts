@@ -28,10 +28,11 @@ export function planControlledJobs(fixtures:{id:string;startsAt:string}[],now:st
 }
 export interface ScheduledPorts {
  repository:V6Repository;
- prepare(job:ScheduledJob):Promise<{provider:V6ReadProvider;model:V6IndependentModel|null}>;
+ prepare(job:ScheduledJob,execution?:ScheduledExecution):Promise<{provider:V6ReadProvider;model:V6IndependentModel|null}>;
  readControl():Promise<{config:ControlledConfig;manifest:unknown;receipt:unknown}>;
  clock():string;
 }
+export interface ScheduledExecution {assertActive():Promise<void>;stage(name:'provider_capture'|'fixtures_discovered'|'research_frozen',count:number):Promise<void>;}
 /** A tick executes the registered V6 worker, never a chat message. Source work
  * precedes the worker's atomic commit/latch. One operation can register all
  * qualifying positions; the scheduler does not impose position/exposure limits.
@@ -48,7 +49,7 @@ export async function runControlledTick(root:string,ports:ScheduledPorts,planned
   const state=await load(),now=Date.parse(at);
   for(const p of planned)if(!state.jobs.some(j=>j.id===p.id))state.jobs.push(jobSchema.parse(p));
   for(const j of state.jobs){
-   if(['pending','running'].includes(j.status)&&Date.parse(j.deadline)<=now){j.status='missed';j.lastError='deadline_elapsed_no_backdating';}
+   if(['pending','running'].includes(j.status)&&Date.parse(j.deadline)<=now){state.attempts.push({jobId:j.id,at,status:'deadline_missed',detail:j.lastError});j.status='missed';j.lastError='deadline_elapsed_no_backdating';}
    else if(j.status==='running'&&j.leaseUntil&&Date.parse(j.leaseUntil)<=now){j.status='pending';j.nextAt=at;j.lastError='expired_lease_recovery';}
    else if(j.status==='blocked'&&j.controlHash!==controlHash){j.status='pending';j.nextAt=at;}
   }
@@ -58,22 +59,25 @@ export async function runControlledTick(root:string,ports:ScheduledPorts,planned
   await atomicPrivateJson(file,state);return job?structuredClone(job):null;
  });
  if(!claimed)return {status:'idle',workerInvoked:false,job:null};
+ const assertActive=async()=>{const state=await load(),job=state.jobs.find(j=>j.id===claimed.id),now=Date.parse(ports.clock());if(!job||job.status!=='running'||job.attempts!==claimed.attempts||now>=Date.parse(job.deadline)||!job.leaseUntil||now>=Date.parse(job.leaseUntil))throw new Error('Scheduled attempt lease/deadline expired; no further read or commit');};
+ const execution:ScheduledExecution={assertActive,stage:async(name,count)=>{if(!Number.isSafeInteger(count)||count<0)throw new Error('Invalid stage count');await exclusive(file+'.lock',async()=>{const state=await load();const current=state.jobs.find(j=>j.id===claimed.id),active=current?.status==='running'&&current.attempts===claimed.attempts&&Date.parse(ports.clock())<Date.parse(current.leaseUntil??'')&&Date.parse(ports.clock())<Date.parse(current.deadline);state.attempts.push({jobId:claimed.id,at:ports.clock(),status:(active?'stage:':'late_stage:')+name,detail:String(count)});await atomicPrivateJson(file,state);});}};
  let status='failed',detail:string|null=null,workerInvoked=false;
  try{
   const latest=await ports.readControl();if(digest(JSON.stringify(latest))!==controlHash)throw new Error('Control changed after job claim');
   if((await ports.repository.read()).runs.some(r=>r.id==='scheduled:'+claimed.id)){workerInvoked=true;status='completed';detail='already_processed';}
   else{
-  const prepared=await ports.prepare(claimed);
-  const result=await runControlledWorker(ports.repository,prepared.provider,prepared.model,controls.config,controls.manifest,controls.receipt,{runId:'scheduled:'+claimed.id,now:ports.clock(),clock:ports.clock,readControl:ports.readControl});
+  const prepared=await ports.prepare(claimed,execution);await assertActive();
+  const result=await runControlledWorker(ports.repository,prepared.provider,prepared.model,controls.config,controls.manifest,controls.receipt,{runId:'scheduled:'+claimed.id,now:ports.clock(),clock:ports.clock,readControl:async()=>{await assertActive();return ports.readControl();}});
   workerInvoked=['paper_run_completed','dry_run_completed','already_processed'].includes(result.status);status=workerInvoked?'completed':'blocked';detail=result.status;}
  }catch(e){if(e instanceof SourcePilotBlocked)status='blocked';detail=e instanceof Error?e.message:'Worker operation failed';}
  await exclusive(file+'.lock',async()=>{
   const state=await load(),job=state.jobs.find(j=>j.id===claimed.id);if(!job||job.status!=='running'||job.attempts!==claimed.attempts)throw new Error('Scheduler lease/revision changed');
-  job.status=status==='completed'?'completed':status==='blocked'?'blocked':job.attempts>=6?'failed':'pending';job.lastError=status==='completed'?null:detail;job.leaseUntil=null;
+  job.status=status==='completed'?'completed':Date.parse(ports.clock())>=Date.parse(job.deadline)?'missed':status==='blocked'?'blocked':job.attempts>=6?'failed':'pending';job.lastError=status==='completed'?null:detail;job.leaseUntil=null;
   if(job.status==='pending'){const delay=[2,10,30,60,60,60][Math.min(5,job.attempts-1)];job.nextAt=new Date(Date.parse(ports.clock())+delay*60000).toISOString();}
   state.attempts.push({jobId:job.id,at:ports.clock(),status:job.status,detail});await atomicPrivateJson(file,state);
  });
- await atomicPrivateJson(path.join(root,'health.json'),{at:ports.clock(),status,workerInvoked,lastJobId:claimed.id,detail,externalAlerts:false});
+ const runs=(await ports.repository.read()).runs.filter(r=>r.id.startsWith('scheduled:'));
+ await atomicPrivateJson(path.join(root,'health.json'),{at:ports.clock(),status,workerInvoked,lastJobId:claimed.id,detail,lastSuccessfulWorkerAt:runs.map(r=>r.at).sort().at(-1)??null,registeredThisJob:runs.find(r=>r.id==='scheduled:'+claimed.id)?.registered??null,externalAlerts:false});
  if(status!=='completed')await atomicPrivateJson(path.join(root,'alerts',digest(claimed.id+':'+claimed.attempts)+'.json'),{at:ports.clock(),jobId:claimed.id,detail,delivery:'local_outbox_not_delivered',sentExternally:false});
  return {status,workerInvoked,job:claimed.id,detail};
 }

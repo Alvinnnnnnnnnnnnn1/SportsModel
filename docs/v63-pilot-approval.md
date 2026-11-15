@@ -1,3 +1,5 @@
+> **Execution update · 15 November 23:04 AEDT:** owner approval for BOTH parts was received; all final gates passed and the two exact private receipts are installed, waiting for the future window. [Actual activation evidence and hashes](v63-pilot-activation.md). The proposal/review wording below is retained historically; do not repeat installation or alter the reviewed JSON.
+
 # V6.3 bounded local pilot — approval requested, not recorded
 
 Mode A forecast tracking is implemented and has genuinely frozen168 no-price forecasts across12 future fixtures using retained evidence. It requires no new source scope or PAPER permission. Existing next operations are16 November18:00 results and19:00 forecasting, Melbourne. See [actual execution](v63-forecast-pilot.md).

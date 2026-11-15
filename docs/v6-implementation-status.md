@@ -1,3 +1,9 @@
+# V6.3 local pilot approval installed — 15 November 23:04 AEDT
+
+Owner explicitly approved BOTH parts of exact package 9625d48d…. Offline hashes/controls/evidence, future window and single-worker gates passed; live zero-credit catalogue confirmed 16 used/reserved / 484 remaining. Installed private receipts: source 6ac07053…, PAPER b3f05a99…; recorded actual 2026-11-15T12:04:38.270Z. Status waiting until 16 Nov 00:00, scope ends 22 Nov 00:00. Same Mac worker/schedule; no application code or original controls were changed.
+
+Next: 16 Nov 18:00 results / 19:00 first expanded capture and possible fresh qualifying Elo-moneyline PAPER registrations; 17 Nov 18:00 next results. Fresh verification passed 853 tests, 162 local SQL checks, typecheck, lint and production build; 20 targeted tests also passed. Existing 168 forecasts remain immutable/forecast-only, genuine PAPER 0/0. No hosted A/B/C, spread/total PAPER, model promotion, paid service, credentials, V5 changes, extra worker or deployment. [Exact receipts, checks, limits and operational instructions](v63-pilot-activation.md). Older unapproved/pending statements below are historical checkpoints.
+
 # V6.3 operational prospective forecasts — 15 November 2026
 
 Genuine keyless retained-data execution at20:43 AEDT froze168 numerical outputs across12 future NBA fixtures, retaining140 excluded rows across10 more fixtures. Original pre-event clocks, sources and model/input snapshots are preserved in a separate append-only owner-scoped forecast ledger. Fresh replay appended0 and retained heade8946f46…; read-only inspection reproduces original probabilities. Actual independent outcomes and PAPER settlements remain0/unverified.

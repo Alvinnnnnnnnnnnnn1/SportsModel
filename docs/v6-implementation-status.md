@@ -1,3 +1,13 @@
+# V6.2 multi-market research — 15 November 2026
+
+Missed discovery: original BDL next-page transport failure and Mac maintenance sleep are retained; exact low-level network cause was discarded by the old catch and remains unknown. The earlier 18:00 source-only results worker **did succeed**. New health/audit distinguish that success from the later failure. Deadline/lease guards, page checkpoints and redacted transport/stage diagnostics are implemented without job replay, quota reset or service changes.
+
+Independent NBA spread/total score model evaluated on the unchanged 5,082 unique games; serialized artifact `12eff7a1…` reproduces. Later-block Brier/log loss beat a simple league-score baseline; historical Sportsbet market benchmarks/EV/CLV remain unavailable. Player prototype is stale and underperforms. NBL/tennis and other props remain data/validation blocked. Exact-market normalizers, source-scoped adapter preparation, observational grading and per-family capability registry are implemented; new collection/registration remain disabled. Existing UI exposes filters, fixture grouping, actual evaluation and honest blockers through private read-only DTOs.
+
+**Final rerun:834/834 tests (79 files),162 local SQL checks,21 intercepted browser groups, four cloud-safety groups, TypeScript, lint and production build pass.** Read-only final audit15Nov19:38 AEDT: sole loaded Mac LaunchAgent,1,334 invocations/exit0. The existing scheduled18:00 results and19:00 discovery both completed; discovery retained41 discovered fixtures/18 frozen candidates with actual stage receipts. Retained quotas nowOdds16/484, BDL4 UTCtoday, attributable to that existing schedule; this task made no source request. Next16Nov18:00 results/19:00 discovery. P0permit expired12:47; original journalrevision1/zero entries and protected evidence unchanged. No hosted/V5/financial/LaunchAgent changes, activation or deployment. Next: a separately reviewed dated featured-market source plan under the existing allowance. [Concise execution report, full changed-file inventory and exact evidence](v62-execution-report.md).
+
+Earlier checkpoints below retain their original date/scope.
+
 # V6.1 local PAPER lifecycle and dashboard — 14 November 2026
 
 Dedicated branch `feature/v6-1-local-paper-dashboard` starts at UI037d8b7; preserves PR #1 and targets its UI branch as a stacked change. The new fixed-path read-only projection validates the bounded permit/seals/source receipts/journal, qualification and independent grades behind existing normal Auth/RLS ownership. It never fetches providers or writes records. Cloud mode refuses the local journal; hosted PAPER remains unconnected and disabled. Forecasts, exact prices/times/cutoffs/models, exposure/returns/equity, fixture-unit model metrics, permission expiry and next retained operation are integrated into all five existing V6 pages.
@@ -344,13 +354,3 @@ Real-source observation → qualifying forecast → automatic pre-event registra
 4. Run a real-source prospective shadow pilot from registration through final grading. Only after those gates may scheduling be activated. UI hosting, managed availability, Hermes/iMessage/outbox delivery remain later explicit deployment/permission gates. No UI cosmetics are prioritised.
 
 Resume: read the latest section first, AGENTS and V6 specifications; inspect current diff/commits; do not repeat account activation or unnecessary source reads. Continue from the last tested milestone and record actual results, never an implied successful prospective lifecycle.
-# V6.2 multi-market research — 15 November 2026
-
-Missed discovery: original BDL next-page transport failure and Mac maintenance sleep are retained; exact low-level network cause was discarded by the old catch and remains unknown. The earlier 18:00 source-only results worker **did succeed**. New health/audit distinguish that success from the later failure. Deadline/lease guards, page checkpoints and redacted transport/stage diagnostics are implemented without job replay, quota reset or service changes.
-
-Independent NBA spread/total score model evaluated on the unchanged 5,082 unique games; serialized artifact `12eff7a1…` reproduces. Later-block Brier/log loss beat a simple league-score baseline; historical Sportsbet market benchmarks/EV/CLV remain unavailable. Player prototype is stale and underperforms. NBL/tennis and other props remain data/validation blocked. Exact-market normalizers, source-scoped adapter preparation, observational grading and per-family capability registry are implemented; new collection/registration remain disabled. Existing UI exposes filters, fixture grouping, actual evaluation and honest blockers through private read-only DTOs.
-
-**834/834 tests (79 files), 162 local SQL checks, 21 intercepted browser groups, TypeScript, lint and production build pass.** Actual read-only audit15Nov16:33 AEDT: one loaded Mac LaunchAgent, 1,151 invocations/exit0, Odds13/487, next18:00 results and19:00 discovery pending. P0permit expired12:47; original journalrevision1/zero entries and protected evidence unchanged. No provider calls, hosted/V5/financial/LaunchAgent changes, activation or deployment. Next: an awake-host scheduled run, then a separately reviewed dated featured-market source plan under the existing allowance. [Concise execution report and exact evidence](v62-execution-report.md).
-
-Earlier checkpoints below retain their original date/scope.
-

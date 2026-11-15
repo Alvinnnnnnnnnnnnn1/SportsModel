@@ -37,7 +37,7 @@ The typed registry separates retained source evidence, model support, validation
 
 Normalization preserves Sportsbet identity, raw-source hashes, original quote/event clocks, exact period, selection, side, signed line, player identity and reviewed settlement terms. It rejects ambiguous identities, conflicting duplicates and incomplete two-sided lines. Independent spread/total reconciliation verifies original quote identity and two retained final-result sources; it produces observational outcomes, never financial grades. Unproven cancellation/void terms remain unresolved.
 
-Genuine retained inventory: **38 NBA moneyline quote observations and ten NBA player-points observations**. These are historical snapshots, not current usable coverage. No retained Sportsbet spread/total, NBL or tennis quotes were found. No live coverage was asserted or requested.
+Genuine retained inventory at the offline analysis checkpoint (15 November 16:30 AEDT): **38 NBA moneyline quote observations and ten NBA player-points observations**. These are historical snapshots, not current usable coverage. No retained Sportsbet spread/total, NBL or tennis quotes were found. No new market coverage was asserted or requested.
 
 ### Actual score-model evaluation
 
@@ -79,10 +79,59 @@ Original P0 permit expired **15 November 12:47:21.079 AEDT**. Journal remains re
 - `/v6/health`: latest failure, historical successful worker, stages, original deadlines/permit expiry and retained quota counters shown separately.
 - Normal owner Auth/RLS binding and private display DTOs remain required. Demo does not request private evidence; cloud mode does not read local reports. No arbitrary path, source body, personal identifier or credential is exposed.
 
-Passed: **834 tests in 79 files**, including disposable native PostgreSQL/security tests; **162 local SQL checks** (70 core, 77 history, 15 cloud proposal); **21 isolated browser groups**; TypeScript, lint, production build and whitespace checks. Browser authentication/transports are intercepted, not new hosted owner acceptance. Browser checks made zero unexpected/provider requests and no hosted writes; actual retained-data desktop/mobile/model/status screenshots were visually reviewed. SQL checks are local, not migration deployment or hosted acceptance.
+Passed: **834 tests in 79 files**, including disposable PostgreSQL/security tests; **162 local SQL checks** (70 core, 77 history, 15 cloud proposal); **21 isolated browser groups**; TypeScript, lint, production build and whitespace checks. Browser authentication/transports are intercepted, not new hosted owner acceptance. Browser checks made zero unexpected/provider requests and no hosted writes; actual retained-data desktop/mobile/model/status screenshots were visually reviewed. SQL checks are local, not migration deployment or hosted acceptance.
 
 Actual read-only operational audit at **15 November 16:33:09 AEDT**: sole LaunchAgent loaded, 60-second ticks, 1,151 invocations, exit 0; latest attempt failed, prior successful worker retained. Next queued operations: **15 November 18:00 results, 19:00 discovery**, neither executed by this task. Odds retained **13 used/reserved, 487 remaining**; original monthly ceiling 60 and 100-credit reserve remain unchanged. BDL journal retains seven requests for UTC 14 November; that is not a claim of today's usage. Protected original dataset, capture, report, seal, journal, control/challenger, source config, plan and receipt remain unchanged.
+
+### Final continuation verification — 15 November 19:38 AEDT
+
+The existing implementation was already committed/pushed as `1e7e7dc` when continuation began. It was preserved. Final review corrected status-document ordering and supplied the missing disabled, hash-bound review artifact; no feature expansion was introduced. Fresh reruns again passed **834 tests / 79 files, 162 SQL checks, 21 browser groups, typecheck, lint and build**. Four offline cloud-safety groups passed: private bundle values absent, private files excluded from production traces, protected hashes intact and disabled cloud runner making zero requests. Browser checks recorded zero unexpected/provider requests or hosted writes. Scripts also pass Node syntax and whitespace checks.
+
+While this task ran its offline checks, the **existing independently scheduled** source-only worker completed both 15 November jobs, each in one attempt. Results completed at18:00:26.829; discovery was claimed19:00:13.806, retained five provider-capture stages, recorded41 discovered fixtures and18 frozen research candidates, then completed at19:00:44.760 (`dry_run_completed`). These are real retained scheduler stages, not a manual invocation by this task and not new-market/PAPER activation. They prove an awake-host execution, not reliability while asleep or a successful transport-retry incident.
+
+Read-only final audit at19:38:33.410: sole LaunchAgent loaded,1,334 invocations/exit0; **Odds16 used/reserved,484 remaining; BDL4 on UTC15 November**. The increase from the16:33 checkpoint is the existing authorised schedule's2-credit results plus1-credit h2h capture. No counters or allowance were reset. Original protected hashes remain identical; P0journal remainsrevision1/headb546f3ac…/zero positions/zero settlements, with expired authority. Next retained jobs are **16 November18:00 results and19:00 discovery AEDT**. Final private audit: `.local/v6/v62/final-verification-20261115.json`; task provider requests/paper writes/hosted writes all0.
 
 ## Next executable step
 
 Keep the approved Mac host awake for its existing source-only schedule and inspect the new stage diagnostics after an actual run. Separately prepare one dated NBA Sportsbet featured-market discovery replacing the scheduled h2h request, with exact source-plan/code/model hashes and budget reallocation under the unchanged allowance. Review genuine prices, exact terms and independent results prospectively before any market-specific PAPER activation. Do not extend the expired P0 permit, relax qualification, replay the missed job or treat this implementation as authority.
+
+## Exact changed-file inventory
+
+- `AGENTS.md`
+- `README.md`
+- `docs/v6-dashboard.md`
+- `docs/v6-implementation-status.md`
+- `docs/v62-execution-report.md`
+- `ops/v62-research-activation.proposed.json`
+- `scripts/analyse-v62-markets.mjs`
+- `scripts/check-v6-dashboard-browser.mjs`
+- `scripts/check-v61-local-lifecycle.mjs`
+- `scripts/run-v6-controlled.mjs`
+- `src/components/v6/dashboard.tsx`
+- `src/components/v6/market-readiness.tsx`
+- `src/components/v6/model-intelligence.tsx`
+- `src/components/v6/panels.tsx`
+- `src/lib/v6/controlled-scheduler.server.ts`
+- `src/lib/v6/controlled-team-runtime.server.ts`
+- `src/lib/v6/dashboard.server.ts`
+- `src/lib/v6/dashboard.ts`
+- `src/lib/v6/feature-pages.server.ts`
+- `src/lib/v6/free-sources.server.ts`
+- `src/lib/v6/local-paper-results.server.ts`
+- `src/lib/v6/market-capabilities.ts`
+- `src/lib/v6/market-normalization.ts`
+- `src/lib/v6/market-research.ts`
+- `src/lib/v6/market-results.ts`
+- `src/lib/v6/multimarket-view.server.ts`
+- `src/lib/v6/player-research.ts`
+- `src/lib/v6/research-identity.ts`
+- `src/lib/v6/score-distribution.ts`
+- `src/lib/v6/source-diagnostics.server.ts`
+- `src/lib/v6/team-sources.server.ts`
+- `tests/v6-controlled.test.ts`
+- `tests/v6-local-paper-results.test.ts`
+- `tests/v62-expanded-provider.test.ts`
+- `tests/v62-markets.test.ts`
+- `tests/v62-score-model.test.ts`
+- `tests/v62-source-recovery.test.ts`
+- `vercel.json`

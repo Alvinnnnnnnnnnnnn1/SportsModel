@@ -1,0 +1,122 @@
+{
+  "format": "edgelab.v62-disabled-research-review",
+  "version": 1,
+  "status": "incomplete_review_only",
+  "approved": false,
+  "activationEnabled": false,
+  "executableReceipt": false,
+  "createdAt": "2026-11-15T08:37:02.275Z",
+  "proposedSourceScope": {
+    "provider": "the-odds-api.com",
+    "sport": "basketball_nba",
+    "bookmaker": "sportsbet",
+    "endpoint": "/v4/sports/basketball_nba/odds",
+    "markets": [
+      "h2h",
+      "spreads",
+      "totals"
+    ],
+    "maximumCreditsPerRead": 3,
+    "additionalReadsApproved": 0,
+    "window": null,
+    "schedule": null,
+    "requiresReplacementOfExistingH2hRead": true,
+    "requiresFreshExactOwnerReceipt": true,
+    "secondWorkerAllowed": false
+  },
+  "quota": {
+    "monthlyCeiling": 60,
+    "safetyReserve": 100,
+    "lastReviewedUsed": 16,
+    "lastReviewedRemaining": 484,
+    "lastReviewedAt": "2026-11-15T08:38:33.410Z",
+    "note": "Retained checkpoint only. Re-read actual shared counters and reallocate remaining schedule budget before approval; no allowance increase."
+  },
+  "model": {
+    "id": "team-score-distribution",
+    "version": "research-1",
+    "artifactHash": "12eff7a1b7da451f22b72c46e7b74f179848a2947d22b5d7c3d054dec100b37c",
+    "protocolHash": "6e35689bf34a0af794d1813f144da0711a91c0b71e64f338a37d413cc4f7c98a",
+    "datasetHash": "31aa630215a5583b90f87f92e6193883a778f6795a9068f2014118685c9283a0",
+    "status": "experimental_research_only",
+    "promotionApproved": false
+  },
+  "code": [
+    {
+      "file": "scripts/analyse-v62-markets.mjs",
+      "sha256": "0347edf4cc1e75c709b7d9b055887d2ee31c246a897bb6272660ed2ac2beb8e4"
+    },
+    {
+      "file": "scripts/run-v6-controlled.mjs",
+      "sha256": "fb3637861046956de68946415fa748d802b480f9d504a8d56d12c6bfdcc146bc"
+    },
+    {
+      "file": "src/lib/v6/controlled-scheduler.server.ts",
+      "sha256": "941bf88589d8e759670d465d0806ef76d45e47d6bd891f8805c821ee7cb36e7a"
+    },
+    {
+      "file": "src/lib/v6/controlled-team-runtime.server.ts",
+      "sha256": "e1685aae1e6de44c6ad71f562c0cb89446a6559171634e1c16c00fe984a8ac1c"
+    },
+    {
+      "file": "src/lib/v6/feature-pages.server.ts",
+      "sha256": "de7ff9232c722b6f0903faa6128e1d4ad8290aae35794cde3665cb3215829acc"
+    },
+    {
+      "file": "src/lib/v6/free-sources.server.ts",
+      "sha256": "ca90c869a0086f0bb6c193f09c42e1708b5c305b9a19cbf948ce86a3351744fc"
+    },
+    {
+      "file": "src/lib/v6/market-capabilities.ts",
+      "sha256": "2e45c1f61801aca4423d77638e181f318d4c83feafe3f3dd01950c2a6d4ade65"
+    },
+    {
+      "file": "src/lib/v6/market-normalization.ts",
+      "sha256": "1309af9d32970107352e228fad90ac16a5b34b303fc65faff760349ece76d8f7"
+    },
+    {
+      "file": "src/lib/v6/market-research.ts",
+      "sha256": "91c4643ac724ba08fd07ef07abc41f35b4b78407a35a857870b6d533ff7d7435"
+    },
+    {
+      "file": "src/lib/v6/market-results.ts",
+      "sha256": "950ff2a04e4d91eab0cb84ecbc6ea62e68a5ab24676724b16852d5ebe8b82dfe"
+    },
+    {
+      "file": "src/lib/v6/player-research.ts",
+      "sha256": "52cc7e20e289f831467c696c4ef3df61130e32c0c9d10ff38f8a507192dff277"
+    },
+    {
+      "file": "src/lib/v6/research-identity.ts",
+      "sha256": "497b6a7e86278fef687d5a40c8ed5ae31d7b0a3853534634295395cd642e0f9f"
+    },
+    {
+      "file": "src/lib/v6/score-distribution.ts",
+      "sha256": "b17b07769901b17e728d9bd07726f05f2d1b572305ff3bb60212856137bd6061"
+    },
+    {
+      "file": "src/lib/v6/source-diagnostics.server.ts",
+      "sha256": "de6e9584da4cbf833414afb9fd3da83e03719d8c8fc1f0dc7dfffe307ff2987c"
+    },
+    {
+      "file": "src/lib/v6/team-sources.server.ts",
+      "sha256": "0d7901520bef965f386f73205e94514acff46b6f415646b8bc5e27139e5050d9"
+    }
+  ],
+  "codeManifestHash": "95a3bba56f855f5dd1f0bad3194fd0dc65d0108abb376f5a54dab1a5fc8e36ae",
+  "policy": {
+    "hash": "3a28940e6727b130c9a560923a920e883610b7d8088a19cbdad2553155089345",
+    "registrationApproved": false,
+    "nominalPaperBankrollCents": 500000,
+    "fixedHypotheticalStakeCents": 5000,
+    "expiredP0PermitExtended": false,
+    "hostedABCApproved": false
+  },
+  "remainingReview": [
+    "Supply an exact future window and schedule; existing source pilot remains unchanged",
+    "Verify current free-plan counters, source rights and exact market/settlement identities",
+    "Reallocate remaining budget under original 60-credit ceiling without duplicate collection",
+    "Review causal prospective evidence and a separate market-specific PAPER policy",
+    "Rehash final code, source plan and policy before requesting any activation"
+  ]
+}

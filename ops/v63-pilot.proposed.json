@@ -1,0 +1,231 @@
+{
+  "packageHash": "9625d48dde809a6b4f517e0e2e19dd90e3c5787c16fa5908ae8a9ba3894e5783",
+  "format": "edgelab.v63-bounded-local-pilot-review",
+  "version": 1,
+  "status": "PENDING_EXPLICIT_OWNER_APPROVAL",
+  "approved": false,
+  "executableReceipt": false,
+  "preparedAt": "2026-11-15T10:34:55.051Z",
+  "baseCommit": "7410b8df9b6d573d39974cae50b5afbd66687ffc",
+  "sourcePlan": {
+    "format": "edgelab.v63-source-extension",
+    "version": 1,
+    "sourceReceiptHash": "b1f1334656173a976119cfe516f809b7ab2ee2ad571b0dd5b1cee6f46eec3b65",
+    "codeHash": "032eb8dec2ae3d952bb304703e50ad4659239406d055c599bb8a9e9c0326290f",
+    "scoreProtocolHash": "6e35689bf34a0af794d1813f144da0711a91c0b71e64f338a37d413cc4f7c98a",
+    "eloDefinitionHash": "ee61e69d684fd15862f9fdd0335f0f9359743aa8377911103451909e2d8fb564",
+    "startsAt": "2026-11-15T13:00:00.000Z",
+    "expiresAt": "2026-11-21T13:00:00.000Z",
+    "dates": [
+      "2026-11-16",
+      "2026-11-18",
+      "2026-11-20"
+    ],
+    "markets": [
+      "h2h",
+      "spreads",
+      "totals"
+    ],
+    "sport": "basketball_nba",
+    "bookmaker": "sportsbet",
+    "discoveryHour": 19,
+    "maximumCostPerRead": 3,
+    "monthlyCeiling": 60,
+    "providerReserve": 100,
+    "replacesExistingRead": true,
+    "paperRegistration": false
+  },
+  "sourcePlanHash": "748e5615be985fe4af8186211be1b2f69ef345b5db113fb0e66de51db53a1ce9",
+  "paper": {
+    "startsAt": "2026-11-15T13:00:00.000Z",
+    "expiresAt": "2026-11-21T13:00:00.000Z",
+    "policy": {
+      "id": "v63-bounded-elo-moneyline-1",
+      "sport": "NBA",
+      "markets": [
+        "moneyline"
+      ],
+      "bookmaker": "sportsbet",
+      "model": {
+        "id": "nba-team-elo-only",
+        "version": "candidate-1",
+        "method": "nba_team_elo_only",
+        "initialRating": 1500,
+        "k": 20,
+        "homeCourt": 60,
+        "seasonRetention": 0.75,
+        "formAdjustment": 0,
+        "restAdjustment": 0,
+        "probabilityShrinkage": 0,
+        "minTeamGames": 20,
+        "maxFeatureAgeDays": 21
+      },
+      "research": {
+        "id": "nba-moneyline-two-pass-1",
+        "version": 1,
+        "minWinProbability": 0.55,
+        "minExpectedValue": 0.02,
+        "maxModelEloDisagreement": 0.08,
+        "maxModelMarketDisagreement": 0.15,
+        "sensitivityRetention": 0.8,
+        "minimumHeldOutGames": 500,
+        "tracks": [
+          "high_probability",
+          "potential_value",
+          "alternative_markets",
+          "exploratory"
+        ],
+        "modelActivationRequired": true
+      },
+      "openingCents": 500000,
+      "stakeCents": 5000,
+      "positionCap": null,
+      "exposureCap": null,
+      "retrospectiveRegistration": false,
+      "eventStartsWithinPermit": true,
+      "spreadTotalRegistration": false,
+      "hosted": false
+    },
+    "policyHash": "98ca96b831922e48b4e3ac1f87279f27228b3808b66023dc5fcfc624d8b7c31d",
+    "codeHash": "c1e84353a25d7bffdedf5efce13e4bb7c416f7a0fea2fb19424e100b8998e617",
+    "sourceReceiptHash": "b1f1334656173a976119cfe516f809b7ab2ee2ad571b0dd5b1cee6f46eec3b65"
+  },
+  "budget": {
+    "observedUsed": 16,
+    "reserved": 16,
+    "providerRemaining": 484,
+    "asOf": "2026-11-15T08:00:40.759Z",
+    "remainingExistingDiscoveryJobs": 11,
+    "remainingExistingResultsJobs": 13,
+    "worstCaseExistingCredits": 37,
+    "extraReplacementCredits": 6,
+    "worstCaseCumulative": 59,
+    "monthlyCeiling": 60,
+    "providerReserve": 100,
+    "unplannedRetriesNotIncluded": true
+  },
+  "originalSourceReceiptRawHash": "c5f236058560271ff86fe4c3f7c042d8a93ced970e171835adfb64c6ded55a16",
+  "originalSourceModelArtifactHash": "5bfe98cb8fec70db371dd61b037e75f927de3348da524a9bca19790661e0a6b4",
+  "codeManifest": [
+    {
+      "file": "scripts/run-v6-controlled.mjs",
+      "hash": "7738b8f5106a2bb1a1e07d919f677ecf6e786a8e15357a20d614afcd08fbfff9"
+    },
+    {
+      "file": "src/lib/v6/controlled-activation.ts",
+      "hash": "7893a826ae18d9374ee945aaa66c97f072260251ae67e8c29dffb24189ba9d76"
+    },
+    {
+      "file": "src/lib/v6/controlled-scheduler.server.ts",
+      "hash": "d76398542fd14e24f8c1f6d810e08ca414202387b754582810c788c99a521c78"
+    },
+    {
+      "file": "src/lib/v6/controlled-team-runtime.server.ts",
+      "hash": "2f852c2930ac2f5c5ee6ee49327e87ffda37441114cef881bb10ffd5ae4355f5"
+    },
+    {
+      "file": "src/lib/v6/daily-forecasts.server.ts",
+      "hash": "db5a506886d5b4209a323d83f477febff09353bcb22a1ea970fac1af6677f5dc"
+    },
+    {
+      "file": "src/lib/v6/daily-paper-pilot.server.ts",
+      "hash": "d2039755d36eb55388af9b604bb14cd9b6f0978fd8cdb4d61a82e9fc1b88a64f"
+    },
+    {
+      "file": "src/lib/v6/daily-source-extension.server.ts",
+      "hash": "689b29a3444f999963948ae23583e1bdd2766a0588a3cf9659411e905089decf"
+    },
+    {
+      "file": "src/lib/v6/engine.ts",
+      "hash": "a43789579cfe05359c3917d4c06b1f3b95acfcfbcf2939fca33c288e2c7df7c3"
+    },
+    {
+      "file": "src/lib/v6/evidence.server.ts",
+      "hash": "59d9ca26a261c0cd0a96d3304ab315d0e2ba83be584ecf0b7bf8503160a2132e"
+    },
+    {
+      "file": "src/lib/v6/feature-pages.server.ts",
+      "hash": "de7ff9232c722b6f0903faa6128e1d4ad8290aae35794cde3665cb3215829acc"
+    },
+    {
+      "file": "src/lib/v6/forecast-journal.server.ts",
+      "hash": "e02582813611519945c545b3471c99befe2b9aede3cd920f4e1e60efd4bb1c78"
+    },
+    {
+      "file": "src/lib/v6/free-sources.server.ts",
+      "hash": "ca90c869a0086f0bb6c193f09c42e1708b5c305b9a19cbf948ce86a3351744fc"
+    },
+    {
+      "file": "src/lib/v6/job-source-cache.server.ts",
+      "hash": "3f63d35cda74f19e3ba423c5b11c5dad583dbc3687f897bfb1fe99e5a87f6b2d"
+    },
+    {
+      "file": "src/lib/v6/journal-repository.server.ts",
+      "hash": "ba084ee410a1e201f91b7e4047aefae3134e3cd5fddc8298a5218ac63dd47e50"
+    },
+    {
+      "file": "src/lib/v6/market-normalization.ts",
+      "hash": "1309af9d32970107352e228fad90ac16a5b34b303fc65faff760349ece76d8f7"
+    },
+    {
+      "file": "src/lib/v6/models.ts",
+      "hash": "2bcef7622b3bdbafbc3209f8aecaa72ad4945b9ddc119bfab75fa8cc6d175a60"
+    },
+    {
+      "file": "src/lib/v6/policy.ts",
+      "hash": "f0da936b51f336671278794da3fddc5aad20ab99135f6fb43586bf36ea2f006e"
+    },
+    {
+      "file": "src/lib/v6/reconciled-grading.ts",
+      "hash": "0a0ad28993f2f5c1d93e4ca0ff50b662e00d80dceae7e240c46a18e9f46f2eb4"
+    },
+    {
+      "file": "src/lib/v6/research-identity.ts",
+      "hash": "497b6a7e86278fef687d5a40c8ed5ae31d7b0a3853534634295395cd642e0f9f"
+    },
+    {
+      "file": "src/lib/v6/score-distribution.ts",
+      "hash": "b17b07769901b17e728d9bd07726f05f2d1b572305ff3bb60212856137bd6061"
+    },
+    {
+      "file": "src/lib/v6/team-games.ts",
+      "hash": "d591cd0223c89b44d9c87d0a2bacba20ffa7a7d0c01c76be4c742c921520877d"
+    },
+    {
+      "file": "src/lib/v6/team-identity.ts",
+      "hash": "041e8308dc766dc08b6e4e7d6d3df705236f362b93a4c5e350b7f0eab2e22d50"
+    },
+    {
+      "file": "src/lib/v6/team-model.ts",
+      "hash": "ceae472a77be3a1cffd840bdbb318089723ae58cba0d5b027f38f55906d8681d"
+    },
+    {
+      "file": "src/lib/v6/team-pilot.ts",
+      "hash": "891700f24e8ff923f601ad2b08bb7effa3298561cbf78fe967a4512cb1dc7e16"
+    },
+    {
+      "file": "src/lib/v6/team-reconciliation.ts",
+      "hash": "5304b4f7a06a517dd5fb8c0ed1fb233ddf59b5f6a63aeddbabc6d17ba2a0e63e"
+    },
+    {
+      "file": "src/lib/v6/team-research-policy.ts",
+      "hash": "c1ce43c4c1de4a37c794b53309a0a5e64ebc4c3c40683c7159ce89c1ae63d58c"
+    },
+    {
+      "file": "src/lib/v6/team-sources.server.ts",
+      "hash": "0d7901520bef965f386f73205e94514acff46b6f415646b8bc5e27139e5050d9"
+    },
+    {
+      "file": "src/lib/v6/types.ts",
+      "hash": "94cf4451bb5f62f98786f7248fad0a8941a4db108ee535be867467bf5d9cf7ce"
+    }
+  ],
+  "exclusions": [
+    "No hosted ABC/schema/credentials/cloud activation",
+    "No V5 or real-money changes",
+    "No source schedule or host changes",
+    "No P0 permit extension",
+    "No score-model promotion or spread/total PAPER registration",
+    "No consent or authority is created by this file"
+  ]
+}
